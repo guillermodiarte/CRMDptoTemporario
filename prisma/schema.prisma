@@ -1,0 +1,170 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  VISUALIZER
+}
+
+enum PaymentStatus {
+  PAID
+  PARTIAL
+  UNPAID
+}
+
+enum ReservationStatus {
+  TENTATIVE
+  CONFIRMED
+  CANCELLED
+  NO_SHOW
+}
+
+enum ReservationSource {
+  AIRBNB
+  BOOKING
+  DIRECT
+}
+
+enum ExpenseType {
+  COMMISSION
+  TAX
+  SUPPLY
+}
+
+enum NoteType {
+  GLOBAL
+  PERSONAL
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  phone     String?
+  image     String?
+  role      Role     @default(VISUALIZER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  notes     Note[]
+  reportedBlacklistEntries BlacklistEntry[]
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  address     String?
+  images      String   @default("[]") // JSON string of image URLs
+  bedCount    Int
+  maxPeople   Int
+  hasParking  Boolean  @default(false)
+  isActive    Boolean  @default(true) // For soft delete/deactivation
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reservations Reservation[]
+  expenses     Expense[]
+}
+
+model Reservation {
+  id String @id @default(cuid())
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  source ReservationSource @default(DIRECT)
+  status ReservationStatus @default(TENTATIVE)
+
+  // Guest Data
+  guestName        String
+  guestPhone       String?
+  guestPeopleCount Int
+
+  // Dates
+  checkIn  DateTime
+  checkOut DateTime
+
+  // Money
+  totalAmount   Float
+  depositAmount Float  @default(0)
+  cleaningFee   Float  @default(0) // New field for cleaning expenses
+  groupId       String? // UUID to link split reservations
+  currency      String @default("ARS") // "ARS" or "USD"
+  exchangeRate  Float? // Stored rate if USD
+
+  paymentStatus PaymentStatus @default(UNPAID)
+
+  hasParking Boolean @default(false)
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Expense {
+  id          String      @id @default(cuid())
+  type        ExpenseType
+  description String
+  amount      Float
+  quantity    Int?        @default(1)
+  unitPrice   Float?
+  date        DateTime    @default(now())
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  isDeleted Boolean  @default(false) // Soft delete
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  type      NoteType @default(PERSONAL)
+}
+
+model BlacklistEntry {
+  id        String   @id @default(cuid())
+  
+  guestName   String
+  guestPhone  String   // Normalized phone for matching
+  reason      String
+  
+  // Reporter info
+  reportedById String?
+  reportedBy   User?   @relation(fields: [reportedById], references: [id], onDelete: SetNull)
+  
+  // Optional: Historical context from a reservation
+  departmentName String?
+  checkIn        DateTime?
+  checkOut       DateTime?
+  totalAmount    Float?
+  
+  isActive    Boolean  @default(true) // Soft delete
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SystemSettings {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
