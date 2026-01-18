@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, CreditCard, CalendarDays, Activity } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { getFullDollarData } from "@/lib/dollar";
+import { getFullDollarData, getDollarRate } from "@/lib/dollar";
 import { getWeatherData } from "@/lib/weather";
 import { DollarWidget } from "@/components/dollar-widget";
 import { WeatherWidget } from "@/components/weather-widget";
@@ -13,6 +13,7 @@ export default async function DashboardPage() {
   const today = new Date();
   const dollarData = await getFullDollarData();
   const weatherData = await getWeatherData();
+  const dollarRate = await getDollarRate();
 
   // 1. Check upcoming reservations
   const nextReservation = await prisma.reservation.findFirst({
@@ -25,13 +26,21 @@ export default async function DashboardPage() {
   });
 
   // 2. Count active checks (people inside today)
-  const activeNow = await prisma.reservation.count({
+  const activeReservations = await prisma.reservation.findMany({
     where: {
       checkIn: { lte: today },
       checkOut: { gte: today },
       status: { not: "CANCELLED" }
+    },
+    select: {
+      id: true,
+      guestName: true,
+      guestPeopleCount: true,
+      department: { select: { name: true } }
     }
   });
+
+  const activeCount = activeReservations.length;
 
   // 3. Pending Payments
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -44,14 +53,33 @@ export default async function DashboardPage() {
     }
   });
 
-  const monthlyRevenueRaw = await prisma.reservation.aggregate({
-    _sum: { totalAmount: true },
+  // Calculate Monthly Revenue (Finance Page Logic)
+  const monthlyReservations = await prisma.reservation.findMany({
     where: {
       checkIn: { gte: startOfMonth, lte: endOfMonth },
       status: { not: "CANCELLED" }
     }
   });
-  const monthlyRevenue = monthlyRevenueRaw._sum.totalAmount || 0;
+
+  const monthlyRevenueRaw = monthlyReservations.reduce((acc, curr) => {
+    let amount = 0;
+    if (curr.paymentStatus === 'PAID') amount = curr.totalAmount;
+    else if (curr.paymentStatus === 'PARTIAL') amount = curr.depositAmount || 0;
+
+    if (curr.currency === 'USD') amount = amount * dollarRate;
+
+    return acc + amount;
+  }, 0);
+
+  const monthlyRevenue = Number(monthlyRevenueRaw.toFixed(2));
+
+  // Capitalize helper
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const formatDate = (date: Date) => {
+    const d = format(date, "EEEE d 'de' MMMM", { locale: es });
+    return capitalize(d).replace(/ de ([a-z])/g, (match) => " de " + match.charAt(4).toUpperCase() + match.slice(5));
+  };
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -59,6 +87,7 @@ export default async function DashboardPage() {
         <h2 className="text-3xl font-bold tracking-tight">Panel General</h2>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* WIDGET 1: INGRESOS TOTALES */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -68,11 +97,13 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${monthlyRevenue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground capitalize">
+            <p className="text-xs text-muted-foreground mt-1 capitalize">
               {format(today, "MMMM", { locale: es })}
             </p>
           </CardContent>
         </Card>
+
+        {/* WIDGET 2: OCUPACIÓN ACTUAL */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -81,12 +112,26 @@ export default async function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeNow}</div>
-            <p className="text-xs text-muted-foreground">
-              Reservas activas hoy
-            </p>
+            <div className="text-2xl font-bold">{activeCount}</div>
+
+            {activeCount > 0 ? (
+              <div className="mt-1 text-xs text-muted-foreground space-y-1">
+                {activeReservations.map(res => (
+                  <div key={res.id} className="flex justify-between items-center">
+                    <span className="truncate max-w-[120px]" title={res.guestName}>{res.guestName}</span>
+                    <span>({res.guestPeopleCount}p)</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Sin reservas activas hoy
+              </p>
+            )}
           </CardContent>
         </Card>
+
+        {/* WIDGET 3: PAGOS PENDIENTES */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pagos Pendientes</CardTitle>
@@ -94,11 +139,13 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingPayments}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               Reservas sin pagar o parciales
             </p>
           </CardContent>
         </Card>
+
+        {/* WIDGET 4: PRÓXIMO INGRESO */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -107,10 +154,10 @@ export default async function DashboardPage() {
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold truncate">
-              {nextReservation ? format(new Date(nextReservation.checkIn), "d 'de' MMM", { locale: es }) : "-"}
+            <div className="text-2xl font-bold">
+              {nextReservation ? formatDate(new Date(nextReservation.checkIn)) : "-"}
             </div>
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="text-xs text-muted-foreground truncate mt-1">
               {nextReservation ? `${nextReservation.guestName} (${nextReservation.department.name})` : "Sin reservas próximas"}
             </p>
           </CardContent>

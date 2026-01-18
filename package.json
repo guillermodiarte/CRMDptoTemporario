@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "build:skip": "echo '>>> NODE PATH:' && which node && echo '>>> NODE VERSION:' && node -v && echo 'Skipping build...'",
+    "start": "sh start.sh",
+    "start:local": "next start",
     "lint": "eslint"
   },
   "dependencies": {

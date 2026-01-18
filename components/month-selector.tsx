@@ -2,6 +2,7 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export function MonthSelector() {
   const router = useRouter();
@@ -15,6 +16,11 @@ export function MonthSelector() {
   // but controlled with URL update on change is safer.
   const paramMonth = searchParams.get("month");
   const paramYear = searchParams.get("year");
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
+
+  if (!isMounted) return <div className="flex gap-2 h-10 w-[248px]" />; // Placeholder to prevet layout shift
 
   const month = paramMonth ? paramMonth : currentMonth.toString();
   const year = paramYear ? paramYear : currentYear.toString();

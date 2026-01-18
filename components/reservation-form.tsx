@@ -354,6 +354,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                     <Input
                       type="number"
                       min={0}
+                      step="0.01"
                       onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
                       {...field}
                       value={field.value ?? ""}
@@ -387,6 +388,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                     <Input
                       type="number"
                       min={0}
+                      step="0.01"
                       onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
                       {...field}
                       value={field.value ?? ""}
@@ -411,6 +413,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                     <Input
                       type="number"
                       min={0}
+                      step="0.01"
                       onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
                       {...field}
                       value={field.value ?? ""}
