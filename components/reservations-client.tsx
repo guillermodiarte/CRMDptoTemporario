@@ -185,52 +185,54 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
   return (
     <>
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight mb-2">Reservas</h2>
           {!hideMonthSelector && <MonthSelector startYear={startYear} endYear={endYear} />}
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative w-64 mr-2">
+        <div className="flex flex-col md:flex-row items-center gap-2 w-full md:w-auto">
+          <div className="relative w-full md:w-64 md:mr-2">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input
               placeholder="Buscar reserva..."
-              className="pl-9"
+              className="pl-9 w-full"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <ReservationsActions
-            data={data}
-            departments={departments}
-            blacklistedPhones={blacklistedPhones}
-            blacklistEntries={blacklistEntries}
-            date={selectedDate}
-          />
+          <div className="flex gap-2 w-full md:w-auto justify-end">
+            <ReservationsActions
+              data={data}
+              departments={departments}
+              blacklistedPhones={blacklistedPhones}
+              blacklistEntries={blacklistEntries}
+              date={selectedDate}
+            />
 
-          {!isVisualizer && (
-            <Dialog open={open} onOpenChange={(val) => {
-              setOpen(val);
-              if (!val) setEditingRes(null);
-            }}>
-              <DialogTrigger asChild>
-                <Button onClick={handleCreate}>
-                  <Plus className="mr-2 h-4 w-4" /> Nueva Reserva
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-md" onCloseAutoFocus={(e) => e.preventDefault()}>
-                <DialogHeader>
-                  <DialogTitle>{editingRes ? "Editar Reserva" : "Nueva Reserva"}</DialogTitle>
-                </DialogHeader>
-                <ReservationForm
-                  departments={departments}
-                  setOpen={setOpen}
-                  initialData={editingRes}
-                />
-              </DialogContent>
-            </Dialog>
-          )}
+            {!isVisualizer && (
+              <Dialog open={open} onOpenChange={(val) => {
+                setOpen(val);
+                if (!val) setEditingRes(null);
+              }}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleCreate} className="whitespace-nowrap">
+                    <Plus className="mr-2 h-4 w-4" /> Nueva
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-md" onCloseAutoFocus={(e) => e.preventDefault()}>
+                  <DialogHeader>
+                    <DialogTitle>{editingRes ? "Editar Reserva" : "Nueva Reserva"}</DialogTitle>
+                  </DialogHeader>
+                  <ReservationForm
+                    departments={departments}
+                    setOpen={setOpen}
+                    initialData={editingRes}
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
       </div>
 
