@@ -17,13 +17,14 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Input } from "@/components/ui/input"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma";
 import Link from "next/link"
-import { Menu, Search, LineChart, Home } from "lucide-react"
+import { Search, LineChart, Home } from "lucide-react"
 import { UserMenu } from "@/components/user-menu";
 import { Logo } from "@/components/logo";
+import { MobileNav } from "@/components/mobile-nav";
 
 export default async function DashboardLayout({
   children,
@@ -119,89 +120,7 @@ export default async function DashboardLayout({
       </div>
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0 md:hidden"
-              >
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col">
-              <nav className="grid gap-2 text-lg font-medium">
-                <Link
-                  href="#"
-                  className="flex items-center gap-2 text-lg font-semibold"
-                >
-                  <Logo className="h-6 w-6" />
-                  <span className="sr-only">Alojamientos Di'Arte</span>
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-                >
-                  <Home className="h-5 w-5" />
-                  Panel General
-                </Link>
-                <Link
-                  href="/dashboard/calendar"
-                  className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-                >
-                  <CalendarDays className="h-5 w-5" />
-                  Calendario
-                </Link>
-                <Link
-                  href="/dashboard/reservations"
-                  className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-                >
-                  <CreditCard className="h-5 w-5" />
-                  Reservas
-                </Link>
-                <Link
-                  href="/dashboard/departments"
-                  className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-                >
-                  <Building className="h-5 w-5" />
-                  Departamentos
-                </Link>
-                <Link
-                  href="/dashboard/finance"
-                  className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-                >
-                  <LineChart className="h-5 w-5" />
-                  Finanzas
-                </Link>
-                {role === 'ADMIN' && (
-                  <Link
-                    href="/dashboard/users"
-                    className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-                  >
-                    <UserCog className="h-5 w-5" />
-                    Usuarios
-                  </Link>
-                )}
-                {role === 'ADMIN' && (
-                  <Link
-                    href="/dashboard/settings"
-                    className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-                  >
-                    <Settings className="h-5 w-5" />
-                    Configuración
-                  </Link>
-                )}
-                <Link
-                  href="/dashboard/blacklist"
-                  className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-                >
-                  <ShieldAlert className="h-5 w-5" />
-                  Lista Negra
-                </Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <MobileNav role={role} user={user} />
           <div className="w-full flex-1">
             <form action="/dashboard/search">
               <div className="relative">
