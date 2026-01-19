@@ -13,7 +13,11 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await req.json();
-    const { name, description, address, bedCount, maxPeople, hasParking, images } = body;
+    const {
+      name, description, address, bedCount, maxPeople, hasParking, images,
+      wifiName, wifiPass, basePrice, cleaningFee, alias, color, isActive,
+      googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink
+    } = body;
 
     const department = await prisma.department.update({
       where: { id },
@@ -23,7 +27,15 @@ export async function PATCH(
         address,
         bedCount: Number(bedCount),
         maxPeople: Number(maxPeople),
+        basePrice: Number(basePrice || 0),
+        cleaningFee: Number(cleaningFee || 0),
+        wifiName,
+        wifiPass,
+        alias,
+        color: color || "#3b82f6",
         hasParking: !!hasParking,
+        isActive: isActive !== undefined ? isActive : undefined,
+        googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink,
         images: JSON.stringify(images || []),
       },
     });
@@ -46,15 +58,18 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Soft delete
+    // Soft delete (Archive)
     const department = await prisma.department.update({
       where: { id },
-      data: { isActive: false },
+      data: {
+        isArchived: true,
+        isActive: false // Also deactivate it for safety
+      },
     });
 
     return NextResponse.json(department);
   } catch (error) {
-    console.log("[DEPARTMENT_DELETE]", error);
+    console.log("[DEPARTMENT_ARCHIVE]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

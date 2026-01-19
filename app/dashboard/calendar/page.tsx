@@ -5,6 +5,7 @@ import { addMonths, startOfMonth, endOfMonth, subMonths } from "date-fns";
 export default async function CalendarPage({ searchParams }: { searchParams: { date?: string } }) {
   // Default to current month window
   const departments = await prisma.department.findMany({
+    where: { isActive: true },
     orderBy: { name: 'asc' }
   });
 

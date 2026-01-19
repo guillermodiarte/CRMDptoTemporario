@@ -7,7 +7,6 @@ export default async function DepartmentsPage() {
   const userRole = (session?.user as any)?.role;
 
   const departments = await prisma.department.findMany({
-    where: { isActive: true },
     orderBy: { createdAt: "desc" },
   });
 

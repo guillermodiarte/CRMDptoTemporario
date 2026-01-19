@@ -27,9 +27,13 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, description, address, bedCount, maxPeople, hasParking, images } = body;
+    const {
+      name, description, address, bedCount, maxPeople, hasParking, images,
+      wifiName, wifiPass, basePrice, cleaningFee, alias, color,
+      googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink
+    } = body;
 
-    if (!name || !bedCount || !maxPeople) {
+    if (!name || !maxPeople) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
@@ -48,11 +52,19 @@ export async function POST(req: Request) {
           where: { id: existingDept.id },
           data: {
             isActive: true,
+            isArchived: false,
             description,
             address,
-            bedCount: Number(bedCount),
+            bedCount: Number(bedCount || 1),
             maxPeople: Number(maxPeople),
+            basePrice: Number(basePrice || 0),
+            cleaningFee: Number(cleaningFee || 0),
+            wifiName,
+            wifiPass,
+            alias,
+            color: color || "#3b82f6",
             hasParking: !!hasParking,
+            googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink,
             images: JSON.stringify(images || []),
           },
         });
@@ -63,9 +75,16 @@ export async function POST(req: Request) {
           name,
           description,
           address,
-          bedCount: Number(bedCount),
+          bedCount: Number(bedCount || 1),
           maxPeople: Number(maxPeople),
+          basePrice: Number(basePrice || 0),
+          cleaningFee: Number(cleaningFee || 0),
+          wifiName,
+          wifiPass,
+          alias,
+          color: color || "#3b82f6",
           hasParking: !!hasParking,
+          googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink,
           images: JSON.stringify(images || []),
         },
       });
