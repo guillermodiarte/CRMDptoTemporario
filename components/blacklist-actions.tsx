@@ -1,11 +1,35 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Papa from "papaparse";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { format, isValid, parse } from "date-fns";
+import { es } from "date-fns/locale";
+import { BlacklistEntry } from "@prisma/client";
+import {
+  Download,
+  Upload,
+  FileSpreadsheet,
+  FileText,
+  FileDown,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Trash2
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -13,48 +37,58 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Upload, FileSpreadsheet, FileText, AlertCircle, CheckCircle, FileDown } from "lucide-react";
-import { useState } from "react";
-import Papa from "papaparse";
-import { useRouter } from "next/navigation";
-import { format, isValid, parse } from "date-fns";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { BlacklistEntry } from "@prisma/client";
-import { es } from "date-fns/locale";
-
-// ... existing imports ...
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 interface BlacklistActionsProps {
   data: (BlacklistEntry & { reportedBy?: { name: string | null; email: string | null } | null })[];
 }
 
+// ------------------------------------------------------------------
+// CONFIGURATION
+// ------------------------------------------------------------------
+
+const CSV_CONFIG = [
+  { label: "GuestName", key: "guestName", type: "string", required: true },
+  { label: "GuestPhone", key: "guestPhone", type: "string", required: true },
+  { label: "Reason", key: "reason", type: "string", required: true },
+  { label: "DepartmentName", key: "departmentName", type: "string" }, // Optional
+  { label: "CheckIn", key: "checkIn", type: "date" },
+  { label: "CheckOut", key: "checkOut", type: "date" },
+  { label: "TotalAmount", key: "totalAmount", type: "number" }
+];
+
 export function BlacklistActions({ data }: BlacklistActionsProps) {
   const router = useRouter();
-  const [importOpen, setImportOpen] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [csvData, setCsvData] = useState<any[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
-  const [successCount, setSuccessCount] = useState(0);
 
-  // --- Export Logic ---
+  // Dialog State
+  const [isOpen, setIsOpen] = useState(false);
+  const [step, setStep] = useState<"upload" | "preview" | "result">("upload");
+
+  // Data State
+  const [parsedRows, setParsedRows] = useState<any[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importSummary, setImportSummary] = useState<{ successes: number, errors: string[] } | null>(null);
+
+  // ------------------------------------------------------------------
+  // EXPORT LOGIC
+  // ------------------------------------------------------------------
 
   const exportToCSV = () => {
-    const csvRows = [];
-    // Headers
-    csvRows.push([
-      "Huésped", "Teléfono", "Motivo", "Reportado Por", "Fecha", "Check-In", "Check-Out"
-    ].join(","));
+    const headers = ["Huésped", "Teléfono", "Motivo", "Reportado Por", "Fecha", "Check-In", "Check-Out"];
 
-    // Body
-    data.forEach(entry => {
-      const row = [
+    const rows = data.map(entry => {
+      return [
         `"${entry.guestName.replace(/"/g, '""')}"`,
         `"${(entry.guestPhone || "").replace(/"/g, '""')}"`,
         `"${entry.reason.replace(/"/g, '""')}"`,
@@ -62,294 +96,323 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
         format(new Date(entry.createdAt), "yyyy-MM-dd"),
         entry.checkIn ? format(new Date(entry.checkIn), "yyyy-MM-dd") : "",
         entry.checkOut ? format(new Date(entry.checkOut), "yyyy-MM-dd") : "",
-      ];
-      csvRows.push(row.join(","));
+      ].join(",");
     });
 
-    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    // Use Spanish month name and year
-    const fileName = `blacklist_${format(new Date(), "MMMM_yyyy", { locale: es })}.csv`;
-    link.setAttribute("download", fileName);
-    document.body.appendChild(link);
+    link.href = URL.createObjectURL(blob);
+    link.download = `blacklist_${format(new Date(), "yyyy-MM-dd")}.csv`;
     link.click();
-    document.body.removeChild(link);
   };
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-    doc.text("Reporte de Lista Negra", 14, 10);
+    doc.text("Reporte de Lista Negra", 14, 15);
     doc.setFontSize(10);
-    doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 16);
-    doc.text(`Período: ${format(new Date(), "MMMM yyyy", { locale: es })}`, 14, 21);
+    doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 22);
 
-    const tableColumn = ["Huésped", "Teléfono", "Motivo", "Reportado", "Fecha"];
-    const tableRows: any[] = [];
-
-    data.forEach(entry => {
-      const row = [
-        entry.guestName.substring(0, 20),
-        entry.guestPhone || "",
-        entry.reason.substring(0, 30),
-        entry.reportedBy?.name || "Sistema",
-        format(new Date(entry.createdAt), "dd/MM/yyyy")
-      ];
-      tableRows.push(row);
-    });
+    const tableRows = data.map(entry => [
+      entry.guestName.substring(0, 20),
+      entry.guestPhone || "",
+      entry.reason.substring(0, 30),
+      entry.reportedBy?.name || "Sistema",
+      format(new Date(entry.createdAt), "dd/MM/yyyy")
+    ]);
 
     autoTable(doc, {
-      head: [tableColumn],
+      head: [["Huésped", "Teléfono", "Motivo", "Reportado", "Fecha"]],
       body: tableRows,
-      startY: 25,
+      startY: 30,
       styles: { fontSize: 8 },
     });
 
-    const fileName = `blacklist_${format(new Date(), "MMMM_yyyy", { locale: es })}.pdf`;
-    doc.save(fileName);
+    doc.save(`blacklist_${format(new Date(), "yyyy-MM-dd")}.pdf`);
   };
 
-  // --- Import Logic ---
+  const downloadTemplate = () => {
+    const headers = CSV_CONFIG.map(c => c.label).join(",");
+    const example = "Juan Perez,123456789,Rompió una mesa,Depto 1,2024-01-01,2024-01-05,50000";
+    const content = "\uFEFF" + headers + "\n" + example;
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "plantilla_blacklist.csv";
+    link.click();
+  };
+
+  // ------------------------------------------------------------------
+  // IMPORT LOGIC
+  // ------------------------------------------------------------------
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setCsvData([]);
-    setErrors([]);
-    setSuccessCount(0);
-
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
-        const normalizedData = results.data.map((row: any) => {
-          const newRow: any = {};
-          Object.keys(row).forEach(key => {
-            const normalizedKey = key.trim().toLowerCase();
-            if (normalizedKey === "huésped" || normalizedKey === "huesped") newRow["GuestName"] = row[key];
-            else if (normalizedKey === "teléfono" || normalizedKey === "telefono") newRow["GuestPhone"] = row[key];
-            else if (normalizedKey === "motivo") newRow["Reason"] = row[key];
-            else if (normalizedKey === "departamento" || normalizedKey === "depto") newRow["DepartmentName"] = row[key];
-            else if (normalizedKey === "check-in" || normalizedKey === "checkin") newRow["CheckIn"] = row[key];
-            else if (normalizedKey === "check-out" || normalizedKey === "checkout") newRow["CheckOut"] = row[key];
-            else if (normalizedKey === "total") newRow["TotalAmount"] = row[key];
-            else newRow[key] = row[key]; // Keep original if no match (e.g. GuestName)
+      complete: (result) => processParsedData(result.data),
+      error: (err) => alert("Error leyendo CSV: " + err.message)
+    });
+    e.target.value = "";
+  };
+
+  const processParsedData = (rawRows: any[]) => {
+    const processed = rawRows.map((row, idx) => {
+      const entry: any = {};
+      const errors: string[] = [];
+
+      // 1. Map Columns (Flexible matching)
+      CSV_CONFIG.forEach(config => {
+        // Try exact match first, then spanish variants
+        let val = row[config.label];
+
+        // Handle aliases if essential
+        if (val === undefined) {
+          const lowerKey = config.label.toLowerCase();
+          const foundKey = Object.keys(row).find(k => {
+            const kLow = k.toLowerCase().trim();
+            if (kLow === lowerKey) return true;
+            // Common aliases
+            if (config.key === "guestName" && (kLow === "huesped" || kLow === "huésped")) return true;
+            if (config.key === "guestPhone" && (kLow === "telefono" || kLow === "teléfono")) return true;
+            if (config.key === "reason" && kLow === "motivo") return true;
+            return false;
           });
-          return newRow;
-        });
-        validateAndSetPreview(normalizedData);
-      },
-      error: (err) => {
-        setErrors(["Error al leer el archivo CSV: " + err.message]);
+          if (foundKey) val = row[foundKey];
+        }
+
+        entry[config.key] = val?.trim();
+      });
+
+      // 2. Validate Required
+      if (!entry.guestName) errors.push("Falta Nombre");
+      if (!entry.guestPhone) errors.push("Falta Teléfono");
+      if (!entry.reason) errors.push("Falta Motivo");
+
+      // 3. Validate Date Formats
+      if (entry.checkIn && !isValid(parse(entry.checkIn, "yyyy-MM-dd", new Date()))) {
+        errors.push("CheckIn inválido (YYYY-MM-DD)");
       }
-    });
-  };
-
-  const validateAndSetPreview = (rows: any[]) => {
-    const validRows: any[] = [];
-    const validationErrors: string[] = [];
-
-    rows.forEach((row, index) => {
-      const rowNum = index + 1;
-      const issues: string[] = [];
-
-      // Required fields
-      if (!row.GuestName) issues.push("Falta GuestName (o Huésped)");
-      if (!row.GuestPhone) issues.push("Falta GuestPhone (o Teléfono)");
-      if (!row.Reason) issues.push("Falta Reason (o Motivo)");
-
-      // Validate Dates if present
-      if (row.CheckIn && !isValid(parse(row.CheckIn, "yyyy-MM-dd", new Date()))) issues.push("CheckIn inválido (Formato YYYY-MM-DD)");
-      if (row.CheckOut && !isValid(parse(row.CheckOut, "yyyy-MM-dd", new Date()))) issues.push("CheckOut inválido (Formato YYYY-MM-DD)");
-
-      if (issues.length > 0) {
-        validationErrors.push(`Fila ${rowNum}: ${issues.join(", ")}`);
-        row._error = issues.join("; ");
-      } else {
-        row._valid = true;
+      if (entry.checkOut && !isValid(parse(entry.checkOut, "yyyy-MM-dd", new Date()))) {
+        errors.push("CheckOut inválido (YYYY-MM-DD)");
       }
-      validRows.push(row);
+
+      // 4. Validate Duplicate (Phone)
+      const exists = data.some(existing =>
+        existing.guestPhone?.trim() === entry.guestPhone?.trim()
+      );
+      if (exists) errors.push("Teléfono ya existe en lista negra");
+
+      return { ...entry, _errors: errors, _id: idx };
     });
 
-    setCsvData(validRows);
-    if (validationErrors.length > 0) {
-      setErrors(validationErrors);
-    }
+    setParsedRows(processed);
+    setStep("preview");
   };
 
-  const processImport = async () => {
-    setImporting(true);
-    let success = 0;
+  const executeImport = async () => {
+    setIsImporting(true);
+    const validRows = parsedRows.filter(r => r._errors.length === 0);
+    let successes = 0;
     const errors: string[] = [];
-
-    const validRows = csvData.filter(r => r._valid);
 
     for (const row of validRows) {
       try {
-        const body = {
-          guestName: row.GuestName,
-          guestPhone: row.GuestPhone,
-          reason: row.Reason,
-          departmentName: row.DepartmentName, // Optional context
-          checkIn: row.CheckIn,
-          checkOut: row.CheckOut,
-          totalAmount: row.TotalAmount
-        };
+        const { _errors, _id, ...payload } = row;
 
         const res = await fetch("/api/blacklist", {
           method: "POST",
-          body: JSON.stringify(body),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
         });
 
         if (!res.ok) {
+          // Ignore 409 (Duplicate) if somehow passed UI check
           if (res.status === 409) {
-            // Duplicate, just skip silently
+            errors.push(`Fila ${row.guestName}: Ya existe (API)`);
             continue;
           }
-          const text = await res.text();
-          throw new Error(text || res.statusText);
+          throw new Error(await res.text());
         }
-        success++;
+        successes++;
+
       } catch (e: any) {
-        console.error("Import error", e);
-        errors.push(`Error importando ${row.GuestName}: ${e.message}`);
+        errors.push(`Error en ${row.guestName}: ${e.message}`);
       }
     }
 
-    setSuccessCount(success);
-    if (errors.length > 0) {
-      setErrors(prev => [...prev, ...errors]);
-    } else {
-      setTimeout(() => {
-        setImportOpen(false);
-        router.refresh();
-      }, 1500);
-    }
-    setImporting(false);
+    setImportSummary({ successes, errors });
+    setStep("result");
+    setIsImporting(false);
+    if (successes > 0) router.refresh();
   };
 
-  const downloadTemplate = () => {
-    const headers = ["GuestName", "GuestPhone", "Reason", "DepartmentName", "CheckIn", "CheckOut", "TotalAmount"];
-    const example = ["Juan Malo", "123456789", "Rompió todo", "Depto 1", "2024-01-01", "2024-01-05", "50000"];
-
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), example.join(",")].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "template_blacklist.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const reset = () => {
+    setIsOpen(false);
+    setStep("upload");
+    setParsedRows([]);
+    setImportSummary(null);
   };
+
+  // ------------------------------------------------------------------
+  // RENDER
+  // ------------------------------------------------------------------
 
   return (
-    <div className="flex items-center gap-2">
+    <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" /> Exportar
+          <Button variant="outline" className="gap-2">
+            <Download className="h-4 w-4" /> Exportar / Importar
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={exportToCSV}>
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> CSV
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV
           </DropdownMenuItem>
           <DropdownMenuItem onClick={exportToPDF}>
-            <FileText className="mr-2 h-4 w-4" /> PDF
+            <FileText className="mr-2 h-4 w-4" /> Exportar PDF
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setIsOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" /> Importar CSV
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline">
-            <Upload className="mr-2 h-4 w-4" /> Importar
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+      <Dialog open={isOpen} onOpenChange={open => !open && reset()}>
+        <DialogContent className="sm:max-w-[900px] h-[80vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="p-6 pb-2">
             <DialogTitle>Importar Lista Negra</DialogTitle>
             <DialogDescription>
-              Carga un archivo CSV para importar registros masivamente.
+              {step === "upload" && "Carga un archivo CSV para comenzar."}
+              {step === "preview" && "Revisa los datos antes de importar."}
+              {step === "result" && "Resumen de la importación."}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex gap-4 items-center my-4">
-            <Input type="file" accept=".csv" onChange={handleFileUpload} />
-            <Button variant="secondary" onClick={downloadTemplate}>
-              <FileDown className="mr-2 h-4 w-4" /> Template
-            </Button>
-          </div>
+          <div className="flex-1 overflow-hidden p-6 pt-2">
 
-          {errors.length > 0 && (
-            <Alert variant="destructive" className="mb-4 max-h-32 overflow-y-auto">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Errores de validación</AlertTitle>
-              <AlertDescription>
-                <div className="text-xs">
-                  {errors.map((e, i) => <div key={i}>{e}</div>)}
+            {/* STEP 1: UPLOAD */}
+            {step === "upload" && (
+              <div className="h-full flex flex-col items-center justify-center border-2 border-dashed rounded-xl bg-muted/10">
+                <div className="text-center space-y-4">
+                  <div className="bg-primary/10 p-4 rounded-full inline-block">
+                    <Upload className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium">Sube tu archivo CSV</h3>
+                  <div className="flex flex-col gap-2">
+                    <Input type="file" accept=".csv" onChange={handleFileUpload} className="cursor-pointer" />
+                    <Button variant="link" onClick={downloadTemplate}>
+                      <FileDown className="mr-2 h-4 w-4" /> Descargar Plantilla
+                    </Button>
+                  </div>
                 </div>
-              </AlertDescription>
-            </Alert>
-          )}
+              </div>
+            )}
 
-          {successCount > 0 && (
-            <Alert className="mb-4 bg-green-50 text-green-900 border-green-200">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertTitle>Importación Parcial</AlertTitle>
-              <AlertDescription>
-                Se importaron {successCount} registros correctamente.
-              </AlertDescription>
-            </Alert>
-          )}
+            {/* STEP 2: PREVIEW */}
+            {step === "preview" && (
+              <div className="h-full flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Se encontraron <strong>{parsedRows.length}</strong> filas.
+                    <span className="text-green-600 ml-2 font-medium">
+                      {parsedRows.filter(r => r._errors.length === 0).length} Válidas
+                    </span>
+                    <span className="text-red-600 ml-2 font-medium">
+                      {parsedRows.filter(r => r._errors.length > 0).length} Erróneas
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setStep("upload")}>
+                    <X className="mr-2 h-4 w-4" /> Cancelar
+                  </Button>
+                </div>
 
-          <div className="flex-1 overflow-auto border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Huésped</TableHead>
-                  <TableHead>Teléfono</TableHead>
-                  <TableHead>Motivo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {csvData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      Sube un archivo CSV para previsualizar.
-                    </TableCell>
-                  </TableRow>
+                <div className="border rounded-md flex-1 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="w-[50px]">Status</TableHead>
+                          <TableHead>Huésped</TableHead>
+                          <TableHead>Teléfono</TableHead>
+                          <TableHead>Motivo</TableHead>
+                          <TableHead>Mensaje</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {parsedRows.map((row, i) => (
+                          <TableRow key={i} className={row._errors.length > 0 ? "bg-red-50 hover:bg-red-100" : ""}>
+                            <TableCell>
+                              {row._errors.length === 0
+                                ? <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                : <AlertCircle className="h-4 w-4 text-red-500" />
+                              }
+                            </TableCell>
+                            <TableCell className="font-medium">{row.guestName || "-"}</TableCell>
+                            <TableCell>{row.guestPhone}</TableCell>
+                            <TableCell>{row.reason}</TableCell>
+                            <TableCell className="text-xs text-red-600 font-medium">
+                              {row._errors.join(", ")}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: RESULT */}
+            {step === "result" && importSummary && (
+              <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
+                <div className="flex flex-col items-center gap-2">
+                  <CheckCircle2 className="h-16 w-16 text-green-500" />
+                  <h2 className="text-2xl font-bold">{importSummary.successes} Importados</h2>
+                  <p className="text-muted-foreground">El proceso ha finalizado.</p>
+                </div>
+
+                {importSummary.errors.length > 0 && (
+                  <div className="w-full max-w-md border rounded-md bg-red-50 p-4 text-left">
+                    <p className="font-bold text-red-700 mb-2">Errores:</p>
+                    <ScrollArea className="h-32">
+                      <ul className="text-xs text-red-600 space-y-1">
+                        {importSummary.errors.map((e, i) => <li key={i}>{e}</li>)}
+                      </ul>
+                    </ScrollArea>
+                  </div>
                 )}
-                {csvData.map((row, i) => (
-                  <TableRow key={i} className={row._valid ? "bg-white" : row._duplicate ? "bg-yellow-50" : "bg-red-50"}>
-                    <TableCell>
-                      {row._valid ? <CheckCircle className="h-4 w-4 text-green-500" /> :
-                        row._duplicate ? <AlertCircle className="h-4 w-4 text-yellow-500" /> :
-                          <AlertCircle className="h-4 w-4 text-red-500" />}
-                    </TableCell>
-                    <TableCell>
-                      {row.GuestName}
-                      {row._warning && <div className="text-xs text-yellow-600 font-medium">{row._warning}</div>}
-                    </TableCell>
-                    <TableCell>{row.GuestPhone}</TableCell>
-                    <TableCell>{row.Reason}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+              </div>
+            )}
           </div>
 
-          <DialogFooter className="mt-4">
-            <Button variant="ghost" onClick={() => setImportOpen(false)}>Cancelar</Button>
-            <Button onClick={processImport} disabled={importing || csvData.filter(r => r._valid).length === 0}>
-              {importing ? "Importando..." : `Importar ${csvData.filter(r => r._valid).length} Registros`}
-            </Button>
+          <DialogFooter className="p-6 pt-2 bg-muted/20 border-t">
+            {step === "upload" && <Button variant="ghost" onClick={() => setIsOpen(false)}>Cerrar</Button>}
+            {step === "preview" && (
+              <>
+                <Button variant="outline" onClick={() => setStep("upload")}>Atrás</Button>
+                <Button
+                  onClick={executeImport}
+                  disabled={isImporting || parsedRows.filter(r => r._errors.length === 0).length === 0}
+                >
+                  {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Importar {parsedRows.filter(r => r._errors.length === 0).length}
+                </Button>
+              </>
+            )}
+            {step === "result" && (
+              <Button onClick={reset} className="w-full">Finalizar</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

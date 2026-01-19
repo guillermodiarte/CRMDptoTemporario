@@ -7,6 +7,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Download, Upload, FileDown, FileSpreadsheet, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import { Department, Reservation } from "@prisma/client";
@@ -22,11 +24,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useRouter } from "next/navigation";
 
@@ -39,7 +39,7 @@ interface ReservationsActionsProps {
   departments: Department[];
   blacklistedPhones?: string[];
   blacklistEntries?: { guestPhone: string; reason: string; guestName: string }[];
-  date?: Date; // Add date prop
+  date?: Date;
 }
 
 export function ReservationsActions({ data, departments, blacklistedPhones = [], blacklistEntries = [], date = new Date() }: ReservationsActionsProps) {
@@ -52,8 +52,11 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
 
   // --- Export Logic ---
 
+  const getExportFileName = (ext: string) => {
+    return `reservas_${format(date, "MMMM_yyyy", { locale: es })}.${ext}`;
+  };
+
   const exportToCSV = () => {
-    // ... headers and body generation ...
     const csvRows = [];
     csvRows.push([
       "Huésped", "Teléfono", "Departamento", "Check-In", "Check-Out",
@@ -61,7 +64,6 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     ].join(","));
 
     data.forEach(res => {
-      // ... row generation ...
       const normalizedPhone = res.guestPhone ? normalizePhone(res.guestPhone) : "";
       const isBlacklisted = blacklistedPhones.includes(normalizedPhone);
       const blacklistEntry = blacklistEntries.find(e => normalizePhone(e.guestPhone) === normalizedPhone);
@@ -89,13 +91,11 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
       csvRows.push(row.join(","));
     });
 
-    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = "\uFEFF" + csvRows.join("\n"); // Add BOM
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    // Use Spanish month name and year
-    const fileName = `reservas_${format(date, "MMMM_yyyy", { locale: es })}.csv`;
-    link.setAttribute("download", fileName);
+    link.href = URL.createObjectURL(blob);
+    link.download = getExportFileName("csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -112,7 +112,6 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     const tableRows: any[] = [];
 
     data.forEach(res => {
-      // ... row generation ...
       const normalizedPhone = res.guestPhone ? normalizePhone(res.guestPhone) : "";
       const isBlacklisted = blacklistedPhones.includes(normalizedPhone);
       const blacklistEntry = blacklistEntries.find(e => normalizePhone(e.guestPhone) === normalizedPhone);
@@ -146,8 +145,7 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
       }
     });
 
-    const fileName = `reservas_${format(date, "MMMM_yyyy", { locale: es })}.pdf`;
-    doc.save(fileName);
+    doc.save(getExportFileName("pdf"));
   };
 
   // --- Import Logic ---
@@ -225,18 +223,14 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
       if (issues.length > 0) {
         // Mark as error
         validationErrors.push(`Fila ${rowNum}: ${issues.join(", ")}`);
-        // We add error property to row for visual highlighting if needed
         row._error = issues.join("; ");
       } else {
         // Check for duplicates in EXISTING data
         const normalizedImportPhone = normalizePhone(row.GuestPhone || "");
 
         // Conditions: Same Phone AND Same CheckIn AND Same CheckOut
-        // (We could relax to just overlapping dates, but user asked for specifics)
         const duplicate = data.find(d => {
           const existingPhone = normalizePhone(d.guestPhone || "");
-          // Simple exact match on dates string (CSV) vs Date object (DB)
-          // DB dates are objects. Need to format them to compare with CSV string "YYYY-MM-DD"
           const dCheckIn = format(new Date(d.checkIn), "yyyy-MM-dd");
           const dCheckOut = format(new Date(d.checkOut), "yyyy-MM-dd");
 
@@ -277,8 +271,6 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           const normalized = normalizePhone(phone);
           const reason = row.BlacklistReason || row.MotivoListaNegra || "Importado sin motivo";
 
-          // Check if already in our CLIENT SIDE list (optimistic check) to save API calls
-          // But better to let API handle duplicates gracefully
           if (phone && !blacklistedPhones.includes(normalized)) {
             try {
               await fetch("/api/blacklist", {
@@ -292,10 +284,8 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
                   checkOut: row.CheckOut,
                 })
               });
-              // Verify if 409 (duplicate) - we ignore it.
             } catch (e) {
               console.error("Error creating blacklist entry", e);
-              // Continue to create reservation anyway
             }
           }
         }
@@ -309,9 +299,9 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           checkOut: row.CheckOut,
           totalAmount: parseFloat(row.TotalAmount),
           depositAmount: parseFloat(row.DepositAmount || "0"),
-          cleaningFee: row.CleaningFee ? parseFloat(row.CleaningFee) : undefined, // Import CleaningFee
+          cleaningFee: row.CleaningFee ? parseFloat(row.CleaningFee) : undefined,
           currency: row.Currency ? row.Currency.toUpperCase() : "ARS",
-          status: "CONFIRMED", // Default for import
+          status: "CONFIRMED",
           paymentStatus: row.PaymentStatus || "UNPAID",
           source: row.Source || "DIRECT",
           notes: row.Notes || row.Notas || "",
@@ -338,7 +328,6 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     if (errors.length > 0) {
       setErrors(prev => [...prev, ...errors]);
     } else {
-      // If all good, close and refresh
       setTimeout(() => {
         setImportOpen(false);
         router.refresh();
@@ -351,11 +340,11 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     const headers = ["GuestName", "GuestPhone", "DepartmentName", "CheckIn", "CheckOut", "GuestPeopleCount", "TotalAmount", "DepositAmount", "CleaningFee", "Currency", "PaymentStatus", "Source", "IsBlacklisted", "BlacklistReason", "Notes"];
     const example = ["Juan Perez", "123456789", departments[0]?.name || "Depto 1", "2024-01-01", "2024-01-05", "2", "50000", "10000", "5000", "ARS", "UNPAID", "DIRECT", "NO", "", "Nota de ejemplo"];
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), example.join(",")].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = "\uFEFF" + [headers.join(","), example.join(",")].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "template_reservas.csv");
+    link.href = URL.createObjectURL(blob);
+    link.download = "template_reservas.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -365,26 +354,27 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     <div className="flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" /> Exportar
+          <Button variant="outline" className="gap-2">
+            <Download className="h-4 w-4" /> Exportar / Importar
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={exportToCSV}>
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> CSV
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV
           </DropdownMenuItem>
           <DropdownMenuItem onClick={exportToPDF}>
-            <FileText className="mr-2 h-4 w-4" /> PDF
+            <FileText className="mr-2 h-4 w-4" /> Exportar PDF
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setImportOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" /> Importar CSV
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline">
-            <Upload className="mr-2 h-4 w-4" /> Importar
-          </Button>
-        </DialogTrigger>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Importar Reservas</DialogTitle>
@@ -439,7 +429,7 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
               <TableBody>
                 {csvData.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Sube un archivo CSV para previsualizar.
                     </TableCell>
                   </TableRow>
