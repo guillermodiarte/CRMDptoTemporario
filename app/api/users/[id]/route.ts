@@ -29,6 +29,13 @@ export async function PATCH(
     if (image !== undefined) updateData.image = image;
 
     if (password && password.length > 0) {
+      const isSuperAdmin = session.user?.email === "guillermo.diarte@gmail.com";
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).{8,}$/;
+
+      if (!isSuperAdmin && !passwordRegex.test(password)) {
+        return new NextResponse("La contraseña debe tener: 8 caracteres, mayúscula, minúscula, número y especial", { status: 400 });
+      }
+
       updateData.password = await bcrypt.hash(password, 10);
     }
 

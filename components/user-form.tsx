@@ -84,22 +84,25 @@ export function UserForm({ initialData, setOpen, currentUserId }: UserFormProps)
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     // Validation: Strong Password Check
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).{8,}$/;
+    const isSuperAdmin = session?.user?.email === "guillermo.diarte@gmail.com";
 
-    if (initialData && values.password && values.password.length > 0) {
-      if (!passwordRegex.test(values.password)) {
-        form.setError("password", {
-          message: "La contraseña debe tener: min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial."
-        });
-        return;
+    if (!isSuperAdmin) {
+      if (initialData && values.password && values.password.length > 0) {
+        if (!passwordRegex.test(values.password)) {
+          form.setError("password", {
+            message: "La contraseña debe tener: min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial."
+          });
+          return;
+        }
       }
-    }
 
-    if (!initialData) {
-      if (!values.password || !passwordRegex.test(values.password)) {
-        form.setError("password", {
-          message: "La contraseña debe tener: min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial."
-        });
-        return;
+      if (!initialData) {
+        if (!values.password || !passwordRegex.test(values.password)) {
+          form.setError("password", {
+            message: "La contraseña debe tener: min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial."
+          });
+          return;
+        }
       }
     }
 

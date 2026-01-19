@@ -59,10 +59,35 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const result = userSchema.safeParse(body);
+
+    // Determine validation restrictiveness based on user
+    const userEmail = (session?.user as any)?.email;
+    const isSuperAdmin = userEmail === "guillermo.diarte@gmail.com";
+
+    const passwordSchema = isSuperAdmin
+      ? z.string().min(1, "La contraseña es obligatoria")
+      : z.string()
+        .min(8, "La contraseña debe tener al menos 8 caracteres")
+        .regex(
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).{8,}$/,
+          "La contraseña debe tener: 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial"
+        );
+
+    const dynamicSchema = z.object({
+      name: z.string().min(1, "El nombre es obligatorio"),
+      email: z.string().email("Email inválido"),
+      password: passwordSchema,
+      role: z.enum(["ADMIN", "VISUALIZER"]),
+      phone: z.string().optional(),
+      image: z.string().optional(),
+      isActive: z.boolean().optional(),
+    });
+
+    const result = dynamicSchema.safeParse(body);
 
     if (!result.success) {
-      return new NextResponse("Invalid data", { status: 400 });
+      const errorMessage = result.error.issues[0]?.message || "Invalid data";
+      return new NextResponse(errorMessage, { status: 400 });
     }
 
     const { name, email, password, role, phone, isActive, image } = result.data;
