@@ -435,8 +435,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             </Table>
           </div>
 
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-4">
+          {/* Mobile Card View (Compact & Wrapped) */}
+          <div className="md:hidden space-y-3">
             {sortedData.map((res) => {
               const isPaid = res.paymentStatus === 'PAID';
               const isPartial = res.paymentStatus === 'PARTIAL';
@@ -447,119 +447,98 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
               const debt = res.totalAmount - (res.depositAmount || 0);
               const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
 
-              let cardClass = "";
+              let cardClass = "text-sm";
               if (isNoShow) {
-                cardClass = "bg-orange-50 opacity-90"; // slightly different for card
+                cardClass += " bg-orange-50 opacity-90";
               } else if (isBlacklisted) {
-                cardClass = "bg-red-50 border-l-4 border-red-500";
+                cardClass += " bg-red-50 border-l-4 border-red-500";
               } else if (isPaid) {
-                cardClass = "bg-green-50";
+                cardClass += " bg-green-50";
               }
 
               if (isNext) cardClass += " border-2 border-blue-500";
 
               return (
                 <Card key={res.id} className={cardClass}>
-                  <CardContent className="p-4 space-y-3">
-                    {/* Header: Name, Dept, Status */}
-                    <div className="flex justify-between items-start">
-                      <div className="min-w-0">
-                        <div className={`font-semibold text-lg truncate ${isNoShow ? "line-through text-muted-foreground" : ""}`}>
-                          {res.guestName}
+                  <CardContent className="p-3 space-y-2">
+                    {/* Header: Name, Dept, Status (Wrapped) */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className={`font-bold text-base whitespace-normal break-words leading-tight ${isNoShow ? "line-through text-muted-foreground" : ""}`}>
+                            {res.guestName}
+                          </div>
+                          <div className="text-xs font-medium text-blue-600 mt-0.5 whitespace-normal break-words">
+                            {res.department.name}
+                          </div>
                         </div>
-                        <div className="text-sm font-medium text-blue-600">{res.department.name}</div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge variant={isNoShow ? "secondary" : "outline"}>
-                          {isNoShow ? "NO SHOW" : res.status}
-                        </Badge>
-                        <Badge variant={isPaid ? 'default' : isPartial ? 'secondary' : 'destructive'}>
-                          {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : 'PEND.'}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      {/* Dates & People */}
-                      <div className="col-span-2 flex items-center gap-2 text-muted-foreground">
-                        <span>{format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}</span>
-                        <span>•</span>
-                        <span>{Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))} noches</span>
-                        <span>•</span>
-                        <span>{res.guestPeopleCount} pax</span>
-                      </div>
-
-                      {/* Contact */}
-                      <div className="col-span-2 text-sm text-muted-foreground flex gap-2">
-                        <span>{res.guestPhone}</span>
-                        <span>•</span>
-                        <span>{res.source}</span>
-                      </div>
-
-                      {/* Financials */}
-                      <div className="bg-background/50 p-2 rounded col-span-2 grid grid-cols-2 gap-2">
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Total</span>
-                          <span className="font-medium">
-                            {res.currency === 'USD' ? `US$ ${res.totalAmount}` : `$${res.totalAmount}`}
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${isPaid ? "bg-green-100 text-green-700 border-green-200" : isPartial ? "bg-orange-100 text-orange-700 border-orange-200" : "bg-red-100 text-red-700 border-red-200"}`}>
+                            {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : 'PEND.'}
                           </span>
-                        </div>
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Deuda</span>
-                          <span className={`font-medium ${!isPaid && !isNoShow ? "text-red-600" : ""}`}>
-                            {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : `$${debt}`) : '-'}
-                          </span>
+                          {isNoShow && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-gray-100 text-gray-600 whitespace-nowrap">NO SHOW</span>}
+                          {isBlacklisted && <span className="text-[10px] bg-red-100 text-red-600 px-1 rounded font-bold whitespace-nowrap">BLACKLIST</span>}
                         </div>
                       </div>
                     </div>
 
-                    {/* Extras: Notes, Parking */}
-                    <div className="flex gap-2 text-xs">
-                      {res.hasParking && (
-                        <span className="flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded">
-                          <Check className="h-3 w-3" /> Cochera
-                        </span>
-                      )}
-                      {res.notes && (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                              <NotepadText className="h-3 w-3" /> Nota
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-80 p-4 text-sm">
-                            {res.notes}
-                          </PopoverContent>
-                        </Popover>
-                      )}
-                      {isBlacklisted && <span className="bg-red-100 text-red-700 px-2 py-1 rounded font-bold">LISTA NEGRA</span>}
+                    {/* Dates & Financials (Grid - Wrap enabled) */}
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground border-t pt-2 border-b pb-2">
+                      <div className="col-span-2 sm:col-span-1 flex flex-wrap items-center gap-x-2">
+                        <span>📅</span>
+                        <span className="font-medium text-gray-700">{format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}</span>
+                        <span>({Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))} noc)</span>
+                      </div>
+
+                      <div className="col-span-2 flex justify-between items-center sm:hidden">
+                        {/* Mobile Row for Financials */}
+                        <div className="font-semibold text-black">
+                          Total: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : `$${res.totalAmount}`}
+                        </div>
+                        <div className={`font-semibold ${!isPaid && !isNoShow ? "text-red-600" : ""}`}>
+                          Deuda: {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : `$${debt}`) : '-'}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Actions */}
+                    {/* Actions Row (Wrapped) */}
                     {!isVisualizer && (
-                      <div className="flex justify-between items-center pt-2 border-t gap-2">
-                        {/* Left: Quick Actions */}
-                        <div className="flex gap-1">
+                      <div className="flex flex-wrap justify-between items-center gap-2 pt-1">
+                        {/* Indicators */}
+                        <div className="flex gap-2">
+                          {res.hasParking && (
+                            <span title="Cochera" className="text-green-600 flex items-center gap-1 text-[10px] bg-green-100 px-1.5 py-0.5 rounded"><Check className="h-3 w-3" /> Auto</span>
+                          )}
+                          {res.notes && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button title="Ver nota" className="text-blue-600 flex items-center gap-1 text-[10px] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100"><NotepadText className="h-3 w-3" /> Nota</button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-3 text-xs bg-white shadow-lg border rounded-md">
+                                {res.notes}
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex gap-1 ml-auto">
                           {!isPaid && !isNoShow && (
-                            <Button variant="outline" size="sm" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)} className="h-8 px-2 text-green-600 bg-green-50/50 border-green-200">
+                            <Button variant="outline" size="sm" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)} className="h-8 w-8 p-0 text-green-600 bg-green-50/50 border-green-200">
                               <DollarSign className="h-4 w-4" />
                             </Button>
                           )}
                           {canMarkNoShow && (
-                            <Button variant="outline" size="sm" onClick={() => handleNoShowClick(res.id)} className="h-8 px-2 text-orange-500 bg-orange-50/50 border-orange-200">
+                            <Button variant="outline" size="sm" onClick={() => handleNoShowClick(res.id)} className="h-8 w-8 p-0 text-orange-500 bg-orange-50/50 border-orange-200">
                               <UserX className="h-4 w-4" />
                             </Button>
                           )}
                           {!isBlacklisted && (
-                            <Button variant="outline" size="sm" onClick={() => setReportBlacklistData(res)} className="h-8 px-2 text-red-500 bg-red-50/50 border-red-200">
+                            <Button variant="outline" size="sm" onClick={() => setReportBlacklistData(res)} className="h-8 w-8 p-0 text-red-500 bg-red-50/50 border-red-200">
                               <ShieldAlert className="h-4 w-4" />
                             </Button>
                           )}
-                        </div>
-
-                        {/* Right: Edit/Delete */}
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(res)} className="h-8">
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(res)} className="h-8 px-3 text-xs">
                             Editar
                           </Button>
                           <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(res.id)} className="h-8 w-8 p-0">
@@ -573,7 +552,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
               );
             })}
             {sortedData.length === 0 && (
-              <div className="text-center py-10 text-muted-foreground">
+              <div className="text-center py-6 text-muted-foreground text-sm">
                 No se encontraron reservas.
               </div>
             )}
