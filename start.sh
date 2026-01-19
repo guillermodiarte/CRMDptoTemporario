@@ -19,10 +19,27 @@ echo ">>> Memory Limit: 512MB"
 # 3. Execution Strategy
 if [ -f ".next/standalone/server.js" ]; then
     echo ">>> Found Standalone Build. Using efficient Node execution."
-    # Copy public and static files if not linked (Standalone quirk requiring static file copy typically done in Dockerfile but useful here)
-    # Usually 'server.js' expects specific structure. 
-    # Just running it is often enough if deploy structure is correct.
     
+    # Critical: Copy static assets to standalone directory
+    # Next.js does not include these by default in standalone output
+    
+    # 1. Copy Public folder
+    if [ -d "public" ]; then
+        cp -r public .next/standalone/public
+    fi
+
+    # 2. Copy Static folder
+    if [ -d ".next/static" ]; then
+        mkdir -p .next/standalone/.next/static
+        cp -r .next/static .next/standalone/.next/static
+    fi
+
+    echo ">>> Static assets copied to standalone directory."
+    
+    # Run the standalone server
+    # We deliberately do NOT cd into .next/standalone to keep CWD at root if needed for other envs,
+    # but normally node .next/standalone/server.js works if assets are in place.
+    # However, to be safe and match Dockerfile standards:
     node .next/standalone/server.js
 else
     echo ">>> Standalone build not found. Falling back to 'next start'."
