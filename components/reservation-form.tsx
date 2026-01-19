@@ -71,9 +71,28 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const [capacityWarning, setCapacityWarning] = useState(false);
   const [blacklistWarning, setBlacklistWarning] = useState<{ name: string; reason: string } | null>(null);
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
-  const [amenitiesCost, setAmenitiesCost] = useState(0);
+  const [amenitiesCost, setAmenitiesCost] = useState(initialData?.amenitiesFee || 0);
 
   useEffect(() => {
+    // Determine if we should fetch current global cost.
+    // Rule: Fetch if NEW reservation OR if checkIn date is Today or Future.
+    // If it's a past reservation, keep the snapshot (initialData.amenitiesFee).
+
+    let shouldFetch = true;
+    if (initialData) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const checkInDate = new Date(initialData.checkIn);
+      // We accept it might be a few hours off due to TZ, but generally "Past" means strictly before today.
+      checkInDate.setHours(0, 0, 0, 0);
+
+      if (checkInDate < today) {
+        shouldFetch = false;
+      }
+    }
+
+    if (!shouldFetch) return;
+
     fetch("/api/supplies")
       .then(res => res.json())
       .then((data: { supplies: any[], totalCost: number }) => {
@@ -81,7 +100,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
         setAmenitiesCost(data.totalCost || 0);
       })
       .catch(console.error);
-  }, []);
+  }, [initialData]);
 
 
 
@@ -112,7 +131,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       totalAmount: initialData?.totalAmount ?? 0,
       depositAmount: initialData?.depositAmount || 0,
       cleaningFee: initialData?.cleaningFee || 0,
-      currency: (initialData?.currency as "ARS" | "USD") || "ARS",
+      currency: initialData?.source === "AIRBNB" ? "USD" : ((initialData?.currency as "ARS" | "USD") || "ARS"),
       paymentStatus: (initialData?.paymentStatus as "PAID" | "PARTIAL" | "UNPAID") || "UNPAID",
       source: (initialData?.source as "AIRBNB" | "BOOKING" | "DIRECT") || "DIRECT",
       hasParking: initialData?.hasParking || false,
@@ -148,6 +167,51 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       form.setValue("hasParking", false);
     }
   }, [selectedDepartmentId, departments, form]);
+
+  // Auto-calculate Total Amount based on Base Price * Nights
+  const checkInDate = form.watch("checkIn");
+  const checkOutDate = form.watch("checkOut");
+
+  useEffect(() => {
+    // Only auto-calc for new reservations (or if user changes key params in edit? User said "update", implies edit too?)
+    // User said: "al crear la reserva...".
+    // "que siga siendo editable".
+    // If I do this on EDIT, it might overwrite valid manual changes if dates are touched.
+    // Let's restrict to "Active editing of these fields".
+    // If initialData exists, maybe we respect it unless they change dates? 
+    // Usually if you change dates, price IS recalculated.
+
+    if (!selectedDepartmentId || !checkInDate || !checkOutDate) return;
+
+    // Prevent overwriting existing data on form load
+    if (initialData) {
+      const initCheckIn = format(new Date(initialData.checkIn), "yyyy-MM-dd");
+      const initCheckOut = format(new Date(initialData.checkOut), "yyyy-MM-dd");
+      if (
+        initialData.departmentId === selectedDepartmentId &&
+        initCheckIn === checkInDate &&
+        initCheckOut === checkOutDate
+      ) {
+        return;
+      }
+    }
+
+    const start = new Date(checkInDate);
+    const end = new Date(checkOutDate);
+
+    if (start >= end) return;
+
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    const dept = departments.find(d => d.id === selectedDepartmentId);
+    if (dept && dept.basePrice) {
+      // We set value. This allows overwrite if user types later (as long as dependencies don't re-trigger).
+      // Dependencies are date/dept. So if those stay same, user can edit total.
+      const newTotal = nights * dept.basePrice;
+      form.setValue("totalAmount", newTotal);
+    }
+  }, [selectedDepartmentId, checkInDate, checkOutDate, departments, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>, forceOverlap: boolean = false, ignoreCapacity: boolean = false, forceBlacklist: boolean = false) {
     setLoading(true);
@@ -185,6 +249,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
         method: method,
         body: JSON.stringify({
           ...values,
+          amenitiesFee: amenitiesCost,
           force: forceOverlap
         }),
       });
@@ -402,7 +467,6 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                       onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
                       {...field}
                       value={field.value ?? ""}
-                      disabled={true} // Auto-calculated from Department
                     />
                   </FormControl>
                 </div>

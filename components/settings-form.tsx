@@ -1,21 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Download, Upload } from "lucide-react";
 
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { CheckCircle2, AlertCircle, Plus, Trash2, Pencil, Power, PowerOff } from "lucide-react";
 
 export function SettingsForm() {
   const { data: session } = useSession();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Settings State
   const [startYear, setStartYear] = useState<string>("2026");
@@ -26,6 +37,12 @@ export function SettingsForm() {
   const [newSupplyName, setNewSupplyName] = useState("");
   const [newSupplyCost, setNewSupplyCost] = useState("");
   const [editingSupply, setEditingSupply] = useState<any | null>(null);
+  const [supplyToDelete, setSupplyToDelete] = useState<string | null>(null);
+
+  // Backup State
+  const [loadingBackup, setLoadingBackup] = useState(false);
+  const [backupToRestore, setBackupToRestore] = useState<File | null>(null);
+  const [backupContent, setBackupContent] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -179,19 +196,96 @@ export function SettingsForm() {
     }
   };
 
-  const handleDeleteSupply = async (id: string) => {
+  const handleDeleteSupply = (id: string) => {
+    setSupplyToDelete(id);
+  };
+
+  const confirmDeleteSupply = async () => {
+    if (!supplyToDelete) return;
     try {
-      await fetch(`/api/supplies?id=${id}`, { method: "DELETE" });
-      setSupplies(supplies.filter(s => s.id !== id));
+      await fetch(`/api/supplies?id=${supplyToDelete}`, { method: "DELETE" });
+      setSupplies(supplies.filter(s => s.id !== supplyToDelete));
       setSuccess("Insumo eliminado.");
       setTimeout(() => setSuccess(null), 3000);
     } catch {
       setError("Error al eliminar.");
+    } finally {
+      setSupplyToDelete(null);
     }
   };
 
   // Calculate Total Active Supplies
   const totalSuppliesCost = supplies.filter(s => s.isActive).reduce((acc, curr) => acc + curr.cost, 0);
+
+  // Backup Handlers
+  const handleExport = async () => {
+    setLoadingBackup(true);
+    try {
+      const res = await fetch("/api/backup");
+      if (!res.ok) throw new Error("Export failed");
+      const data = await res.json();
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setSuccess("Backup descargado correctamente.");
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (e) {
+      console.error(e);
+      setError("Error al exportar backup.");
+    } finally {
+      setLoadingBackup(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (!json.data || !json.timestamp) throw new Error("Invalid format");
+        setBackupContent(json);
+        setBackupToRestore(file);
+      } catch (e) {
+        setError("Archivo inválido.");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const confirmRestore = async () => {
+    if (!backupContent) return;
+    setLoadingBackup(true);
+    try {
+      const res = await fetch("/api/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(backupContent)
+      });
+
+      if (!res.ok) throw new Error("Import failed");
+
+      setSuccess("Sistema restaurado correctamente. Recargando...");
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (e) {
+      console.error(e);
+      setError("Error crítico al restaurar.");
+      setLoadingBackup(false);
+      setBackupToRestore(null);
+    }
+  };
 
   if (loading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -333,6 +427,88 @@ export function SettingsForm() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Backup Section */}
+      <Card className="max-w-xl">
+        <CardHeader>
+          <CardTitle>Copia de Seguridad</CardTitle>
+          <CardDescription>Exporta o importa la base de datos completa.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-muted-foreground">
+              La exportación descarga un archivo JSON con todos los datos.
+            </p>
+            <Button variant="outline" onClick={handleExport} disabled={loadingBackup}>
+              {loadingBackup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Exportar Todo
+            </Button>
+          </div>
+
+          <hr />
+
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-muted-foreground">
+              La importación <strong>BORRARÁ TODOS</strong> los datos actuales y los reemplazará por los del archivo.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="file"
+                accept=".json"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <Button variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => fileInputRef.current?.click()} disabled={loadingBackup}>
+                {loadingBackup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                Importar Respaldo
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={!!supplyToDelete} onOpenChange={(open) => !open && setSupplyToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará el insumo permanentemente. No afectará a las reservas pasadas que ya tienen guardado su costo histórico.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700 font-bold" onClick={confirmDeleteSupply}>
+              Sí, Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!backupToRestore} onOpenChange={(open) => !open && setBackupToRestore(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600 font-bold">⚠️ PELIGRO: Restauración Destructiva</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción <strong>ELIMINARÁ TODOS LOS DATOS ACTUALES</strong> de la base de datos (Reservas, Departamentos, Usuarios, etc.) y los reemplazará por los del archivo seleccionado.
+              <br /><br />
+              <strong>Archivo:</strong> {backupToRestore?.name}
+              <br /><br />
+              Esta acción no se puede deshacer. ¿Está completamente seguro?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 font-bold"
+              onClick={confirmRestore}
+            >
+              {loadingBackup ? "Restaurando..." : "Sí, Reemplazar Todo"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }

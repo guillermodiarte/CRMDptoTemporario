@@ -47,9 +47,13 @@ export async function PATCH(
         ? Number(body.depositAmount)
         : parts.reduce((acc, p) => acc + p.depositAmount, 0);
 
+      const mergedAmenities = body.amenitiesFee !== undefined
+        ? Number(body.amenitiesFee)
+        : parts.reduce((acc, p) => acc + (p.amenitiesFee || 0), 0);
+
 
       const splits = calculateReservationSplits(
-        newStart, newEnd, mergedTotal, mergedCleaning, mergedDeposit
+        newStart, newEnd, mergedTotal, mergedCleaning, mergedDeposit, mergedAmenities
       );
 
       const groupId = currentRes.groupId;
@@ -67,6 +71,7 @@ export async function PATCH(
             totalAmount: split.totalAmount,
             depositAmount: split.depositAmount,
             cleaningFee: split.cleaningFee,
+            amenitiesFee: split.amenitiesFee,
             currency: body.currency || firstPart.currency,
             paymentStatus: body.paymentStatus || firstPart.paymentStatus,
             source: body.source || firstPart.source,
@@ -112,6 +117,7 @@ export async function PATCH(
           totalAmount: body.totalAmount !== undefined ? Number(body.totalAmount) : undefined,
           depositAmount: body.depositAmount !== undefined ? Number(body.depositAmount) : undefined,
           cleaningFee: body.cleaningFee !== undefined ? Number(body.cleaningFee) : undefined,
+          amenitiesFee: body.amenitiesFee !== undefined ? Number(body.amenitiesFee) : undefined,
           currency: body.currency,
           paymentStatus: body.paymentStatus,
           source: body.source,
