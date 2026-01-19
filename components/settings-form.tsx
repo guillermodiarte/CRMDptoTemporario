@@ -314,159 +314,169 @@ export function SettingsForm() {
         </Alert>
       )}
 
-      {/* Supplies Section */}
-      <Card className="max-w-4xl">
-        <CardHeader>
-          <CardTitle>Gastos de Insumos</CardTitle>
-          <CardDescription>Gestión de insumos globales (se suman automáticamente a nuevas reservas).</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      {/* Layout Grid */}
+      <div className="grid gap-6 md:grid-cols-3 items-start">
 
-          <div className="flex gap-4 items-end bg-slate-50 p-4 rounded-md border">
-            <div className="grid gap-1.5 flex-1">
-              <Label htmlFor="sName">{editingSupply ? "Editar Nombre" : "Nombre del Insumo"}</Label>
-              <Input id="sName" value={newSupplyName} onChange={e => setNewSupplyName(e.target.value)} placeholder="Ej: Papel Higiénico" />
-            </div>
-            <div className="grid gap-1.5 w-32">
-              <Label htmlFor="sCost">Costo ($)</Label>
-              <Input id="sCost" type="number" value={newSupplyCost} onChange={e => setNewSupplyCost(e.target.value)} placeholder="0" />
-            </div>
+        {/* Main Column: Supplies */}
+        <div className="md:col-span-2 space-y-6">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>Gastos de Insumos</CardTitle>
+              <CardDescription>Gestión de insumos globales (se suman automáticamente a nuevas reservas).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
 
-            <div className="flex gap-2">
-              {editingSupply && (
-                <Button variant="outline" onClick={handleCancelEdit}>
-                  Cancelar
+              <div className="flex gap-4 items-end bg-slate-50 p-4 rounded-md border">
+                <div className="grid gap-1.5 flex-1">
+                  <Label htmlFor="sName">{editingSupply ? "Editar Nombre" : "Nombre del Insumo"}</Label>
+                  <Input id="sName" value={newSupplyName} onChange={e => setNewSupplyName(e.target.value)} placeholder="Ej: Papel Higiénico" />
+                </div>
+                <div className="grid gap-1.5 w-32">
+                  <Label htmlFor="sCost">Costo ($)</Label>
+                  <Input id="sCost" type="number" value={newSupplyCost} onChange={e => setNewSupplyCost(e.target.value)} placeholder="0" />
+                </div>
+
+                <div className="flex gap-2">
+                  {editingSupply && (
+                    <Button variant="outline" onClick={handleCancelEdit}>
+                      Cancelar
+                    </Button>
+                  )}
+                  <Button onClick={handleSaveSupply} disabled={!newSupplyName || !newSupplyCost}>
+                    {editingSupply ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+                    {editingSupply ? "Actualizar" : "Agregar"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border rounded-md">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="p-3 font-medium">Nombre</th>
+                      <th className="p-3 font-medium">Costo</th>
+                      <th className="p-3 font-medium">Estado</th>
+                      <th className="p-3 font-medium text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {supplies.map(supply => (
+                      <tr key={supply.id} className={`border-t ${!supply.isActive ? 'bg-slate-50 text-muted-foreground' : ''}`}>
+                        <td className="p-3">{supply.name}</td>
+                        <td className="p-3 font-medium">${supply.cost}</td>
+                        <td className="p-3">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${supply.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+                            {supply.isActive ? "Activo" : "Inactivo"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleSupply(supply)}
+                            title={supply.isActive ? "Desactivar" : "Activar"}
+                            className={`h-8 w-8 p-0 ${supply.isActive ? 'text-amber-600' : 'text-green-600'}`}
+                          >
+                            {supply.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleEditSupply(supply)} className="h-8 w-8 p-0">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteSupply(supply.id)} className="text-red-600 h-8 w-8 p-0">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                    {supplies.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="p-4 text-center text-muted-foreground">No hay insumos cargados.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                  <tfoot className="bg-slate-100 font-semibold">
+                    <tr>
+                      <td className="p-3">TOTAL GASTOS INSUMOS (Activos)</td>
+                      <td className="p-3 text-lg">${totalSuppliesCost}</td>
+                      <td colSpan={2}></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Side Column: Config & Backup */}
+        <div className="space-y-6">
+          {/* Calendar Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuración de Calendario</CardTitle>
+              <CardDescription>Rango de años visible en el sistema.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid w-full items-center gap-1.5">
+                  <Label htmlFor="startYear">Año Inicio</Label>
+                  <Input id="startYear" type="number" value={startYear} onChange={(e) => setStartYear(e.target.value)} />
+                </div>
+                <div className="grid w-full items-center gap-1.5">
+                  <Label htmlFor="endYear">Año Fin</Label>
+                  <Input id="endYear" type="number" value={endYear} onChange={(e) => setEndYear(e.target.value)} />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={handleSaveSettings} disabled={saving}>
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Guardar
                 </Button>
-              )}
-              <Button onClick={handleSaveSupply} disabled={!newSupplyName || !newSupplyCost}>
-                {editingSupply ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-                {editingSupply ? "Actualizar" : "Agregar"}
-              </Button>
-            </div>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="border rounded-md">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="p-3 font-medium">Nombre</th>
-                  <th className="p-3 font-medium">Costo</th>
-                  <th className="p-3 font-medium">Estado</th>
-                  <th className="p-3 font-medium text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {supplies.map(supply => (
-                  <tr key={supply.id} className={`border-t ${!supply.isActive ? 'bg-slate-50 text-muted-foreground' : ''}`}>
-                    <td className="p-3">{supply.name}</td>
-                    <td className="p-3 font-medium">${supply.cost}</td>
-                    <td className="p-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${supply.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
-                        {supply.isActive ? "Activo" : "Inactivo"}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleToggleSupply(supply)}
-                        title={supply.isActive ? "Desactivar" : "Activar"}
-                        className={`h-8 w-8 p-0 ${supply.isActive ? 'text-amber-600' : 'text-green-600'}`}
-                      >
-                        {supply.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEditSupply(supply)} className="h-8 w-8 p-0">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteSupply(supply.id)} className="text-red-600 h-8 w-8 p-0">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-                {supplies.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="p-4 text-center text-muted-foreground">No hay insumos cargados.</td>
-                  </tr>
-                )}
-              </tbody>
-              <tfoot className="bg-slate-100 font-semibold">
-                <tr>
-                  <td className="p-3">TOTAL GASTOS INSUMOS (Activos)</td>
-                  <td className="p-3 text-lg">${totalSuppliesCost}</td>
-                  <td colSpan={2}></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+          {/* Backup Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Copia de Seguridad</CardTitle>
+              <CardDescription>Exporta o importa la base de datos completa.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">
+                  La exportación descarga un archivo JSON con todos los datos.
+                </p>
+                <Button variant="outline" onClick={handleExport} disabled={loadingBackup}>
+                  {loadingBackup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                  Exportar Todo
+                </Button>
+              </div>
 
-      {/* Calendar Settings */}
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle>Configuración de Calendario</CardTitle>
-          <CardDescription>Rango de años visible en el sistema.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid w-full items-center gap-1.5">
-              <Label htmlFor="startYear">Año Inicio</Label>
-              <Input id="startYear" type="number" value={startYear} onChange={(e) => setStartYear(e.target.value)} />
-            </div>
-            <div className="grid w-full items-center gap-1.5">
-              <Label htmlFor="endYear">Año Fin</Label>
-              <Input id="endYear" type="number" value={endYear} onChange={(e) => setEndYear(e.target.value)} />
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={handleSaveSettings} disabled={saving}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Guardar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <hr />
 
-      {/* Backup Section */}
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle>Copia de Seguridad</CardTitle>
-          <CardDescription>Exporta o importa la base de datos completa.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-muted-foreground">
-              La exportación descarga un archivo JSON con todos los datos.
-            </p>
-            <Button variant="outline" onClick={handleExport} disabled={loadingBackup}>
-              {loadingBackup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              Exportar Todo
-            </Button>
-          </div>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">
+                  La importación <strong>BORRARÁ TODOS</strong> los datos actuales y los reemplazará por los del archivo.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="file"
+                    accept=".json"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <Button variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => fileInputRef.current?.click()} disabled={loadingBackup}>
+                    {loadingBackup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                    Importar Respaldo
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-          <hr />
-
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-muted-foreground">
-              La importación <strong>BORRARÁ TODOS</strong> los datos actuales y los reemplazará por los del archivo.
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="file"
-                accept=".json"
-                ref={fileInputRef}
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              <Button variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => fileInputRef.current?.click()} disabled={loadingBackup}>
-                {loadingBackup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                Importar Respaldo
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </div>
 
       <AlertDialog open={!!supplyToDelete} onOpenChange={(open) => !open && setSupplyToDelete(null)}>
         <AlertDialogContent>
