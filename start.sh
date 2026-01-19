@@ -19,7 +19,15 @@ if [ -z "$NEXTAUTH_SECRET" ]; then
   export NEXTAUTH_SECRET=$(openssl rand -base64 32)
   echo ">>> Generated temporary secret (Sessions will reset on restart). Please set NEXTAUTH_SECRET in your VPS settings for persistence."
 else
-  echo ">>> NEXTAUTH_SECRET is set."
+fi
+
+# Critical: Check for Persistence
+if [[ "$DATABASE_URL" == *"dummy.db"* ]]; then
+  echo ">>> [WARNING] DATABASE_URL is pointing to 'dummy.db'."
+  echo ">>> [WARNING] DATA WILL BE LOST on redeployment."
+  echo ">>> [ACTION REQUIRED] Please configure a Volume in Dokploy and set DATABASE_URL to a persistent path (e.g., file:/etc/dokploy/data/prod.db)."
+else
+   echo ">>> DATABASE_URL check: Seems configured."
 fi
 
 echo ">>> Starting CRM in Production Mode (VPS Optimized)..."
