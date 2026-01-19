@@ -17,7 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Input } from "@/components/ui/input"
+
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma";
 import Link from "next/link"
