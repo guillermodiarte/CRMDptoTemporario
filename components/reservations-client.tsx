@@ -261,188 +261,321 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Huésped</TableHead>
-                <TableHead>Depto</TableHead>
-                <TableHead>Fechas</TableHead>
-                <TableHead>Noches</TableHead>
-                <TableHead>Personas</TableHead>
-                <TableHead className="text-center">Cochera</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Pago</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Gastos (Limp+Ins)</TableHead>
-                <TableHead className="text-right">Deuda</TableHead>
-                {!isVisualizer && <TableHead className="text-right">Acciones</TableHead>}
-              </TableRow>
-            </TableHeader>
+          {/* Desktop Table */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Huésped</TableHead>
+                  <TableHead>Depto</TableHead>
+                  <TableHead>Fechas</TableHead>
+                  <TableHead>Noches</TableHead>
+                  <TableHead>Personas</TableHead>
+                  <TableHead className="text-center">Cochera</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Pago</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Gastos (Limp+Ins)</TableHead>
+                  <TableHead className="text-right">Deuda</TableHead>
+                  {!isVisualizer && <TableHead className="text-right">Acciones</TableHead>}
+                </TableRow>
+              </TableHeader>
 
+              <TableBody>
+                {sortedData.map((res) => {
+                  const isPaid = res.paymentStatus === 'PAID';
+                  const isPartial = res.paymentStatus === 'PARTIAL';
+                  const isNext = nextReservation?.id === res.id;
+                  const isNoShow = (res.status as any) === 'NO_SHOW';
 
-            <TableBody>
-              {sortedData.map((res) => {
-                const isPaid = res.paymentStatus === 'PAID';
-                const isPartial = res.paymentStatus === 'PARTIAL';
-                const isNext = nextReservation?.id === res.id;
-                const isNoShow = (res.status as any) === 'NO_SHOW';
+                  const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
+                  const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
 
-                const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
-                const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
+                  let rowClass = "";
+                  if (isNoShow) {
+                    rowClass = "bg-orange-50 hover:bg-orange-100 text-muted-foreground";
+                  } else if (isBlacklisted) {
+                    rowClass = "bg-red-50 hover:bg-red-100 border-l-4 border-red-500";
+                  } else if (isPaid) {
+                    rowClass = "bg-green-50 hover:bg-green-100";
+                  }
 
-                let rowClass = "";
-                // Base background style based on status
-                if (isNoShow) {
-                  rowClass = "bg-orange-50 hover:bg-orange-100 text-muted-foreground";
-                } else if (isBlacklisted) {
-                  rowClass = "bg-red-50 hover:bg-red-100 border-l-4 border-red-500";
-                } else if (isPaid) {
-                  rowClass = "bg-green-50 hover:bg-green-100";
-                }
+                  if (isNext) {
+                    rowClass += " border-2 border-blue-500";
+                  }
 
-                // Add blue highlight border if it is the "Next" reservation (independent of status)
-                // We use !important or ensure specificity if needed, but border-2 should work if added.
-                // Note: border-l-4 from blacklist might conflict if we want a full box.
-                // User asked for "recuadro azul" (blue box/border).
-                if (isNext) {
-                  // If we already have border-l-4 (blacklist), we might want to preserve it or override?
-                  // Blacklist is red border-left. Blue box is full border.
-                  // Let's add border-blue-500. 
-                  // If it's blacklisted, we might have weird borders. 
-                  // But priority: Next is usually for valid ones. Blacklisted is distinct.
-                  // Let's just append.
-                  rowClass += " border-2 border-blue-500";
-                }
+                  const debt = res.totalAmount - (res.depositAmount || 0);
+                  const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
 
-                const debt = res.totalAmount - (res.depositAmount || 0);
-
-                // Check allowed No-Show action: Only if today > checkIn, not already no-show, AND not paid
-                const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
-
-                return (
-                  <TableRow key={res.id} className={rowClass}>
-                    <TableCell className="font-medium">
-                      <div className={isNoShow ? "line-through" : ""}>{res.guestName}</div>
-                      <div className="text-xs text-muted-foreground">{res.guestPhone}</div>
-                      <div className="text-xs text-muted-foreground">{res.source}</div>
-                      {isBlacklisted && <Badge variant="destructive" className="mt-1 text-[10px]">Lista Negra</Badge>}
-                    </TableCell>
-                    <TableCell>
-                      {res.department.name}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}
-                      {res.groupId && (
-                        <span title="Parte de una reserva dividida" className="ml-2 inline-block">
-                          <LinkIcon className="h-3 w-3 text-blue-500" />
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))}
-                    </TableCell>
-                    <TableCell>
-                      {res.guestPeopleCount}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {res.hasParking ? <Check className="h-4 w-4 mx-auto text-green-600" /> : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={isNoShow ? "secondary" : "outline"}>
-                        {isNoShow ? "NO PRESENTADO" : res.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={isPaid ? 'default' : isPartial ? 'secondary' : 'destructive'}>
-                        {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : 'PENDIENTE'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex flex-col items-end">
-                        <span className={isNoShow ? "line-through text-muted-foreground" : ""}>
-                          {res.currency === 'USD' ? `US$ ${res.totalAmount}` : `$${res.totalAmount}`}
-                        </span>
-                        {res.currency === 'USD' && !isNoShow && (
-                          <span className="text-xs text-muted-foreground">≈ ${Math.round(res.totalAmount * dollarRate).toLocaleString()}</span>
-                        )}
-                        {isNoShow && (
-                          <span className="text-xs text-orange-600 font-semibold">Seña: ${res.depositAmount}</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex flex-col items-end">
-                        <span className="text-muted-foreground">
-                          {res.cleaningFee ? `$${res.cleaningFee}` : '-'}
-                        </span>
-                        {(res.amenitiesFee || 0) > 0 && (
-                          <span className="text-xs text-red-600" title="Insumos (Informativo)">
-                            +${res.amenitiesFee}
+                  return (
+                    <TableRow key={res.id} className={rowClass}>
+                      <TableCell className="font-medium">
+                        <div className={isNoShow ? "line-through" : ""}>{res.guestName}</div>
+                        <div className="text-xs text-muted-foreground">{res.guestPhone}</div>
+                        <div className="text-xs text-muted-foreground">{res.source}</div>
+                        {isBlacklisted && <Badge variant="destructive" className="mt-1 text-[10px]">Lista Negra</Badge>}
+                      </TableCell>
+                      <TableCell>
+                        {res.department.name}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}
+                        {res.groupId && (
+                          <span title="Parte de una reserva dividida" className="ml-2 inline-block">
+                            <LinkIcon className="h-3 w-3 text-blue-500" />
                           </span>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right text-red-600 font-medium">
-                      {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : `$${debt}`) : '-'}
-                    </TableCell>
-                    {!isVisualizer && (
-                      <TableCell className="text-right flex justify-end gap-1">
-                        {res.notes && (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="ghost" size="icon" title="Ver notas">
-                                <NotepadText className="h-4 w-4 text-blue-500" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 p-4 bg-white border rounded shadow-lg z-50">
-                              <div className="space-y-2">
-                                <h4 className="font-semibold leading-none mb-1">Nota de Reserva</h4>
-                                <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                                  {res.notes}
-                                </p>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        )}
-                        {!isPaid && !isNoShow && (
-                          <Button variant="ghost" size="icon" title="Marcar Pagado" className="text-green-600 hover:text-green-700 hover:bg-green-100" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)}>
-                            <DollarSign className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {canMarkNoShow && (
-                          <Button variant="ghost" size="icon" title="Marcar No Presentado" className="text-orange-500 hover:text-orange-600 hover:bg-orange-50" onClick={() => handleNoShowClick(res.id)}>
-                            <UserX className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {isBlacklisted ? (
-                          <Button variant="ghost" size="icon" title="Huésped ya en lista negra" className="text-red-500 cursor-not-allowed opacity-70" disabled>
-                            <Ban className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button variant="ghost" size="icon" title="Reportar a Lista Negra" className="text-orange-500 hover:text-orange-600" onClick={() => setReportBlacklistData(res)}>
-                            <ShieldAlert className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(res)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteClick(res.id)}>
-                          <Trash className="h-4 w-4" />
-                        </Button>
                       </TableCell>
-                    )}
+                      <TableCell>
+                        {Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))}
+                      </TableCell>
+                      <TableCell>
+                        {res.guestPeopleCount}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {res.hasParking ? <Check className="h-4 w-4 mx-auto text-green-600" /> : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={isNoShow ? "secondary" : "outline"}>
+                          {isNoShow ? "NO PRESENTADO" : res.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={isPaid ? 'default' : isPartial ? 'secondary' : 'destructive'}>
+                          {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : 'PENDIENTE'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-col items-end">
+                          <span className={isNoShow ? "line-through text-muted-foreground" : ""}>
+                            {res.currency === 'USD' ? `US$ ${res.totalAmount}` : `$${res.totalAmount}`}
+                          </span>
+                          {res.currency === 'USD' && !isNoShow && (
+                            <span className="text-xs text-muted-foreground">≈ ${Math.round(res.totalAmount * dollarRate).toLocaleString()}</span>
+                          )}
+                          {isNoShow && (
+                            <span className="text-xs text-orange-600 font-semibold">Seña: ${res.depositAmount}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-col items-end">
+                          <span className="text-muted-foreground">
+                            {res.cleaningFee ? `$${res.cleaningFee}` : '-'}
+                          </span>
+                          {(res.amenitiesFee || 0) > 0 && (
+                            <span className="text-xs text-red-600" title="Insumos (Informativo)">
+                              +${res.amenitiesFee}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right text-red-600 font-medium">
+                        {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : `$${debt}`) : '-'}
+                      </TableCell>
+                      {!isVisualizer && (
+                        <TableCell className="text-right flex justify-end gap-1">
+                          {res.notes && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" title="Ver notas">
+                                  <NotepadText className="h-4 w-4 text-blue-500" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-80 p-4 bg-white border rounded shadow-lg z-50">
+                                <div className="space-y-2">
+                                  <h4 className="font-semibold leading-none mb-1">Nota de Reserva</h4>
+                                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                    {res.notes}
+                                  </p>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                          {!isPaid && !isNoShow && (
+                            <Button variant="ghost" size="icon" title="Marcar Pagado" className="text-green-600 hover:text-green-700 hover:bg-green-100" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)}>
+                              <DollarSign className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canMarkNoShow && (
+                            <Button variant="ghost" size="icon" title="Marcar No Presentado" className="text-orange-500 hover:text-orange-600 hover:bg-orange-50" onClick={() => handleNoShowClick(res.id)}>
+                              <UserX className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {isBlacklisted ? (
+                            <Button variant="ghost" size="icon" title="Huésped ya en lista negra" className="text-red-500 cursor-not-allowed opacity-70" disabled>
+                              <Ban className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="icon" title="Reportar a Lista Negra" className="text-orange-500 hover:text-orange-600" onClick={() => setReportBlacklistData(res)}>
+                              <ShieldAlert className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(res)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteClick(res.id)}>
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
+                {sortedData.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={!isVisualizer ? 11 : 10} className="text-center h-24">
+                      No se encontraron reservas.
+                    </TableCell>
                   </TableRow>
-                );
-              })}
-              {sortedData.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={!isVisualizer ? 11 : 10} className="text-center h-24">
-                    No se encontraron reservas.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {sortedData.map((res) => {
+              const isPaid = res.paymentStatus === 'PAID';
+              const isPartial = res.paymentStatus === 'PARTIAL';
+              const isNext = nextReservation?.id === res.id;
+              const isNoShow = (res.status as any) === 'NO_SHOW';
+              const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
+              const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
+              const debt = res.totalAmount - (res.depositAmount || 0);
+              const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
+
+              let cardClass = "";
+              if (isNoShow) {
+                cardClass = "bg-orange-50 opacity-90"; // slightly different for card
+              } else if (isBlacklisted) {
+                cardClass = "bg-red-50 border-l-4 border-red-500";
+              } else if (isPaid) {
+                cardClass = "bg-green-50";
+              }
+
+              if (isNext) cardClass += " border-2 border-blue-500";
+
+              return (
+                <Card key={res.id} className={cardClass}>
+                  <CardContent className="p-4 space-y-3">
+                    {/* Header: Name, Dept, Status */}
+                    <div className="flex justify-between items-start">
+                      <div className="min-w-0">
+                        <div className={`font-semibold text-lg truncate ${isNoShow ? "line-through text-muted-foreground" : ""}`}>
+                          {res.guestName}
+                        </div>
+                        <div className="text-sm font-medium text-blue-600">{res.department.name}</div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant={isNoShow ? "secondary" : "outline"}>
+                          {isNoShow ? "NO SHOW" : res.status}
+                        </Badge>
+                        <Badge variant={isPaid ? 'default' : isPartial ? 'secondary' : 'destructive'}>
+                          {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : 'PEND.'}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {/* Dates & People */}
+                      <div className="col-span-2 flex items-center gap-2 text-muted-foreground">
+                        <span>{format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}</span>
+                        <span>•</span>
+                        <span>{Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))} noches</span>
+                        <span>•</span>
+                        <span>{res.guestPeopleCount} pax</span>
+                      </div>
+
+                      {/* Contact */}
+                      <div className="col-span-2 text-sm text-muted-foreground flex gap-2">
+                        <span>{res.guestPhone}</span>
+                        <span>•</span>
+                        <span>{res.source}</span>
+                      </div>
+
+                      {/* Financials */}
+                      <div className="bg-background/50 p-2 rounded col-span-2 grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Total</span>
+                          <span className="font-medium">
+                            {res.currency === 'USD' ? `US$ ${res.totalAmount}` : `$${res.totalAmount}`}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Deuda</span>
+                          <span className={`font-medium ${!isPaid && !isNoShow ? "text-red-600" : ""}`}>
+                            {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : `$${debt}`) : '-'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Extras: Notes, Parking */}
+                    <div className="flex gap-2 text-xs">
+                      {res.hasParking && (
+                        <span className="flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded">
+                          <Check className="h-3 w-3" /> Cochera
+                        </span>
+                      )}
+                      {res.notes && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                              <NotepadText className="h-3 w-3" /> Nota
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 p-4 text-sm">
+                            {res.notes}
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                      {isBlacklisted && <span className="bg-red-100 text-red-700 px-2 py-1 rounded font-bold">LISTA NEGRA</span>}
+                    </div>
+
+                    {/* Actions */}
+                    {!isVisualizer && (
+                      <div className="flex justify-between items-center pt-2 border-t gap-2">
+                        {/* Left: Quick Actions */}
+                        <div className="flex gap-1">
+                          {!isPaid && !isNoShow && (
+                            <Button variant="outline" size="sm" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)} className="h-8 px-2 text-green-600 bg-green-50/50 border-green-200">
+                              <DollarSign className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canMarkNoShow && (
+                            <Button variant="outline" size="sm" onClick={() => handleNoShowClick(res.id)} className="h-8 px-2 text-orange-500 bg-orange-50/50 border-orange-200">
+                              <UserX className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {!isBlacklisted && (
+                            <Button variant="outline" size="sm" onClick={() => setReportBlacklistData(res)} className="h-8 px-2 text-red-500 bg-red-50/50 border-red-200">
+                              <ShieldAlert className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Right: Edit/Delete */}
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(res)} className="h-8">
+                            Editar
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(res.id)} className="h-8 w-8 p-0">
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {sortedData.length === 0 && (
+              <div className="text-center py-10 text-muted-foreground">
+                No se encontraron reservas.
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
