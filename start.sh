@@ -50,9 +50,33 @@ if [ -f ".next/standalone/server.js" ]; then
         echo ">>> WARNING: .next/static directory not found"
     fi
     
+    # 3. Copy Prisma folder (Schema)
+    if [ -d "prisma" ]; then
+        cp -r prisma .next/standalone/prisma
+        echo ">>> Copied prisma -> .next/standalone/prisma"
+    fi
+
+    # 4. Copy Scripts folder (Seeding)
+    if [ -d "scripts" ]; then
+        cp -r scripts .next/standalone/scripts
+        echo ">>> Copied scripts -> .next/standalone/scripts"
+    fi
+    
     # Run the standalone server
     echo ">>> Entering standalone directory..."
     cd .next/standalone
+    
+    echo ">>> Applying Database Migrations..."
+    # We use 'npx prisma db push' because it's robust for SQLite and creates the file if missing.
+    # It works with the schema copied to ./prisma/schema.prisma
+    npx prisma db push --accept-data-loss
+    
+    echo ">>> Seeding Admin User..."
+    if [ -f "scripts/seed-admin.js" ]; then
+        node scripts/seed-admin.js
+    else
+        echo ">>> WARNING: Seed script not found."
+    fi
     
     echo ">>> Starting Server..."
     exec node server.js
