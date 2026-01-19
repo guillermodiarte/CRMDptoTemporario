@@ -48,10 +48,29 @@ if [ -n "$DATABASE_URL" ]; then
     fi
 fi
 
-# Critical: Generate a secret if not provided
-if [ -z "$NEXTAUTH_SECRET" ]; then
-  log "WARNING: NEXTAUTH_SECRET not set. Generating a temporary random secret..."
-  export NEXTAUTH_SECRET=$(openssl rand -base64 32)
+# Critical: Load Environment Variables from file if present
+if [ -f .env ]; then
+  log "Loading configuration from .env..."
+  export $(cat .env | xargs)
+fi
+
+if [ -f .env.production ]; then
+  log "Loading configuration from .env.production..."
+  export $(cat .env.production | xargs)
+fi
+
+# Ensure Secret Consistency
+if [ -z "$AUTH_SECRET" ] && [ -z "$NEXTAUTH_SECRET" ]; then
+  log "WARNING: neither AUTH_SECRET nor NEXTAUTH_SECRET is set."
+  log "Generating a TEMPORARY random secret. Sessions will be invalidated on restart."
+  export AUTH_SECRET=$(openssl rand -base64 32)
+  # Keep legacy compatibility just in case
+  export NEXTAUTH_SECRET=$AUTH_SECRET
+else
+  log "Secret is set. Sessions will persist."
+  if [ -n "$AUTH_SECRET" ] && [ -z "$NEXTAUTH_SECRET" ]; then
+     export NEXTAUTH_SECRET=$AUTH_SECRET
+  fi
 fi
 
 log "Listing .next directory:"
