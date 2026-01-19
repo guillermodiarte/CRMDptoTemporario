@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Department } from "@prisma/client";
 import {
   format,
@@ -39,6 +39,11 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
   // Responsive check
   // Using a simple state-based detection for simplicity in this component
   const [isDesktop, setIsDesktop] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useLayoutEffect(() => {
     const checkMedia = () => {
@@ -103,11 +108,13 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
     };
   };
 
+  if (!isMounted) return <div className="h-full bg-white border rounded-md shadow-sm animate-pulse" />;
+
   return (
     <div className="flex flex-col h-full bg-white border rounded-md shadow-sm overflow-hidden select-none">
       {/* Header controls */}
-      <div className="flex items-center justify-between p-4 border-b bg-background z-30 relative shrink-0">
-        <div className="flex items-center gap-2 md:gap-4">
+      <div className="flex flex-col md:flex-row items-center justify-between p-4 border-b bg-background z-30 relative shrink-0 gap-4">
+        <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto justify-between md:justify-start">
           <Button variant="outline" size="icon" onClick={handlePrevMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -121,14 +128,14 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
             Hoy
           </Button>
         </div>
-        <div className="hidden md:flex gap-4">
-          <div className="flex items-center gap-2 text-sm">
+        <div className="flex flex-wrap gap-4 justify-center md:justify-end w-full md:w-auto">
+          <div className="flex items-center gap-2 text-xs md:text-sm">
             <span className="w-3 h-3 bg-red-500 rounded-sm"></span> Pendiente
           </div>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-xs md:text-sm">
             <span className="w-3 h-3 bg-yellow-500 rounded-sm"></span> Parcial
           </div>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-xs md:text-sm">
             <span className="w-3 h-3 bg-green-500 rounded-sm"></span> Pagado
           </div>
         </div>
