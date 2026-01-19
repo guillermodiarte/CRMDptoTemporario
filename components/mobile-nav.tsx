@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,6 +42,7 @@ export function MobileNav({ role, user }: MobileNavProps) {
       </SheetTrigger>
       {/* FIXED WIDTH: Enforce w-[260px] to be small and consistent */}
       <SheetContent side="left" className="flex flex-col w-[260px] sm:w-[260px] p-4">
+        <SheetTitle className="sr-only">Menú de Navegación</SheetTitle>
         <nav className="grid gap-2 text-lg font-medium">
           <Link
             href="#"
