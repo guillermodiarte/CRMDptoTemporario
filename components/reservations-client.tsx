@@ -219,7 +219,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   <Plus className="mr-2 h-4 w-4" /> Nueva Reserva
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <DialogContent className="w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-md" onCloseAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                   <DialogTitle>{editingRes ? "Editar Reserva" : "Nueva Reserva"}</DialogTitle>
                 </DialogHeader>
