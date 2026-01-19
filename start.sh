@@ -22,13 +22,17 @@ else
 fi
 
 # Critical: Check for Persistence
-if [[ "$DATABASE_URL" == *"dummy.db"* ]]; then
-  echo ">>> [WARNING] DATABASE_URL is pointing to 'dummy.db'."
-  echo ">>> [WARNING] DATA WILL BE LOST on redeployment."
-  echo ">>> [ACTION REQUIRED] Please configure a Volume in Dokploy and set DATABASE_URL to a persistent path (e.g., file:/etc/dokploy/data/prod.db)."
-else
-   echo ">>> DATABASE_URL check: Seems configured."
-fi
+# Check if DATABASE_URL contains "dummy.db" using case (POSIX compliant)
+case "$DATABASE_URL" in 
+  *"dummy.db"*)
+    echo ">>> [WARNING] DATABASE_URL is pointing to 'dummy.db'."
+    echo ">>> [WARNING] DATA WILL BE LOST on redeployment."
+    echo ">>> [ACTION REQUIRED] Please configure a Volume in Dokploy and set DATABASE_URL to a persistent path."
+    ;;
+  *)
+    echo ">>> DATABASE_URL check: Seems configured (Not using dummy.db)."
+    ;;
+esac
 
 echo ">>> Starting CRM in Production Mode (VPS Optimized)..."
 echo ">>> PWD: $(pwd)"
