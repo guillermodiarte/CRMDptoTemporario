@@ -95,21 +95,26 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role
 
   return (
     <>
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Departamentos</h2>
-        <div className="flex items-center gap-2">
-          <DepartmentsActions data={data} />
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Departamentos</h2>
+          <p className="text-muted-foreground">
+            Gestiona tus unidades.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          <DepartmentsActions data={data} role={role} />
           {!isVisualizer && (
             <Dialog open={open} onOpenChange={(val) => {
               setOpen(val);
               if (!val) setEditingDept(null);
             }}>
               <DialogTrigger asChild>
-                <Button onClick={handleCreate}>
-                  <Plus className="mr-2 h-4 w-4" /> Nuevo Departamento
+                <Button onClick={handleCreate} className="whitespace-nowrap">
+                  <Plus className="mr-2 h-4 w-4" /> Nuevo
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <DialogContent className="w-[95vw] sm:max-w-[800px] max-h-[85vh] overflow-y-auto" onCloseAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                   <DialogTitle>{editingDept ? "Editar Departamento" : "Nuevo Departamento"}</DialogTitle>
                 </DialogHeader>
@@ -242,7 +247,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role
                         </Button>
                         {!dept.isActive && (
                           <Button
-                            variant="ghost"
+                            variant="destructive"
                             size="icon"
                             className="text-red-500 hover:text-red-600 hover:bg-red-50"
                             onClick={() => setDeleteId(dept.id)}
@@ -266,116 +271,124 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role
             </Table>
           </div>
 
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-4">
+          {/* Mobile Card View (Refined) */}
+          <div className="md:hidden space-y-3">
             {visibleData.map((dept) => (
               <Card key={dept.id} className={cn("overflow-hidden", !dept.isActive && "opacity-60 bg-muted/50")}>
-                <div className="p-4 space-y-3">
+                <CardContent className="p-3 space-y-3">
                   {/* Header: Name, Status */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {dept.color && (
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dept.color }} />
-                      )}
-                      <div className="min-w-0">
-                        <div className="font-semibold text-lg truncate">{dept.name}</div>
-                        <div className="text-sm text-muted-foreground truncate">{dept.address}</div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2 min-w-0 flex-1">
+                        {dept.color && (
+                          <div className="w-3 h-3 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: dept.color }} />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-base whitespace-normal break-words leading-tight">{dept.name}</div>
+                          <div className="text-xs text-muted-foreground whitespace-normal break-words mt-0.5">{dept.address}</div>
+                        </div>
                       </div>
+                      <Badge variant={dept.isActive ? "default" : "secondary"} className="shrink-0">
+                        {dept.isActive ? "Activo" : "Inactivo"}
+                      </Badge>
                     </div>
-                    <Badge variant={dept.isActive ? "default" : "secondary"}>
-                      {dept.isActive ? "Activo" : "Inactivo"}
-                    </Badge>
                   </div>
 
                   {/* Details Grid */}
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-3 text-sm border-t pt-2 border-b pb-2">
                     {/* Capacity */}
                     <div>
-                      <span className="text-muted-foreground block text-xs">Capacidad</span>
-                      <span className="font-medium">{dept.maxPeople} pax / {dept.bedCount} camas</span>
+                      <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">Capacidad</span>
+                      <span className="font-medium text-xs">{dept.maxPeople} pax / {dept.bedCount} camas</span>
                     </div>
 
                     {/* Prices */}
                     <div>
-                      <span className="text-muted-foreground block text-xs">Precios</span>
-                      <div className="font-medium flex flex-wrap gap-1">
+                      <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">Precios</span>
+                      <div className="font-medium text-xs flex flex-wrap gap-1">
                         <span>${dept.basePrice}</span>
-                        <span className="text-xs text-muted-foreground">+${dept.cleaningFee} Limp.</span>
+                        <span className="text-muted-foreground">+${dept.cleaningFee} Limp.</span>
                       </div>
                     </div>
 
                     {/* Wifi */}
                     <div className="col-span-2 bg-muted/30 p-2 rounded-md">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                        <Wifi className="h-3 w-3" /> Wifi
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1">
+                        <Wifi className="h-3 w-3" /> Connectividad
                       </div>
-                      <div className="font-medium text-sm">{dept.wifiName || "-"}</div>
-                      <div className="text-xs break-all select-all font-mono">{dept.wifiPass}</div>
+                      <div className="font-medium text-xs whitespace-normal break-all">
+                        {dept.wifiName || "-"}
+                      </div>
+                      <div className="text-xs break-all select-all font-mono text-muted-foreground">
+                        Pass: {dept.wifiPass}
+                      </div>
                     </div>
+
+                    {/* Keys/Locker */}
+                    {(dept as any).lockBoxCode && (
+                      <div className="col-span-2 flex items-center gap-2 border px-2 py-1 rounded bg-background text-xs">
+                        <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <span className="text-muted-foreground">Locker:</span>
+                        <span className="font-mono font-medium select-all">{(dept as any).lockBoxCode}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Footer: Links & Locker */}
-                  <div className="flex items-center justify-between pt-2 border-t mt-2">
+                  {/* Footer: Links & Actions */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                     {/* Links Row */}
                     <div className="flex gap-3">
                       {(dept as any).googleMapsLink && (
                         <a href={(dept as any).googleMapsLink} target="_blank" rel="noopener noreferrer">
-                          <img src="/icons/maps.png" alt="Maps" className="w-6 h-6 object-contain" />
+                          <img src="/icons/maps.png" alt="Maps" className="w-6 h-6 object-contain hover:scale-110 transition-transform" />
                         </a>
                       )}
                       {(dept as any).airbnbLink && (
                         <a href={(dept as any).airbnbLink} target="_blank" rel="noopener noreferrer">
-                          <img src="/icons/airbnb.png" alt="Airbnb" className="w-6 h-6 object-contain" />
+                          <img src="/icons/airbnb.png" alt="Airbnb" className="w-6 h-6 object-contain hover:scale-110 transition-transform" />
                         </a>
                       )}
                       {(dept as any).bookingLink && (
                         <a href={(dept as any).bookingLink} target="_blank" rel="noopener noreferrer">
-                          <img src="/icons/booking.png" alt="Booking" className="w-6 h-6 object-contain" />
+                          <img src="/icons/booking.png" alt="Booking" className="w-6 h-6 object-contain hover:scale-110 transition-transform" />
                         </a>
                       )}
-                      {/* Locker info inline if space allows, or specific icon */}
-                      {(dept as any).lockBoxCode && (
-                        <div className="flex items-center gap-1 border px-2 rounded-md bg-background text-xs" title="Locker">
-                          <Lock className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-mono font-medium">{(dept as any).lockBoxCode}</span>
-                        </div>
-                      )}
                     </div>
-                  </div>
 
-                  {/* Actions Row */}
-                  {!isVisualizer && (
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => toggleActive(dept)}
-                        disabled={togglingId === dept.id}
-                      >
-                        {dept.isActive ? <Eye className="h-4 w-4 mr-2" /> : <EyeOff className="h-4 w-4 mr-2" />}
-                        {dept.isActive ? "Desactivar" : "Activar"}
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(dept)}>
-                        <Pencil className="h-4 w-4 mr-2" /> Editar
-                      </Button>
-                      {!dept.isActive && (
+                    {/* Actions Row */}
+                    {!isVisualizer && (
+                      <div className="flex gap-2 ml-auto">
                         <Button
-                          variant="destructive"
+                          variant="outline"
                           size="sm"
-                          className="px-3"
-                          onClick={() => setDeleteId(dept.id)}
+                          className="h-8 w-8 p-0"
+                          onClick={() => toggleActive(dept)}
+                          disabled={togglingId === dept.id}
+                          title={dept.isActive ? "Desactivar" : "Activar"}
                         >
-                          <Trash className="h-4 w-4" />
+                          {dept.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
                         </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                        <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => handleEdit(dept)}>
+                          Editar
+                        </Button>
+                        {!dept.isActive && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => setDeleteId(dept.id)}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
               </Card>
             ))}
             {visibleData.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-branch-foreground text-sm">
                 No se encontraron departamentos.
               </div>
             )}
