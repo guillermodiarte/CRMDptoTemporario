@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BlacklistEntry } from "@prisma/client";
 import { format } from "date-fns";
 import {
@@ -43,10 +43,16 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
   const [editingEntry, setEditingEntry] = useState<BlacklistEntry | null>(null);
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const isAdmin = currentUserRole === "ADMIN";
 
   const filteredData = data.filter((entry) => {
+    // ... search logic remains same ...
     const s = search.toLowerCase();
     return (
       entry.guestName.toLowerCase().includes(s) ||
@@ -80,7 +86,7 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <ShieldAlert className="h-8 w-8 text-red-600" />
@@ -89,13 +95,13 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
           <p className="text-muted-foreground">Gestión de huéspedes no admitidos.</p>
         </div>
 
-        {isAdmin && (
+        {isAdmin && isMounted && (
           <Dialog open={open} onOpenChange={(val) => {
             setOpen(val);
             if (!val) setEditingEntry(null);
           }}>
             <DialogTrigger asChild>
-              <Button onClick={handleCreate} variant="destructive">
+              <Button onClick={handleCreate} variant="destructive" className="w-full md:w-auto">
                 <Plus className="mr-2 h-4 w-4" /> Agregar Manualmente
               </Button>
             </DialogTrigger>
@@ -125,7 +131,8 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
         <BlacklistActions data={filteredData} />
       </div>
 
-      <div className="rounded-md border bg-white">
+      {/* Desktop Table */}
+      <div className="hidden md:block rounded-md border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
@@ -180,22 +187,71 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
         </Table>
       </div>
 
-      <AlertDialog open={!!deleteId} onOpenChange={(val) => !val && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar de Lista Negra?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará (lógicamente) al huésped de la lista negra. Podrá volver a ser admitido en futuras reservas.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={confirmDelete}>
-              Sí, Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {filteredData.map((entry) => (
+          <div key={entry.id} className="p-4 rounded-lg border bg-white shadow-sm border-l-4 border-l-red-500">
+            <div className="flex justify-between items-start gap-2">
+              <div className="min-w-0">
+                <div className="font-bold text-base text-red-700 whitespace-normal break-words leading-tight flex items-center gap-1">
+                  <ShieldAlert className="h-4 w-4 shrink-0" />
+                  {entry.guestName}
+                </div>
+                <div className="text-sm font-mono text-muted-foreground mt-1">{entry.guestPhone}</div>
+              </div>
+              {isAdmin && (
+                <div className="flex gap-1 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(entry)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => setDeleteId(entry.id)}>
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-3 text-sm bg-red-50 p-2 rounded text-red-900 whitespace-normal break-words">
+              <span className="font-semibold block text-xs uppercase tracking-wide text-red-400 mb-0.5">Motivo:</span>
+              {entry.reason}
+            </div>
+
+            <div className="mt-3 flex justify-between items-center text-xs text-muted-foreground border-t pt-2">
+              <div>
+                {entry.checkIn
+                  ? `Reserva: ${format(new Date(entry.checkIn), "dd/MM/yyyy")}`
+                  : `Agregado: ${format(new Date(entry.createdAt), "dd/MM/yyyy")}`
+                }
+              </div>
+              <div>Rep: {entry.reportedBy?.name || "N/A"}</div>
+            </div>
+          </div>
+        ))}
+        {filteredData.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            No se encontraron registros.
+          </div>
+        )}
+      </div>
+
+      {isMounted && (
+        <AlertDialog open={!!deleteId} onOpenChange={(val) => !val && setDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar de Lista Negra?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción eliminará (lógicamente) al huésped de la lista negra. Podrá volver a ser admitido en futuras reservas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={confirmDelete}>
+                Sí, Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
