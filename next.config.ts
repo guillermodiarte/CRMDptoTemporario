@@ -9,9 +9,7 @@ const nextConfig = {
     minimumCacheTTL: 60,
     formats: ['image/avif', 'image/webp'], // Modern formats
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+
   typescript: {
     ignoreBuildErrors: true,
   },
