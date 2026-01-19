@@ -12,87 +12,110 @@ export HOSTNAME="0.0.0.0"
 
 # Explicitly trust proxy for NextAuth
 export AUTH_TRUST_HOST=true
+export NEXTAUTH_URL="http://0.0.0.0:3000"
 
-# Critical: Generate a secret if not provided (prevents crash on first run)
-if [ -z "$NEXTAUTH_SECRET" ]; then
-  echo ">>> WARNING: NEXTAUTH_SECRET not set. Generating a temporary random secret..."
-  export NEXTAUTH_SECRET=$(openssl rand -base64 32)
-  echo ">>> Generated temporary secret (Sessions will reset on restart). Please set NEXTAUTH_SECRET in your VPS settings for persistence."
-else
+# Debug Helper
+log() {
+    echo "[start.sh] $1"
+}
+
+log "Starting CRM in Production Mode..."
+log "User: $(whoami)"
+log "PWD: $(pwd)"
+
+# Debug Persistence
+log "Checking DATABASE_URL: $DATABASE_URL"
+if [ -n "$DATABASE_URL" ]; then
+    # Extract path assuming file: prefix
+    DB_PATH=$(echo "$DATABASE_URL" | sed 's/file://')
+    DB_DIR=$(dirname "$DB_PATH")
+    
+    log "Database Directory: $DB_DIR"
+    if [ -d "$DB_DIR" ]; then
+        log "Directory exists. Permissions:"
+        ls -ld "$DB_DIR"
+        
+        # Test write permission
+        if touch "$DB_DIR/.write_test" 2>/dev/null; then
+            log "SUCCESS: Directory is writable."
+            rm "$DB_DIR/.write_test"
+        else
+            log "ERROR: Directory is NOT writable."
+            log "Attempting to fix permissions (chmod 777)..."
+            chmod 777 "$DB_DIR" 2>/dev/null || log "Failed to chmod $DB_DIR"
+        fi
+    else
+        log "Warning: Database directory $DB_DIR does not exist."
+    fi
 fi
 
-# Critical: Check for Persistence
-# Check if DATABASE_URL contains "dummy.db" using case (POSIX compliant)
-case "$DATABASE_URL" in 
-  *"dummy.db"*)
-    echo ">>> [WARNING] DATABASE_URL is pointing to 'dummy.db'."
-    echo ">>> [WARNING] DATA WILL BE LOST on redeployment."
-    echo ">>> [ACTION REQUIRED] Please configure a Volume in Dokploy and set DATABASE_URL to a persistent path."
-    ;;
-  *)
-    echo ">>> DATABASE_URL check: Seems configured (Not using dummy.db)."
-    ;;
-esac
+# Critical: Generate a secret if not provided
+if [ -z "$NEXTAUTH_SECRET" ]; then
+  log "WARNING: NEXTAUTH_SECRET not set. Generating a temporary random secret..."
+  export NEXTAUTH_SECRET=$(openssl rand -base64 32)
+fi
 
-echo ">>> Starting CRM in Production Mode (VPS Optimized)..."
-echo ">>> PWD: $(pwd)"
-echo ">>> Listing .next directory:"
+log "Listing .next directory:"
 ls -F .next || echo ".next not found"
 
 # 3. Execution Strategy
 if [ -f ".next/standalone/server.js" ]; then
-    echo ">>> Found Standalone Build. Using efficient Node execution."
+    log "Found Standalone Build. Using efficient Node execution."
     
-    echo ">>> Copying static assets..."
+    log "Copying static assets..."
     # 1. Copy Public folder
     if [ -d "public" ]; then
         cp -r public .next/standalone/public
-        echo ">>> Copied public -> .next/standalone/public"
+        log "Copied public -> .next/standalone/public"
     else
-        echo ">>> WARNING: public directory not found"
+        log "WARNING: public directory not found"
     fi
 
     # 2. Copy Static folder
     if [ -d ".next/static" ]; then
         mkdir -p .next/standalone/.next/static
         cp -r .next/static/* .next/standalone/.next/static/
-        echo ">>> Copied .next/static -> .next/standalone/.next/static"
+        log "Copied .next/static -> .next/standalone/.next/static"
     else
-        echo ">>> WARNING: .next/static directory not found"
+        log "WARNING: .next/static directory not found"
     fi
     
     # 3. Copy Prisma folder (Schema)
     if [ -d "prisma" ]; then
         cp -r prisma .next/standalone/prisma
-        echo ">>> Copied prisma -> .next/standalone/prisma"
+        log "Copied prisma -> .next/standalone/prisma"
     fi
 
     # 4. Copy Scripts folder (Seeding)
     if [ -d "scripts" ]; then
         cp -r scripts .next/standalone/scripts
-        echo ">>> Copied scripts -> .next/standalone/scripts"
+        log "Copied scripts -> .next/standalone/scripts"
     fi
     
     # Run the standalone server
-    echo ">>> Entering standalone directory..."
+    log "Entering standalone directory..."
     cd .next/standalone
     
-    echo ">>> Applying Database Migrations..."
-    # We use 'npx prisma db push' because it's robust for SQLite and creates the file if missing.
-    # It works with the schema copied to ./prisma/schema.prisma
-    npx prisma db push --accept-data-loss
-    
-    echo ">>> Seeding Admin User..."
-    if [ -f "scripts/seed-admin.js" ]; then
-        node scripts/seed-admin.js
+    log "Applying Database Migrations..."
+    # Capture db push output and log it. Do not exit on fail, but verify.
+    if npx prisma db push --accept-data-loss; then
+        log "Migrations successful."
     else
-        echo ">>> WARNING: Seed script not found."
+        log "ERROR: Prisma db push failed. Likely permission issues."
+        log "Sleeping 60s to allow log inspection..."
+        sleep 60
     fi
     
-    echo ">>> Starting Server..."
+    log "Seeding Admin User..."
+    if [ -f "scripts/seed-admin.js" ]; then
+        node scripts/seed-admin.js || log "Seeding failed."
+    else
+        log "WARNING: Seed script not found."
+    fi
+    
+    log "Starting Server..."
     exec node server.js
 else
-    echo ">>> Standalone build not found. Falling back to 'next start'."
-    # Note: 'next start' uses more memory than standalone 'node server.js'
+    log "Standalone build not found. Falling back to 'next start'."
     npm start
 fi
