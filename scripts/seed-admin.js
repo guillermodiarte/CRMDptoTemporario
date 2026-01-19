@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   const email = 'guillermo.diarte@gmail.com';
-  const password = 'Gad33224122#';
+  const password = 'Admin1234';
 
   console.log(`>>> Checking admin user: ${email}`);
 
