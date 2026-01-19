@@ -127,142 +127,259 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[300px]">Nombre</TableHead>
-                <TableHead>Cap./Camas</TableHead>
-                <TableHead>Wifi</TableHead>
-                <TableHead>Cód. Locker</TableHead>
-                <TableHead>Links</TableHead>
-                <TableHead>Precios (Base/Limp)</TableHead>
-                <TableHead>Insumos (Global)</TableHead>
-                <TableHead>Estado</TableHead>
-                {!isVisualizer && <TableHead className="text-right">Acciones</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleData.map((dept) => (
-                <TableRow key={dept.id} className={cn(!dept.isActive && "opacity-60 bg-muted/50")}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
+          {/* Desktop Table */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[300px]">Nombre</TableHead>
+                  <TableHead>Cap./Camas</TableHead>
+                  <TableHead>Wifi</TableHead>
+                  <TableHead>Cód. Locker</TableHead>
+                  <TableHead>Links</TableHead>
+                  <TableHead>Precios (Base/Limp)</TableHead>
+                  <TableHead>Insumos (Global)</TableHead>
+                  <TableHead>Estado</TableHead>
+                  {!isVisualizer && <TableHead className="text-right">Acciones</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleData.map((dept) => (
+                  <TableRow key={dept.id} className={cn(!dept.isActive && "opacity-60 bg-muted/50")}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {dept.color && (
+                          <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dept.color }} title="Color distintivo" />
+                        )}
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold">{dept.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{dept.address}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {dept.maxPeople}p / {dept.bedCount}c
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {dept.wifiName ? (
+                        <div className="flex flex-col gap-0.5 max-w-[150px]">
+                          <div className="flex items-center gap-1 font-medium truncate"><Wifi className="h-3 w-3 shrink-0" /> {dept.wifiName}</div>
+                          <div className="text-muted-foreground select-all truncate">{dept.wifiPass}</div>
+                        </div>
+                      ) : "-"}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {(dept as any).lockBoxCode ? (
+                        <div className="flex items-center gap-1" title="Código Locker">
+                          <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="font-mono select-all">{(dept as any).lockBoxCode}</span>
+                        </div>
+                      ) : "-"}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <div className="flex gap-1 items-center">
+                        {(dept as any).googleMapsLink && (
+                          <a
+                            href={(dept as any).googleMapsLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Google Maps"
+                            className="hover:opacity-80 transition-opacity"
+                          >
+                            <img src="/icons/maps.png" alt="Maps" className="w-6 h-6 object-contain" />
+                          </a>
+                        )}
+                        {(dept as any).airbnbLink && (
+                          <a
+                            href={(dept as any).airbnbLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Airbnb"
+                            className="hover:opacity-80 transition-opacity"
+                          >
+                            <img src="/icons/airbnb.png" alt="Airbnb" className="w-6 h-6 object-contain" />
+                          </a>
+                        )}
+                        {(dept as any).bookingLink && (
+                          <a
+                            href={(dept as any).bookingLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Booking.com"
+                            className="hover:opacity-80 transition-opacity"
+                          >
+                            <img src="/icons/booking.png" alt="Booking" className="w-6 h-6 object-contain" />
+                          </a>
+                        )}
+                        {!((dept as any).googleMapsLink || (dept as any).airbnbLink || (dept as any).bookingLink) && <span className="text-muted-foreground ml-2">-</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <div>${dept.basePrice}</div>
+                      <div className="text-muted-foreground">+${dept.cleaningFee} (Limp)</div>
+                    </TableCell>
+                    <TableCell className="text-xs font-medium text-red-600">
+                      <div>${totalSuppliesCost}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={dept.isActive ? "default" : "secondary"}>
+                        {dept.isActive ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </TableCell>
+                    {!isVisualizer && (
+                      <TableCell className="text-right space-x-2 whitespace-nowrap">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => toggleActive(dept)}
+                          disabled={togglingId === dept.id}
+                          title={dept.isActive ? "Desactivar" : "Activar"}
+                        >
+                          {dept.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(dept)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {!dept.isActive && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => setDeleteId(dept.id)}
+                            title="Eliminar (Archivar)"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+                {visibleData.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={!isVisualizer ? 9 : 8} className="text-center h-24">
+                      No se encontraron departamentos.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {visibleData.map((dept) => (
+              <Card key={dept.id} className={cn("overflow-hidden", !dept.isActive && "opacity-60 bg-muted/50")}>
+                <div className="p-4 space-y-3">
+                  {/* Header: Name, Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       {dept.color && (
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dept.color }} title="Color distintivo" />
+                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dept.color }} />
                       )}
                       <div className="min-w-0">
-                        <div className="truncate font-semibold">{dept.name}</div>
-                        <div className="text-xs text-muted-foreground truncate">{dept.address}</div>
+                        <div className="font-semibold text-lg truncate">{dept.name}</div>
+                        <div className="text-sm text-muted-foreground truncate">{dept.address}</div>
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    {dept.maxPeople}p / {dept.bedCount}c
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {dept.wifiName ? (
-                      <div className="flex flex-col gap-0.5 max-w-[150px]">
-                        <div className="flex items-center gap-1 font-medium truncate"><Wifi className="h-3 w-3 shrink-0" /> {dept.wifiName}</div>
-                        <div className="text-muted-foreground select-all truncate">{dept.wifiPass}</div>
+                    <Badge variant={dept.isActive ? "default" : "secondary"}>
+                      {dept.isActive ? "Activo" : "Inactivo"}
+                    </Badge>
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {/* Capacity */}
+                    <div>
+                      <span className="text-muted-foreground block text-xs">Capacidad</span>
+                      <span className="font-medium">{dept.maxPeople} pax / {dept.bedCount} camas</span>
+                    </div>
+
+                    {/* Prices */}
+                    <div>
+                      <span className="text-muted-foreground block text-xs">Precios</span>
+                      <div className="font-medium flex flex-wrap gap-1">
+                        <span>${dept.basePrice}</span>
+                        <span className="text-xs text-muted-foreground">+${dept.cleaningFee} Limp.</span>
                       </div>
-                    ) : "-"}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {(dept as any).lockBoxCode ? (
-                      <div className="flex items-center gap-1" title="Código Locker">
-                        <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="font-mono select-all">{(dept as any).lockBoxCode}</span>
+                    </div>
+
+                    {/* Wifi */}
+                    <div className="col-span-2 bg-muted/30 p-2 rounded-md">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                        <Wifi className="h-3 w-3" /> Wifi
                       </div>
-                    ) : "-"}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    <div className="flex gap-1 items-center">
+                      <div className="font-medium text-sm">{dept.wifiName || "-"}</div>
+                      <div className="text-xs break-all select-all font-mono">{dept.wifiPass}</div>
+                    </div>
+                  </div>
+
+                  {/* Footer: Links & Locker */}
+                  <div className="flex items-center justify-between pt-2 border-t mt-2">
+                    {/* Links Row */}
+                    <div className="flex gap-3">
                       {(dept as any).googleMapsLink && (
-                        <a
-                          href={(dept as any).googleMapsLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Google Maps"
-                          className="hover:opacity-80 transition-opacity"
-                        >
+                        <a href={(dept as any).googleMapsLink} target="_blank" rel="noopener noreferrer">
                           <img src="/icons/maps.png" alt="Maps" className="w-6 h-6 object-contain" />
                         </a>
                       )}
                       {(dept as any).airbnbLink && (
-                        <a
-                          href={(dept as any).airbnbLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Airbnb"
-                          className="hover:opacity-80 transition-opacity"
-                        >
+                        <a href={(dept as any).airbnbLink} target="_blank" rel="noopener noreferrer">
                           <img src="/icons/airbnb.png" alt="Airbnb" className="w-6 h-6 object-contain" />
                         </a>
                       )}
                       {(dept as any).bookingLink && (
-                        <a
-                          href={(dept as any).bookingLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Booking.com"
-                          className="hover:opacity-80 transition-opacity"
-                        >
+                        <a href={(dept as any).bookingLink} target="_blank" rel="noopener noreferrer">
                           <img src="/icons/booking.png" alt="Booking" className="w-6 h-6 object-contain" />
                         </a>
                       )}
-                      {!((dept as any).googleMapsLink || (dept as any).airbnbLink || (dept as any).bookingLink) && <span className="text-muted-foreground ml-2">-</span>}
+                      {/* Locker info inline if space allows, or specific icon */}
+                      {(dept as any).lockBoxCode && (
+                        <div className="flex items-center gap-1 border px-2 rounded-md bg-background text-xs" title="Locker">
+                          <Lock className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-mono font-medium">{(dept as any).lockBoxCode}</span>
+                        </div>
+                      )}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    <div>${dept.basePrice}</div>
-                    <div className="text-muted-foreground">+${dept.cleaningFee} (Limp)</div>
-                  </TableCell>
-                  <TableCell className="text-xs font-medium text-red-600">
-                    <div>${totalSuppliesCost}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={dept.isActive ? "default" : "secondary"}>
-                      {dept.isActive ? "Activo" : "Inactivo"}
-                    </Badge>
-                  </TableCell>
+                  </div>
+
+                  {/* Actions Row */}
                   {!isVisualizer && (
-                    <TableCell className="text-right space-x-2 whitespace-nowrap">
+                    <div className="flex gap-2 pt-2">
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
                         onClick={() => toggleActive(dept)}
                         disabled={togglingId === dept.id}
-                        title={dept.isActive ? "Desactivar" : "Activar"}
                       >
-                        {dept.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                        {dept.isActive ? <Eye className="h-4 w-4 mr-2" /> : <EyeOff className="h-4 w-4 mr-2" />}
+                        {dept.isActive ? "Desactivar" : "Activar"}
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(dept)}>
-                        <Pencil className="h-4 w-4" />
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(dept)}>
+                        <Pencil className="h-4 w-4 mr-2" /> Editar
                       </Button>
                       {!dept.isActive && (
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                          variant="destructive"
+                          size="sm"
+                          className="px-3"
                           onClick={() => setDeleteId(dept.id)}
-                          title="Eliminar (Archivar)"
                         >
                           <Trash className="h-4 w-4" />
                         </Button>
                       )}
-                    </TableCell>
+                    </div>
                   )}
-                </TableRow>
-              ))}
-              {visibleData.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={!isVisualizer ? 9 : 8} className="text-center h-24">
-                    No se encontraron departamentos.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
+                </div>
+              </Card>
+            ))}
+            {visibleData.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No se encontraron departamentos.
+              </div>
+            )}
+          </div>
       </Card>
 
       <AlertDialog open={!!deleteId} onOpenChange={(val) => !val && setDeleteId(null)}>
