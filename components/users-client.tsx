@@ -92,7 +92,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Usuarios</h2>
           <p className="text-muted-foreground">Gestión de acceso y roles del sistema.</p>
@@ -103,7 +103,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
           if (!val) setEditingUser(null);
         }}>
           <DialogTrigger asChild>
-            <Button onClick={handleCreate}>
+            <Button onClick={handleCreate} className="w-full md:w-auto">
               <Plus className="mr-2 h-4 w-4" /> Nuevo Usuario
             </Button>
           </DialogTrigger>
@@ -142,7 +142,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
         </Select>
       </div>
 
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-white hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -207,6 +207,59 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {filteredData.map((user) => {
+          const isCurrentUser = user.id === currentUserId;
+          return (
+            <div key={user.id} className={`p-4 rounded-lg border bg-white shadow-sm ${!user.isActive ? "opacity-60 bg-muted/50" : ""}`}>
+              <div className="flex justify-between items-start gap-2">
+                <div className="min-w-0">
+                  <div className="font-bold text-base whitespace-normal break-words leading-tight">{user.name || "Sin nombre"}</div>
+                  <div className="text-sm text-muted-foreground whitespace-normal break-words mt-0.5">{user.email}</div>
+                  {user.phone && <div className="text-xs text-muted-foreground mt-1">{user.phone}</div>}
+                </div>
+                <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'} className="shrink-0">
+                  {user.role}
+                </Badge>
+              </div>
+
+              <div className="flex justify-between items-center pt-3 mt-3 border-t">
+                {user.isActive ? (
+                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100 shadow-none border-0 shrink-0">Activo</Badge>
+                ) : (
+                  <Badge variant="destructive" className="shrink-0">Inactivo</Badge>
+                )}
+
+                <div className="flex gap-1 ml-auto">
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  {!isCurrentUser && (
+                    <>
+                      {user.isActive ? (
+                        <Button variant="ghost" size="icon" className="text-orange-500 hover:text-orange-600" onClick={() => setDeleteId({ id: user.id, action: "DEACTIVATE" })}>
+                          <Ban className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => setDeleteId({ id: user.id, action: "DELETE" })}>
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {filteredData.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            No se encontraron usuarios.
+          </div>
+        )}
       </div>
 
       <AlertDialog open={!!deleteId} onOpenChange={(val) => !val && setDeleteId(null)}>
