@@ -28,11 +28,26 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         if (parsedCredentials.success) {
           const { email, password } = parsedCredentials.data;
-          const user = await getUser(email);
-          if (!user) return null;
-          const passwordsMatch = await bcrypt.compare(password, user.password);
+          console.log(`>>> Login attempt for: ${email}`);
 
-          if (passwordsMatch) return user;
+          const user = await getUser(email);
+          if (!user) {
+            console.log('>>> User not found in DB.');
+            return null;
+          }
+
+          const passwordsMatch = await bcrypt.compare(password, user.password);
+          if (passwordsMatch) {
+            console.log('>>> Password matched. Login successful.');
+            return user;
+          } else {
+            console.log('>>> Password mismatch.');
+            // Debug hash comparison (be careful not to log plain passwords in prod logs permanently, but for now it's necessary to debug)
+            // console.log('Stored hash:', user.password);
+            return null;
+          }
+        } else {
+          console.log('>>> Invalid credentials format (Zod validation failed)');
         }
 
         console.log('Credenciales inválidas');
