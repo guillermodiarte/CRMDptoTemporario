@@ -41,6 +41,7 @@
     "react-hook-form": "^7.71.0",
     "react-image-file-resizer": "^0.4.8",
     "recharts": "^3.6.0",
+    "sharp": "^0.34.5",
     "tailwind-merge": "^3.4.0",
     "use-debounce": "^10.1.0",
     "zod": "^4.3.5"
