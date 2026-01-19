@@ -1,3 +1,6 @@
+[variables]
+DATABASE_URL = "file:./dummy.db"
+
 [phases.setup]
 nixPkgs = ["nodejs_20", "npm-9_x", "openssl"]
 
