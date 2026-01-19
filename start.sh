@@ -12,7 +12,6 @@ export HOSTNAME="0.0.0.0"
 
 # Explicitly trust proxy for NextAuth
 export AUTH_TRUST_HOST=true
-export NEXTAUTH_URL="http://0.0.0.0:3000"
 
 # Debug Helper
 log() {
