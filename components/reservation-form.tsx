@@ -109,17 +109,16 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     },
   });
 
-  // Fetch default cleaning fee on mount if creating new
+  // Auto-fill Cleaning Fee from selected Department
+  const selectedDepartmentId = form.watch("departmentId");
   useEffect(() => {
-    if (!initialData) {
-      fetch("/api/settings")
-        .then(res => res.json())
-        .then(data => {
-          if (data.value) form.setValue("cleaningFee", data.value);
-        })
-        .catch(err => console.error("Error fetching cleaning fee", err));
+    if (!initialData && selectedDepartmentId) {
+      const dept = departments.find(d => d.id === selectedDepartmentId);
+      if (dept) {
+        form.setValue("cleaningFee", dept.cleaningFee || 0);
+      }
     }
-  }, [initialData, form]);
+  }, [selectedDepartmentId, departments, initialData, form]);
 
   // Airbnb Logic
   const source = form.watch("source");
@@ -131,13 +130,13 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   }, [source, form]);
 
   // Parking Logic
-  const selectedDeptId = form.watch("departmentId");
+  // const selectedDepartmentId = form.watch("departmentId"); // Already watched above
   useEffect(() => {
-    const selectedDept = departments.find(d => d.id === selectedDeptId);
+    const selectedDept = departments.find(d => d.id === selectedDepartmentId);
     if (selectedDept && !selectedDept.hasParking) {
       form.setValue("hasParking", false);
     }
-  }, [selectedDeptId, departments, form]);
+  }, [selectedDepartmentId, departments, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>, forceOverlap: boolean = false, ignoreCapacity: boolean = false, forceBlacklist: boolean = false) {
     setLoading(true);
@@ -392,7 +391,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                       onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
                       {...field}
                       value={field.value ?? ""}
-                      disabled={false /* TODO: Disable for non-admin if required by strict rules, but logic says 'Editable by Admin only', visualizers can verify? User said: 'Ser editable solo por usuarios Admin' */}
+                      disabled={true} // Auto-calculated from Department
                     />
                   </FormControl>
                 </div>
