@@ -32,9 +32,28 @@ export default async function CalendarPage({ searchParams }: { searchParams: { d
       checkIn: true,
       checkOut: true,
       guestName: true,
+      guestPhone: true,
       status: true,
       paymentStatus: true
     }
+  });
+
+  const blacklistEntries = await prisma.blacklistEntry.findMany({
+    where: { isActive: true },
+    select: { guestName: true, guestPhone: true }
+  });
+
+  const processedReservations = reservations.map(res => {
+    const isBlacklisted = blacklistEntries.some(entry => {
+      const normalize = (s: string) => s.toLowerCase().trim();
+      const resName = normalize(res.guestName);
+      const entryName = normalize(entry.guestName);
+      // Simple name match or inclusion? strict match is safer for now to avoid false positives on 'Juan'
+      // But 'Juan Perez' vs 'Juan Perez ' should match.
+      return resName === entryName || (entry.guestPhone && res.guestPhone === entry.guestPhone); // Phone is usually safer
+    });
+
+    return { ...res, isBlacklisted };
   });
 
   return (
@@ -43,7 +62,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: { d
         <h2 className="text-3xl font-bold tracking-tight">Calendario</h2>
       </div>
       <div className="flex-1 border rounded-md overflow-hidden bg-card">
-        <GlobalCalendar departments={departments} reservations={reservations} />
+        <GlobalCalendar departments={departments} reservations={processedReservations} />
       </div>
     </div>
   );
