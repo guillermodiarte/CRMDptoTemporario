@@ -14,6 +14,15 @@ export HOSTNAME="0.0.0.0"
 export AUTH_TRUST_HOST=true 
 export NEXTAUTH_URL="http://0.0.0.0:3000" # Fallback internal URL
 
+# Critical: Generate a secret if not provided (prevents crash on first run)
+if [ -z "$NEXTAUTH_SECRET" ]; then
+  echo ">>> WARNING: NEXTAUTH_SECRET not set. Generating a temporary random secret..."
+  export NEXTAUTH_SECRET=$(openssl rand -base64 32)
+  echo ">>> Generated temporary secret (Sessions will reset on restart). Please set NEXTAUTH_SECRET in your VPS settings for persistence."
+else
+  echo ">>> NEXTAUTH_SECRET is set."
+fi
+
 echo ">>> Starting CRM in Production Mode (VPS Optimized)..."
 echo ">>> PWD: $(pwd)"
 echo ">>> Listing .next directory:"
