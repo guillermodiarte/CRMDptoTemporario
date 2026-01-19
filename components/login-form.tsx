@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { authenticate } from '@/app/lib/actions';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 
 export default function LoginForm() {
   const [errorMessage, dispatch, isPending] = useActionState(authenticate, undefined);
+  const [email, setEmail] = useState(''); // Client-side state for persistence
 
   return (
     <Card className="mx-auto max-w-sm">
@@ -35,6 +36,8 @@ export default function LoginForm() {
               name="email"
               placeholder="admin@example.com"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="grid gap-2">

@@ -29,7 +29,12 @@ async function main() {
       });
       console.log('>>> Admin user created successfully.');
     } else {
-      console.log('>>> Admin user already exists. Skipping creation.');
+      console.log('>>> Admin user already exists. Checking role...');
+      await prisma.user.update({
+        where: { email },
+        data: { role: 'ADMIN' },
+      });
+      console.log('>>> User role verified/updated to ADMIN.');
     }
   } catch (error) {
     console.error('>>> Error checking/creating admin user:', error);
