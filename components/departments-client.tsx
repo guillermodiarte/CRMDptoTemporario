@@ -380,6 +380,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role
               </div>
             )}
           </div>
+        </CardContent>
       </Card>
 
       <AlertDialog open={!!deleteId} onOpenChange={(val) => !val && setDeleteId(null)}>
