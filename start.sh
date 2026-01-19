@@ -11,8 +11,7 @@ export PORT=3000
 export HOSTNAME="0.0.0.0"
 
 # Explicitly trust proxy for NextAuth
-export AUTH_TRUST_HOST=true 
-export NEXTAUTH_URL="http://0.0.0.0:3000" # Fallback internal URL
+export AUTH_TRUST_HOST=true
 
 # Critical: Generate a secret if not provided (prevents crash on first run)
 if [ -z "$NEXTAUTH_SECRET" ]; then
