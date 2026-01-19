@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User } from "@prisma/client";
 import {
   Table,
@@ -47,6 +47,11 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<{ id: string; action: "DEACTIVATE" | "DELETE" } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Filter
   const filteredData = data.filter(user => {
@@ -98,26 +103,28 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
           <p className="text-muted-foreground">Gestión de acceso y roles del sistema.</p>
         </div>
 
-        <Dialog open={open} onOpenChange={(val) => {
-          setOpen(val);
-          if (!val) setEditingUser(null);
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={handleCreate} className="w-full md:w-auto">
-              <Plus className="mr-2 h-4 w-4" /> Nuevo Usuario
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md" onCloseAutoFocus={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <DialogTitle>{editingUser ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
-            </DialogHeader>
-            <UserForm
-              initialData={editingUser}
-              setOpen={setOpen}
-              currentUserId={currentUserId}
-            />
-          </DialogContent>
-        </Dialog>
+        {isMounted && (
+          <Dialog open={open} onOpenChange={(val) => {
+            setOpen(val);
+            if (!val) setEditingUser(null);
+          }}>
+            <DialogTrigger asChild>
+              <Button onClick={handleCreate} className="w-full md:w-auto">
+                <Plus className="mr-2 h-4 w-4" /> Nuevo Usuario
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <DialogHeader>
+                <DialogTitle>{editingUser ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
+              </DialogHeader>
+              <UserForm
+                initialData={editingUser}
+                setOpen={setOpen}
+                currentUserId={currentUserId}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="flex gap-4 items-center bg-white p-4 rounded-lg shadow-sm border">
@@ -130,16 +137,20 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar por Rol" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todos los roles</SelectItem>
-            <SelectItem value="ADMIN">Administrador</SelectItem>
-            <SelectItem value="VISUALIZER">Visualizador</SelectItem>
-          </SelectContent>
-        </Select>
+        {isMounted ? (
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filtrar por Rol" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todos los roles</SelectItem>
+              <SelectItem value="ADMIN">Administrador</SelectItem>
+              <SelectItem value="VISUALIZER">Visualizador</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="w-[180px] h-10 border rounded bg-muted animate-pulse" />
+        )}
       </div>
 
       <div className="rounded-md border bg-white hidden md:block">
