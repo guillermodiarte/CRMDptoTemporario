@@ -60,10 +60,33 @@ if [ -f .env.production ]; then
 fi
 
 # Ensure Secret Consistency
+# Ensure Secret Consistency
 if [ -z "$AUTH_SECRET" ] && [ -z "$NEXTAUTH_SECRET" ]; then
   log "WARNING: neither AUTH_SECRET nor NEXTAUTH_SECRET is set."
-  log "Generating a TEMPORARY random secret. Sessions will be invalidated on restart."
-  export AUTH_SECRET=$(openssl rand -base64 32)
+  
+  # Check if .env exists, if so append, else create
+  if [ ! -f .env ]; then
+      log "Creating .env file to persist secret..."
+      touch .env
+  fi
+
+  # Generate functionality
+  NEW_SECRET=$(openssl rand -base64 32)
+  
+  # Check if AUTH_SECRET is already in .env (maybe empty string?)
+  if grep -q "AUTH_SECRET" .env; then
+      log "AUTH_SECRET key found in .env but env var was empty/missing. Not overwriting file blindly."
+      # Fallback to temp export if file has it but maybe commented out?
+      export AUTH_SECRET=$NEW_SECRET
+  else
+      log "Appending generated AUTH_SECRET to .env for persistence."
+      echo "" >> .env
+      echo "AUTH_SECRET=\"$NEW_SECRET\"" >> .env
+      export AUTH_SECRET=$NEW_SECRET
+  fi
+
+  log "Sessions will now persist across restarts (saved to .env)."
+  
   # Keep legacy compatibility just in case
   export NEXTAUTH_SECRET=$AUTH_SECRET
 else
