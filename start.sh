@@ -9,35 +9,44 @@ export NODE_OPTIONS="--max-old-space-size=512"
 export NODE_ENV=production
 export PORT=3000
 export HOSTNAME="0.0.0.0"
-export AUTH_TRUST_HOST=true # Fix for NextAuth behind proxy/VPS
+
+# Explicitly trust proxy for NextAuth
+export AUTH_TRUST_HOST=true 
+export NEXTAUTH_URL="http://0.0.0.0:3000" # Fallback internal URL
 
 echo ">>> Starting CRM in Production Mode (VPS Optimized)..."
-echo ">>> Memory Limit: 512MB"
+echo ">>> PWD: $(pwd)"
+echo ">>> Listing .next directory:"
+ls -F .next || echo ".next not found"
 
 # 3. Execution Strategy
 if [ -f ".next/standalone/server.js" ]; then
     echo ">>> Found Standalone Build. Using efficient Node execution."
     
-    # Critical: Copy static assets to standalone directory
-    # Next.js does not include these by default in standalone output
-    
+    echo ">>> Copying static assets..."
     # 1. Copy Public folder
     if [ -d "public" ]; then
         cp -r public .next/standalone/public
+        echo ">>> Copied public -> .next/standalone/public"
+    else
+        echo ">>> WARNING: public directory not found"
     fi
 
     # 2. Copy Static folder
     if [ -d ".next/static" ]; then
         mkdir -p .next/standalone/.next/static
-        cp -r .next/static .next/standalone/.next/static
+        cp -r .next/static/* .next/standalone/.next/static/
+        echo ">>> Copied .next/static -> .next/standalone/.next/static"
+    else
+        echo ">>> WARNING: .next/static directory not found"
     fi
-
-    echo ">>> Static assets copied to standalone directory."
     
     # Run the standalone server
-    # Important: Change directory to where server.js is located so it finds relative assets
+    echo ">>> Entering standalone directory..."
     cd .next/standalone
-    node server.js
+    
+    echo ">>> Starting Server..."
+    exec node server.js
 else
     echo ">>> Standalone build not found. Falling back to 'next start'."
     # Note: 'next start' uses more memory than standalone 'node server.js'
