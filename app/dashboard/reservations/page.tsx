@@ -47,6 +47,19 @@ export default async function ReservationsPage({
 
   const dollarRate = await getDollarRate();
 
+  // Fetch customizable year range
+  const yearSettings = await prisma.systemSettings.findMany({
+    where: {
+      key: { in: ["RESERVATION_YEAR_START", "RESERVATION_YEAR_END"] }
+    }
+  });
+
+  const startYearSetting = yearSettings.find(s => s.key === "RESERVATION_YEAR_START")?.value;
+  const endYearSetting = yearSettings.find(s => s.key === "RESERVATION_YEAR_END")?.value;
+
+  const configStartYear = startYearSetting ? parseInt(startYearSetting) : currentYear;
+  const configEndYear = endYearSetting ? parseInt(endYearSetting) : currentYear + 10;
+
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <ReservationsClient
@@ -56,6 +69,8 @@ export default async function ReservationsPage({
         role={userRole}
         blacklistedPhones={blacklistedPhones}
         blacklistEntries={blacklistEntries}
+        startYear={configStartYear}
+        endYear={configEndYear}
       />
     </div>
   );

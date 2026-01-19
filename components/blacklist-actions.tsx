@@ -15,10 +15,9 @@ import {
   FileText,
   FileDown,
   Loader2,
-  CheckCircle2,
+  CheckCircle,
   AlertCircle,
-  X,
-  Trash2
+  CheckCircle2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -48,15 +47,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 
 interface BlacklistActionsProps {
   data: (BlacklistEntry & { reportedBy?: { name: string | null; email: string | null } | null })[];
 }
-
-// ------------------------------------------------------------------
-// CONFIGURATION
-// ------------------------------------------------------------------
 
 const CSV_CONFIG = [
   { label: "GuestName", key: "guestName", type: "string", required: true },
@@ -71,18 +65,17 @@ const CSV_CONFIG = [
 export function BlacklistActions({ data }: BlacklistActionsProps) {
   const router = useRouter();
 
-  // Dialog State
-  const [isOpen, setIsOpen] = useState(false);
-  const [step, setStep] = useState<"upload" | "preview" | "result">("upload");
+  const [importOpen, setImportOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [csvData, setCsvData] = useState<any[]>([]);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [successCount, setSuccessCount] = useState(0);
 
-  // Data State
-  const [parsedRows, setParsedRows] = useState<any[]>([]);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importSummary, setImportSummary] = useState<{ successes: number, errors: string[] } | null>(null);
+  // --- Export Logic ---
 
-  // ------------------------------------------------------------------
-  // EXPORT LOGIC
-  // ------------------------------------------------------------------
+  const getExportFileName = (ext: string) => {
+    return `lista_negra_${format(new Date(), "MMMM_yyyy", { locale: es })}.${ext}`;
+  };
 
   const exportToCSV = () => {
     const headers = ["Huésped", "Teléfono", "Motivo", "Reportado Por", "Fecha", "Check-In", "Check-Out"];
@@ -103,33 +96,40 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `blacklist_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    link.download = getExportFileName("csv");
     link.click();
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
     doc.text("Reporte de Lista Negra", 14, 15);
     doc.setFontSize(10);
     doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 22);
 
     const tableRows = data.map(entry => [
-      entry.guestName.substring(0, 20),
+      entry.guestName,
       entry.guestPhone || "",
-      entry.reason.substring(0, 30),
+      entry.reason,
       entry.reportedBy?.name || "Sistema",
-      format(new Date(entry.createdAt), "dd/MM/yyyy")
+      format(new Date(entry.createdAt), "dd/MM/yyyy"),
+      entry.checkIn ? format(new Date(entry.checkIn), "dd/MM/yyyy") : "-",
+      entry.checkOut ? format(new Date(entry.checkOut), "dd/MM/yyyy") : "-"
     ]);
 
     autoTable(doc, {
-      head: [["Huésped", "Teléfono", "Motivo", "Reportado", "Fecha"]],
+      head: [["Huésped", "Teléfono", "Motivo", "Reportado", "Fecha Rep.", "Check-In", "Check-Out"]],
       body: tableRows,
       startY: 30,
       styles: { fontSize: 8 },
+      columnStyles: {
+        2: { cellWidth: 50 } // Motivo wider
+      }
     });
 
-    doc.save(`blacklist_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    doc.save(getExportFileName("pdf"));
   };
+
+  // --- Import Logic ---
 
   const downloadTemplate = () => {
     const headers = CSV_CONFIG.map(c => c.label).join(",");
@@ -142,27 +142,27 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
     link.click();
   };
 
-  // ------------------------------------------------------------------
-  // IMPORT LOGIC
-  // ------------------------------------------------------------------
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setCsvData([]);
+    setErrors([]);
+    setSuccessCount(0);
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (result) => processParsedData(result.data),
-      error: (err) => alert("Error leyendo CSV: " + err.message)
+      complete: (result) => validateAndSetPreview(result.data),
+      error: (err) => setErrors(["Error leyendo CSV: " + err.message])
     });
     e.target.value = "";
   };
 
-  const processParsedData = (rawRows: any[]) => {
-    const processed = rawRows.map((row, idx) => {
+  const validateAndSetPreview = (rows: any[]) => {
+    const processed = rows.map((row, idx) => {
       const entry: any = {};
-      const errors: string[] = [];
+      const rowErrors: string[] = [];
 
       // 1. Map Columns (Flexible matching)
       CSV_CONFIG.forEach(config => {
@@ -188,40 +188,43 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
       });
 
       // 2. Validate Required
-      if (!entry.guestName) errors.push("Falta Nombre");
-      if (!entry.guestPhone) errors.push("Falta Teléfono");
-      if (!entry.reason) errors.push("Falta Motivo");
+      if (!entry.guestName) rowErrors.push("Falta Nombre");
+      if (!entry.guestPhone) rowErrors.push("Falta Teléfono");
+      if (!entry.reason) rowErrors.push("Falta Motivo");
 
       // 3. Validate Date Formats
       if (entry.checkIn && !isValid(parse(entry.checkIn, "yyyy-MM-dd", new Date()))) {
-        errors.push("CheckIn inválido (YYYY-MM-DD)");
+        rowErrors.push("CheckIn inválido (YYYY-MM-DD)");
       }
       if (entry.checkOut && !isValid(parse(entry.checkOut, "yyyy-MM-dd", new Date()))) {
-        errors.push("CheckOut inválido (YYYY-MM-DD)");
+        rowErrors.push("CheckOut inválido (YYYY-MM-DD)");
       }
 
       // 4. Validate Duplicate (Phone)
       const exists = data.some(existing =>
         existing.guestPhone?.trim() === entry.guestPhone?.trim()
       );
-      if (exists) errors.push("Teléfono ya existe en lista negra");
+      if (exists) {
+        rowErrors.push("Teléfono ya existe en lista negra");
+        entry._duplicate = true;
+      }
 
-      return { ...entry, _errors: errors, _id: idx };
+      return { ...entry, _errors: rowErrors, _id: idx, _valid: rowErrors.length === 0 };
     });
 
-    setParsedRows(processed);
-    setStep("preview");
+    setCsvData(processed);
   };
 
   const executeImport = async () => {
-    setIsImporting(true);
-    const validRows = parsedRows.filter(r => r._errors.length === 0);
-    let successes = 0;
-    const errors: string[] = [];
+    setImporting(true);
+    let success = 0;
+    const globalErrors: string[] = [];
+
+    const validRows = csvData.filter(r => r._valid);
 
     for (const row of validRows) {
       try {
-        const { _errors, _id, ...payload } = row;
+        const { _errors, _id, _valid, _duplicate, ...payload } = row;
 
         const res = await fetch("/api/blacklist", {
           method: "POST",
@@ -232,37 +235,32 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
         if (!res.ok) {
           // Ignore 409 (Duplicate) if somehow passed UI check
           if (res.status === 409) {
-            errors.push(`Fila ${row.guestName}: Ya existe (API)`);
+            globalErrors.push(`Fila ${row.guestName}: Ya existe (API)`);
             continue;
           }
           throw new Error(await res.text());
         }
-        successes++;
+        success++;
 
       } catch (e: any) {
-        errors.push(`Error en ${row.guestName}: ${e.message}`);
+        globalErrors.push(`Error en ${row.guestName}: ${e.message}`);
       }
     }
 
-    setImportSummary({ successes, errors });
-    setStep("result");
-    setIsImporting(false);
-    if (successes > 0) router.refresh();
+    setSuccessCount(success);
+    if (globalErrors.length > 0) {
+      setErrors(globalErrors);
+    } else {
+      setTimeout(() => {
+        setImportOpen(false);
+        router.refresh();
+      }, 1500);
+    }
+    setImporting(false);
   };
-
-  const reset = () => {
-    setIsOpen(false);
-    setStep("upload");
-    setParsedRows([]);
-    setImportSummary(null);
-  };
-
-  // ------------------------------------------------------------------
-  // RENDER
-  // ------------------------------------------------------------------
 
   return (
-    <>
+    <div className="flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="gap-2">
@@ -279,140 +277,97 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
             <FileText className="mr-2 h-4 w-4" /> Exportar PDF
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setIsOpen(true)}>
+          <DropdownMenuItem onClick={() => setImportOpen(true)}>
             <Upload className="mr-2 h-4 w-4" /> Importar CSV
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={isOpen} onOpenChange={open => !open && reset()}>
-        <DialogContent className="sm:max-w-[900px] h-[80vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-6 pb-2">
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
             <DialogTitle>Importar Lista Negra</DialogTitle>
             <DialogDescription>
-              {step === "upload" && "Carga un archivo CSV para comenzar."}
-              {step === "preview" && "Revisa los datos antes de importar."}
-              {step === "result" && "Resumen de la importación."}
+              Carga un archivo CSV para importar miembros a la lista negra.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden p-6 pt-2">
-
-            {/* STEP 1: UPLOAD */}
-            {step === "upload" && (
-              <div className="h-full flex flex-col items-center justify-center border-2 border-dashed rounded-xl bg-muted/10">
-                <div className="text-center space-y-4">
-                  <div className="bg-primary/10 p-4 rounded-full inline-block">
-                    <Upload className="h-8 w-8 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-medium">Sube tu archivo CSV</h3>
-                  <div className="flex flex-col gap-2">
-                    <Input type="file" accept=".csv" onChange={handleFileUpload} className="cursor-pointer" />
-                    <Button variant="link" onClick={downloadTemplate}>
-                      <FileDown className="mr-2 h-4 w-4" /> Descargar Plantilla
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 2: PREVIEW */}
-            {step === "preview" && (
-              <div className="h-full flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    Se encontraron <strong>{parsedRows.length}</strong> filas.
-                    <span className="text-green-600 ml-2 font-medium">
-                      {parsedRows.filter(r => r._errors.length === 0).length} Válidas
-                    </span>
-                    <span className="text-red-600 ml-2 font-medium">
-                      {parsedRows.filter(r => r._errors.length > 0).length} Erróneas
-                    </span>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => setStep("upload")}>
-                    <X className="mr-2 h-4 w-4" /> Cancelar
-                  </Button>
-                </div>
-
-                <div className="border rounded-md flex-1 overflow-hidden">
-                  <ScrollArea className="h-full">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="w-[50px]">Status</TableHead>
-                          <TableHead>Huésped</TableHead>
-                          <TableHead>Teléfono</TableHead>
-                          <TableHead>Motivo</TableHead>
-                          <TableHead>Mensaje</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {parsedRows.map((row, i) => (
-                          <TableRow key={i} className={row._errors.length > 0 ? "bg-red-50 hover:bg-red-100" : ""}>
-                            <TableCell>
-                              {row._errors.length === 0
-                                ? <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                : <AlertCircle className="h-4 w-4 text-red-500" />
-                              }
-                            </TableCell>
-                            <TableCell className="font-medium">{row.guestName || "-"}</TableCell>
-                            <TableCell>{row.guestPhone}</TableCell>
-                            <TableCell>{row.reason}</TableCell>
-                            <TableCell className="text-xs text-red-600 font-medium">
-                              {row._errors.join(", ")}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: RESULT */}
-            {step === "result" && importSummary && (
-              <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-                <div className="flex flex-col items-center gap-2">
-                  <CheckCircle2 className="h-16 w-16 text-green-500" />
-                  <h2 className="text-2xl font-bold">{importSummary.successes} Importados</h2>
-                  <p className="text-muted-foreground">El proceso ha finalizado.</p>
-                </div>
-
-                {importSummary.errors.length > 0 && (
-                  <div className="w-full max-w-md border rounded-md bg-red-50 p-4 text-left">
-                    <p className="font-bold text-red-700 mb-2">Errores:</p>
-                    <ScrollArea className="h-32">
-                      <ul className="text-xs text-red-600 space-y-1">
-                        {importSummary.errors.map((e, i) => <li key={i}>{e}</li>)}
-                      </ul>
-                    </ScrollArea>
-                  </div>
-                )}
-              </div>
-            )}
+          <div className="flex gap-4 items-center my-4">
+            <Input type="file" accept=".csv" onChange={handleFileUpload} />
+            <Button variant="secondary" onClick={downloadTemplate}>
+              <FileDown className="mr-2 h-4 w-4" /> Template
+            </Button>
           </div>
 
-          <DialogFooter className="p-6 pt-2 bg-muted/20 border-t">
-            {step === "upload" && <Button variant="ghost" onClick={() => setIsOpen(false)}>Cerrar</Button>}
-            {step === "preview" && (
-              <>
-                <Button variant="outline" onClick={() => setStep("upload")}>Atrás</Button>
-                <Button
-                  onClick={executeImport}
-                  disabled={isImporting || parsedRows.filter(r => r._errors.length === 0).length === 0}
-                >
-                  {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Importar {parsedRows.filter(r => r._errors.length === 0).length}
-                </Button>
-              </>
-            )}
-            {step === "result" && (
-              <Button onClick={reset} className="w-full">Finalizar</Button>
-            )}
+          {errors.length > 0 && (
+            <Alert variant="destructive" className="mb-4 max-h-32 overflow-y-auto">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Errores de validación</AlertTitle>
+              <AlertDescription>
+                <div className="text-xs">
+                  {errors.map((e, i) => <div key={i}>{e}</div>)}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {successCount > 0 && (
+            <Alert className="mb-4 bg-green-50 text-green-900 border-green-200">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertTitle>Importación Parcial</AlertTitle>
+              <AlertDescription>
+                Se importaron {successCount} entradas correctamente.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex-1 overflow-auto border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">Status</TableHead>
+                  <TableHead>Huésped</TableHead>
+                  <TableHead>Teléfono</TableHead>
+                  <TableHead>Motivo</TableHead>
+                  <TableHead>Mensaje</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {csvData.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      Sube un archivo CSV para previsualizar.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {csvData.map((row, i) => (
+                  <TableRow key={i} className={!row._valid ? "bg-red-50" : "bg-white"}>
+                    <TableCell>
+                      {row._valid
+                        ? <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        : <AlertCircle className="h-4 w-4 text-red-500" />
+                      }
+                    </TableCell>
+                    <TableCell className="font-medium">{row.guestName || "-"}</TableCell>
+                    <TableCell>{row.guestPhone}</TableCell>
+                    <TableCell>{row.reason}</TableCell>
+                    <TableCell className="text-xs text-red-600 font-medium">
+                      {row._errors.join(", ")}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="ghost" onClick={() => setImportOpen(false)}>Cancelar</Button>
+            <Button onClick={executeImport} disabled={importing || csvData.filter(r => r._valid).length === 0}>
+              {importing ? "Importando..." : `Importar ${csvData.filter(r => r._valid).length} entradas`}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

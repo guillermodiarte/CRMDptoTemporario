@@ -15,10 +15,9 @@ import {
   FileText,
   FileDown,
   Loader2,
-  CheckCircle2,
+  CheckCircle,
   AlertCircle,
-  X,
-  Trash2
+  CheckCircle2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -48,7 +47,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 
 interface FinanceActionsProps {
   expenses: (Expense & { department: { name: string } | null })[];
@@ -91,18 +89,13 @@ const CSV_CONFIG = [
 export function FinanceActions({ expenses, departments, date = new Date() }: FinanceActionsProps) {
   const router = useRouter();
 
-  // Dialog State
-  const [isOpen, setIsOpen] = useState(false);
-  const [step, setStep] = useState<"upload" | "preview" | "result">("upload");
+  const [importOpen, setImportOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [csvData, setCsvData] = useState<any[]>([]);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [successCount, setSuccessCount] = useState(0);
 
-  // Data State
-  const [parsedRows, setParsedRows] = useState<any[]>([]);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importSummary, setImportSummary] = useState<{ successes: number, errors: string[] } | null>(null);
-
-  // ------------------------------------------------------------------
-  // EXPORT LOGIC
-  // ------------------------------------------------------------------
+  // --- Export Logic ---
 
   const getExportFileName = (ext: string) => {
     return `finanzas_${format(date, "MMMM_yyyy", { locale: es })}.${ext}`;
@@ -156,6 +149,8 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
     doc.save(getExportFileName("pdf"));
   };
 
+  // --- Import Logic ---
+
   const downloadTemplate = () => {
     const headers = CSV_CONFIG.map(c => c.label).join(",");
     const example = "2024-01-30,Insumos,Compra de papel,5000,Depto 1,2,2500";
@@ -167,27 +162,27 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
     link.click();
   };
 
-  // ------------------------------------------------------------------
-  // IMPORT LOGIC
-  // ------------------------------------------------------------------
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setCsvData([]);
+    setErrors([]);
+    setSuccessCount(0);
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (result) => processParsedData(result.data),
-      error: (err) => alert("Error leyendo CSV: " + err.message)
+      complete: (result) => validateAndSetPreview(result.data),
+      error: (err) => setErrors(["Error leyendo CSV: " + err.message])
     });
     e.target.value = "";
   };
 
-  const processParsedData = (rawRows: any[]) => {
-    const processed = rawRows.map((row, idx) => {
+  const validateAndSetPreview = (rows: any[]) => {
+    const processed = rows.map((row, idx) => {
       const entry: any = {};
-      const errors: string[] = [];
+      const rowErrors: string[] = [];
 
       // 1. Map Columns (Flexible)
       CSV_CONFIG.forEach(config => {
@@ -215,14 +210,14 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
       // 2. Validate & Normalize
 
       // Date
-      if (!entry.date) errors.push("Falta Fecha");
-      else if (!isValid(parse(entry.date, "yyyy-MM-dd", new Date()))) errors.push("Fecha inválida (YYYY-MM-DD)");
+      if (!entry.date) rowErrors.push("Falta Fecha");
+      else if (!isValid(parse(entry.date, "yyyy-MM-dd", new Date()))) rowErrors.push("Fecha inválida (YYYY-MM-DD)");
 
       // Amount
-      if (!entry.amount) errors.push("Falta Monto");
+      if (!entry.amount) rowErrors.push("Falta Monto");
       else {
         entry.amount = parseFloat(entry.amount);
-        if (isNaN(entry.amount)) errors.push("Monto inválido");
+        if (isNaN(entry.amount)) rowErrors.push("Monto inválido");
       }
       entry.quantity = entry.quantity ? parseInt(entry.quantity) : 1;
       entry.unitPrice = entry.unitPrice ? parseFloat(entry.unitPrice) : undefined;
@@ -230,36 +225,36 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
       // Department
       if (entry.departmentName && entry.departmentName.toLowerCase() !== "global") {
         const dept = departments.find(d => d.name.toLowerCase() === entry.departmentName.toLowerCase());
-        if (!dept) errors.push(`Depto no encontrado: ${entry.departmentName}`);
+        if (!dept) rowErrors.push(`Depto no encontrado: ${entry.departmentName}`);
         else entry._departmentId = dept.id;
       }
 
       // Type
-      if (!entry.type) errors.push("Falta Tipo");
+      if (!entry.type) rowErrors.push("Falta Tipo");
       else {
         const typeKey = entry.type.toLowerCase();
         const mapped = REVERSE_TYPE_LABELS[typeKey];
         if (!mapped && !Object.values(ExpenseType).includes(entry.type)) {
-          errors.push(`Tipo desconocido: ${entry.type}`);
+          rowErrors.push(`Tipo desconocido: ${entry.type}`);
         } else {
           entry.type = mapped || entry.type;
         }
       }
 
-      if (!entry.description) errors.push("Falta Descripción");
+      if (!entry.description) rowErrors.push("Falta Descripción");
 
-      return { ...entry, _errors: errors, _id: idx };
+      return { ...entry, _errors: rowErrors, _id: idx, _valid: rowErrors.length === 0 };
     });
 
-    setParsedRows(processed);
-    setStep("preview");
+    setCsvData(processed);
   };
 
   const executeImport = async () => {
-    setIsImporting(true);
-    const validRows = parsedRows.filter(r => r._errors.length === 0);
-    let successes = 0;
-    const errors: string[] = [];
+    setImporting(true);
+    let success = 0;
+    const globalErrors: string[] = [];
+
+    const validRows = csvData.filter(r => r._valid);
 
     for (const row of validRows) {
       try {
@@ -280,32 +275,27 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
         });
 
         if (!res.ok) throw new Error(await res.text());
-        successes++;
+        success++;
 
       } catch (e: any) {
-        errors.push(`Error en ${row.description}: ${e.message}`);
+        globalErrors.push(`Error en ${row.description}: ${e.message}`);
       }
     }
 
-    setImportSummary({ successes, errors });
-    setStep("result");
-    setIsImporting(false);
-    if (successes > 0) router.refresh();
+    setSuccessCount(success);
+    if (globalErrors.length > 0) {
+      setErrors(globalErrors);
+    } else {
+      setTimeout(() => {
+        setImportOpen(false);
+        router.refresh();
+      }, 1500);
+    }
+    setImporting(false);
   };
-
-  const reset = () => {
-    setIsOpen(false);
-    setStep("upload");
-    setParsedRows([]);
-    setImportSummary(null);
-  };
-
-  // ------------------------------------------------------------------
-  // RENDER
-  // ------------------------------------------------------------------
 
   return (
-    <>
+    <div className="flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="gap-2">
@@ -322,143 +312,100 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
             <FileText className="mr-2 h-4 w-4" /> Exportar PDF
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setIsOpen(true)}>
+          <DropdownMenuItem onClick={() => setImportOpen(true)}>
             <Upload className="mr-2 h-4 w-4" /> Importar CSV
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={isOpen} onOpenChange={open => !open && reset()}>
-        <DialogContent className="sm:max-w-[900px] h-[80vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-6 pb-2">
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
             <DialogTitle>Importar Gastos</DialogTitle>
             <DialogDescription>
-              {step === "upload" && "Carga un archivo CSV para comenzar."}
-              {step === "preview" && "Revisa los datos antes de importar."}
-              {step === "result" && "Resumen de la importación."}
+              Carga un archivo CSV para importar gastos masivamente.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden p-6 pt-2">
-
-            {/* STEP 1: UPLOAD */}
-            {step === "upload" && (
-              <div className="h-full flex flex-col items-center justify-center border-2 border-dashed rounded-xl bg-muted/10">
-                <div className="text-center space-y-4">
-                  <div className="bg-primary/10 p-4 rounded-full inline-block">
-                    <Upload className="h-8 w-8 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-medium">Sube tu archivo CSV</h3>
-                  <div className="flex flex-col gap-2">
-                    <Input type="file" accept=".csv" onChange={handleFileUpload} className="cursor-pointer" />
-                    <Button variant="link" onClick={downloadTemplate}>
-                      <FileDown className="mr-2 h-4 w-4" /> Descargar Plantilla
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 2: PREVIEW */}
-            {step === "preview" && (
-              <div className="h-full flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    Se encontraron <strong>{parsedRows.length}</strong> filas.
-                    <span className="text-green-600 ml-2 font-medium">
-                      {parsedRows.filter(r => r._errors.length === 0).length} Válidas
-                    </span>
-                    <span className="text-red-600 ml-2 font-medium">
-                      {parsedRows.filter(r => r._errors.length > 0).length} Erróneas
-                    </span>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => setStep("upload")}>
-                    <X className="mr-2 h-4 w-4" /> Cancelar
-                  </Button>
-                </div>
-
-                <div className="border rounded-md flex-1 overflow-hidden">
-                  <ScrollArea className="h-full">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="w-[50px]">Status</TableHead>
-                          <TableHead>Fecha</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Desc.</TableHead>
-                          <TableHead>Monto</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {parsedRows.map((row, i) => (
-                          <TableRow key={i} className={row._errors.length > 0 ? "bg-red-50 hover:bg-red-100" : ""}>
-                            <TableCell>
-                              {row._errors.length === 0
-                                ? <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                : <AlertCircle className="h-4 w-4 text-red-500" />
-                              }
-                            </TableCell>
-                            <TableCell>{row.date}</TableCell>
-                            <TableCell className="capitalize">{row.type?.toLowerCase()}</TableCell>
-                            <TableCell>
-                              {row.description}
-                              {row._errors.length > 0 && (
-                                <div className="text-xs text-red-600 font-medium">{row._errors.join(", ")}</div>
-                              )}
-                            </TableCell>
-                            <TableCell>${row.amount}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: RESULT */}
-            {step === "result" && importSummary && (
-              <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-                <div className="flex flex-col items-center gap-2">
-                  <CheckCircle2 className="h-16 w-16 text-green-500" />
-                  <h2 className="text-2xl font-bold">{importSummary.successes} Importados</h2>
-                  <p className="text-muted-foreground">El proceso ha finalizado.</p>
-                </div>
-
-                {importSummary.errors.length > 0 && (
-                  <div className="w-full max-w-md border rounded-md bg-red-50 p-4 text-left">
-                    <p className="font-bold text-red-700 mb-2">Errores:</p>
-                    <ScrollArea className="h-32">
-                      <ul className="text-xs text-red-600 space-y-1">
-                        {importSummary.errors.map((e, i) => <li key={i}>{e}</li>)}
-                      </ul>
-                    </ScrollArea>
-                  </div>
-                )}
-              </div>
-            )}
+          <div className="flex gap-4 items-center my-4">
+            <Input type="file" accept=".csv" onChange={handleFileUpload} />
+            <Button variant="secondary" onClick={downloadTemplate}>
+              <FileDown className="mr-2 h-4 w-4" /> Template
+            </Button>
           </div>
 
-          <DialogFooter className="p-6 pt-2 bg-muted/20 border-t">
-            {step === "upload" && <Button variant="ghost" onClick={() => setIsOpen(false)}>Cerrar</Button>}
-            {step === "preview" && (
-              <>
-                <Button variant="outline" onClick={() => setStep("upload")}>Atrás</Button>
-                <Button
-                  onClick={executeImport}
-                  disabled={isImporting || parsedRows.filter(r => r._errors.length === 0).length === 0}
-                >
-                  {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Importar {parsedRows.filter(r => r._errors.length === 0).length}
-                </Button>
-              </>
-            )}
-            {step === "result" && (
-              <Button onClick={reset} className="w-full">Finalizar</Button>
-            )}
+          {errors.length > 0 && (
+            <Alert variant="destructive" className="mb-4 max-h-32 overflow-y-auto">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Errores de validación</AlertTitle>
+              <AlertDescription>
+                <div className="text-xs">
+                  {errors.map((e, i) => <div key={i}>{e}</div>)}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {successCount > 0 && (
+            <Alert className="mb-4 bg-green-50 text-green-900 border-green-200">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertTitle>Importación Parcial</AlertTitle>
+              <AlertDescription>
+                Se importaron {successCount} gastos correctamente.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex-1 overflow-auto border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">Status</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Desc.</TableHead>
+                  <TableHead>Monto</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {csvData.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      Sube un archivo CSV para previsualizar.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {csvData.map((row, i) => (
+                  <TableRow key={i} className={!row._valid ? "bg-red-50" : "bg-white"}>
+                    <TableCell>
+                      {row._valid
+                        ? <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        : <AlertCircle className="h-4 w-4 text-red-500" />
+                      }
+                    </TableCell>
+                    <TableCell>{row.date}</TableCell>
+                    <TableCell className="capitalize">{row.type?.toLowerCase()}</TableCell>
+                    <TableCell>
+                      {row.description}
+                      {row._errors.length > 0 && (
+                        <div className="text-xs text-red-600 font-medium">{row._errors.join(", ")}</div>
+                      )}
+                    </TableCell>
+                    <TableCell>${row.amount}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="ghost" onClick={() => setImportOpen(false)}>Cancelar</Button>
+            <Button onClick={executeImport} disabled={importing || csvData.filter(r => r._valid).length === 0}>
+              {importing ? "Importando..." : `Importar ${csvData.filter(r => r._valid).length} gastos`}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

@@ -4,7 +4,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-export function MonthSelector() {
+interface MonthSelectorProps {
+  startYear?: number;
+  endYear?: number;
+}
+
+export function MonthSelector({ startYear = 2026, endYear = 2036 }: MonthSelectorProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -36,7 +41,11 @@ export function MonthSelector() {
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
 
-  const years = Array.from({ length: 11 }, (_, i) => (2026 + i).toString());
+  // Dynamic years from props
+  const years = Array.from(
+    { length: endYear - startYear + 1 },
+    (_, i) => (startYear + i).toString()
+  );
 
   return (
     <div className="flex gap-2">

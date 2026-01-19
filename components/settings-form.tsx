@@ -11,135 +11,328 @@ import { Loader2, Save } from "lucide-react";
 
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, Plus, Trash2, Pencil, Power, PowerOff } from "lucide-react";
 
 export function SettingsForm() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  const [cleaningFee, setCleaningFee] = useState<string>("5000");
+  // Settings State
+  const [startYear, setStartYear] = useState<string>("2026");
+  const [endYear, setEndYear] = useState<string>("2036");
+
+  // Supplies State
+  const [supplies, setSupplies] = useState<any[]>([]);
+  const [newSupplyName, setNewSupplyName] = useState("");
+  const [newSupplyCost, setNewSupplyCost] = useState("");
+  const [editingSupply, setEditingSupply] = useState<any | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Role check handled by Server Component
-
-
   useEffect(() => {
-    const fetchSettings = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch("/api/settings");
-        if (res.ok) {
-          const data = await res.json();
-          setCleaningFee(String(data.value));
+        const [settingsRes, suppliesRes] = await Promise.all([
+          fetch("/api/settings"),
+          fetch("/api/supplies")
+        ]);
+
+        if (settingsRes.ok) {
+          const data = await settingsRes.json();
+          setStartYear(String(data.startYear || 2026));
+          setEndYear(String(data.endYear || 2036));
+        }
+
+        if (suppliesRes.ok) {
+          const data = await suppliesRes.json();
+          setSupplies(data.supplies || []);
         }
       } catch (error) {
-        console.error("Failed to fetch settings", error);
+        console.error("Failed to fetch data", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchSettings();
+    fetchData();
   }, []);
 
-  const handleSave = async () => {
+  const handleSaveSettings = async () => {
     setSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    const start = parseInt(startYear);
+    const end = parseInt(endYear);
+
+    if (isNaN(start) || isNaN(end) || start < 2020 || end > 2100 || end < start) {
+      setError("Años inválidos. Deben ser números entre 2020 y 2100, y fin >= inicio.");
+      setSaving(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value: parseFloat(cleaningFee) }),
+        body: JSON.stringify({
+          startYear,
+          endYear
+        }),
       });
 
-      if (!res.ok) throw new Error("Failed to save");
-
-      setSuccess("Configuración guardada correctamente");
-      setError(null);
+      if (!res.ok) throw new Error("Failed");
+      setSuccess("Configuración de calendario guardada.");
       router.refresh();
-
-      // Auto-dismiss
       setTimeout(() => setSuccess(null), 3000);
-    } catch (error) {
-      setError("Error al guardar la configuración");
-      setSuccess(null);
+    } catch {
+      setError("Error al guardar.");
     } finally {
       setSaving(false);
     }
   };
 
+  const handleSaveSupply = async () => {
+    if (!newSupplyName || !newSupplyCost) return;
+
+    if (editingSupply) {
+      // Update existing
+      try {
+        const res = await fetch("/api/supplies", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingSupply.id,
+            name: newSupplyName,
+            cost: newSupplyCost,
+            isActive: editingSupply.isActive
+          })
+        });
+
+        if (res.ok) {
+          const updatedSupply = await res.json();
+          setSupplies(supplies.map(s => s.id === updatedSupply.id ? updatedSupply : s));
+          handleCancelEdit();
+          setSuccess("Insumo actualizado.");
+          setTimeout(() => setSuccess(null), 3000);
+        }
+      } catch {
+        setError("Error al actualizar insumo.");
+      }
+    } else {
+      // Create new
+      try {
+        const res = await fetch("/api/supplies", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newSupplyName, cost: newSupplyCost })
+        });
+        if (res.ok) {
+          const newSupply = await res.json();
+          setSupplies([newSupply, ...supplies]);
+          setNewSupplyName("");
+          setNewSupplyCost("");
+          setSuccess("Insumo agregado.");
+          setTimeout(() => setSuccess(null), 3000);
+        }
+      } catch {
+        setError("Error al agregar insumo.");
+      }
+    }
+  };
+
+  const handleEditSupply = (supply: any) => {
+    setEditingSupply(supply);
+    setNewSupplyName(supply.name);
+    setNewSupplyCost(String(supply.cost));
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSupply(null);
+    setNewSupplyName("");
+    setNewSupplyCost("");
+  };
+
+  const handleToggleSupply = async (supply: any) => {
+    try {
+      const res = await fetch("/api/supplies", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: supply.id,
+          name: supply.name,
+          cost: supply.cost,
+          isActive: !supply.isActive
+        })
+      });
+
+      if (res.ok) {
+        const updatedSupply = await res.json();
+        setSupplies(supplies.map(s => s.id === updatedSupply.id ? updatedSupply : s));
+        setSuccess(updatedSupply.isActive ? "Insumo activado." : "Insumo desactivado.");
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch {
+      setError("Error al cambiar estado.");
+    }
+  };
+
+  const handleDeleteSupply = async (id: string) => {
+    try {
+      await fetch(`/api/supplies?id=${id}`, { method: "DELETE" });
+      setSupplies(supplies.filter(s => s.id !== id));
+      setSuccess("Insumo eliminado.");
+      setTimeout(() => setSuccess(null), 3000);
+    } catch {
+      setError("Error al eliminar.");
+    }
+  };
+
+  // Calculate Total Active Supplies
+  const totalSuppliesCost = supplies.filter(s => s.isActive).reduce((acc, curr) => acc + curr.cost, 0);
+
   if (loading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
-
-
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>
-        <p className="text-muted-foreground">Administra los valores por defecto del sistema.</p>
+        <p className="text-muted-foreground">Administra los valores del sistema y los insumos globales.</p>
       </div>
 
+      {success && (
+        <Alert className="border-green-500 bg-green-50 text-green-900">
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertTitle>Éxito</AlertTitle>
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-      {
-        success && (
-          <Alert className="border-green-500 bg-green-50 text-green-900">
-            <CheckCircle2 className="h-4 w-4" />
-            <AlertTitle>Éxito</AlertTitle>
-            <AlertDescription>
-              {success}
-            </AlertDescription>
-          </Alert>
-        )
-      }
+      {/* Supplies Section */}
+      <Card className="max-w-4xl">
+        <CardHeader>
+          <CardTitle>Gastos de Insumos</CardTitle>
+          <CardDescription>Gestión de insumos globales (se suman automáticamente a nuevas reservas).</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
 
-      {
-        error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              {error}
-            </AlertDescription>
-          </Alert>
-        )
-      }
+          <div className="flex gap-4 items-end bg-slate-50 p-4 rounded-md border">
+            <div className="grid gap-1.5 flex-1">
+              <Label htmlFor="sName">{editingSupply ? "Editar Nombre" : "Nombre del Insumo"}</Label>
+              <Input id="sName" value={newSupplyName} onChange={e => setNewSupplyName(e.target.value)} placeholder="Ej: Papel Higiénico" />
+            </div>
+            <div className="grid gap-1.5 w-32">
+              <Label htmlFor="sCost">Costo ($)</Label>
+              <Input id="sCost" type="number" value={newSupplyCost} onChange={e => setNewSupplyCost(e.target.value)} placeholder="0" />
+            </div>
 
+            <div className="flex gap-2">
+              {editingSupply && (
+                <Button variant="outline" onClick={handleCancelEdit}>
+                  Cancelar
+                </Button>
+              )}
+              <Button onClick={handleSaveSupply} disabled={!newSupplyName || !newSupplyCost}>
+                {editingSupply ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+                {editingSupply ? "Actualizar" : "Agregar"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="border rounded-md">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="p-3 font-medium">Nombre</th>
+                  <th className="p-3 font-medium">Costo</th>
+                  <th className="p-3 font-medium">Estado</th>
+                  <th className="p-3 font-medium text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {supplies.map(supply => (
+                  <tr key={supply.id} className={`border-t ${!supply.isActive ? 'bg-slate-50 text-muted-foreground' : ''}`}>
+                    <td className="p-3">{supply.name}</td>
+                    <td className="p-3 font-medium">${supply.cost}</td>
+                    <td className="p-3">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${supply.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+                        {supply.isActive ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleToggleSupply(supply)}
+                        title={supply.isActive ? "Desactivar" : "Activar"}
+                        className={`h-8 w-8 p-0 ${supply.isActive ? 'text-amber-600' : 'text-green-600'}`}
+                      >
+                        {supply.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleEditSupply(supply)} className="h-8 w-8 p-0">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteSupply(supply.id)} className="text-red-600 h-8 w-8 p-0">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {supplies.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="p-4 text-center text-muted-foreground">No hay insumos cargados.</td>
+                  </tr>
+                )}
+              </tbody>
+              <tfoot className="bg-slate-100 font-semibold">
+                <tr>
+                  <td className="p-3">TOTAL GASTOS INSUMOS (Activos)</td>
+                  <td className="p-3 text-lg">${totalSuppliesCost}</td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Calendar Settings */}
       <Card className="max-w-xl">
         <CardHeader>
-          <CardTitle>Gastos de Limpieza</CardTitle>
-          <CardDescription>
-            Define el valor por defecto que se asignará automáticamente a las nuevas reservas.
-          </CardDescription>
+          <CardTitle>Configuración de Calendario</CardTitle>
+          <CardDescription>Rango de años visible en el sistema.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid w-full items-center gap-1.5">
-            <Label htmlFor="cleaningFee">Gasto de limpieza por reserva (ARS)</Label>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold">$</span>
-              <Input
-                id="cleaningFee"
-                type="number"
-                value={cleaningFee}
-                onChange={(e) => setCleaningFee(e.target.value)}
-                placeholder="5000"
-              />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid w-full items-center gap-1.5">
+              <Label htmlFor="startYear">Año Inicio</Label>
+              <Input id="startYear" type="number" value={startYear} onChange={(e) => setStartYear(e.target.value)} />
             </div>
-            <p className="text-[0.8rem] text-muted-foreground">
-              Este valor será sugerido al crear una nueva reserva, pero podrás modificarlo manualmente en cada caso.
-            </p>
+            <div className="grid w-full items-center gap-1.5">
+              <Label htmlFor="endYear">Año Fin</Label>
+              <Input id="endYear" type="number" value={endYear} onChange={(e) => setEndYear(e.target.value)} />
+            </div>
           </div>
           <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {!saving && <Save className="mr-2 h-4 w-4" />}
-              Guardar Cambios
+            <Button onClick={handleSaveSettings} disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Guardar
             </Button>
           </div>
         </CardContent>
       </Card>
-    </div >
+    </div>
   );
 }

@@ -47,6 +47,8 @@ interface ReservationsClientProps {
   blacklistedPhones?: string[];
   hideMonthSelector?: boolean;
   blacklistEntries?: { guestPhone: string; reason: string; guestName: string }[];
+  startYear?: number;
+  endYear?: number;
 }
 
 import { MonthSelector } from "./month-selector";
@@ -55,7 +57,17 @@ import { ReservationsActions } from "./reservations-actions";
 import { BlacklistForm } from "./blacklist-form";
 import { normalizePhone } from "@/lib/phone-utils";
 
-export const ReservationsClient: React.FC<ReservationsClientProps> = ({ data, departments, dollarRate, role, blacklistedPhones = [], hideMonthSelector = false, blacklistEntries = [] }) => {
+export const ReservationsClient: React.FC<ReservationsClientProps> = ({
+  data,
+  departments,
+  dollarRate,
+  role,
+  blacklistedPhones = [],
+  hideMonthSelector = false,
+  blacklistEntries = [],
+  startYear = new Date().getFullYear(),
+  endYear = new Date().getFullYear() + 10
+}) => {
   const [open, setOpen] = useState(false);
   const [editingRes, setEditingRes] = useState<ReservationWithDept | null>(null);
   const router = useRouter();
@@ -176,7 +188,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({ data, de
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight mb-2">Reservas</h2>
-          {!hideMonthSelector && <MonthSelector />}
+          {!hideMonthSelector && <MonthSelector startYear={startYear} endYear={endYear} />}
         </div>
 
         <div className="flex items-center gap-2">

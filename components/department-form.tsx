@@ -65,7 +65,16 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
 
   // Parse images if editing (Legacy support internal only, mostly empty now)
   // Removed ImageUrls field as requested, but we keep the logic to not break schema if data exists.
-  const initialImages = initialData?.images ? JSON.parse(initialData.images as string).join("\n") : "";
+  // Parse images if editing (Legacy support internal only, mostly empty now)
+  const initialImages = (() => {
+    if (!initialData?.images) return "";
+    try {
+      const parsed = JSON.parse(initialData.images as string);
+      return Array.isArray(parsed) ? parsed.join("\n") : "";
+    } catch {
+      return "";
+    }
+  })();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema) as any,

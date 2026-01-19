@@ -108,7 +108,12 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 16);
     doc.text(`Período: ${format(date, "MMMM yyyy", { locale: es })}`, 14, 21);
 
-    const tableColumn = ["Huésped", "Depto", "In", "Out", "Total", "Limp.", "Moneda", "Estado", "Pago", "No-Show", "Blacklist", "Motivo"];
+    const tableColumn = [
+      "Huésped", "Teléfono", "Depto", "Personas",
+      "In", "Out", "Total", "Seña", "Limp.",
+      "Moneda", "Estado", "Pago",
+      "No-Show", "Blacklist", "Motivo", "Fuente", "Notas"
+    ];
     const tableRows: any[] = [];
 
     data.forEach(res => {
@@ -118,18 +123,23 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
       const isNoShow = (res.status as any) === 'NO_SHOW';
 
       const row = [
-        res.guestName.substring(0, 15),
-        res.department.name.substring(0, 10),
+        res.guestName,
+        res.guestPhone || "",
+        res.department.name,
+        res.guestPeopleCount || 1,
         format(new Date(res.checkIn), "dd/MM"),
         format(new Date(res.checkOut), "dd/MM"),
         `$${res.totalAmount}`,
+        `$${res.depositAmount || 0}`,
         `$${res.cleaningFee || 0}`,
         res.currency || "ARS",
         res.status,
         res.paymentStatus,
         isNoShow ? "SI" : "NO",
         isBlacklisted ? "SI" : "NO",
-        blacklistEntry?.reason?.substring(0, 15) || ""
+        blacklistEntry?.reason || "",
+        res.source || "",
+        res.notes || ""
       ];
       tableRows.push(row);
     });
@@ -138,10 +148,11 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
       head: [tableColumn],
       body: tableRows,
       startY: 25,
-      styles: { fontSize: 8 },
+      styles: { fontSize: 6 }, // Reduced font size to fit columns
       columnStyles: {
-        0: { cellWidth: 25 },
-        10: { cellWidth: 25 }
+        0: { cellWidth: 20 }, // Huésped
+        14: { cellWidth: 20 }, // Motivo
+        16: { cellWidth: 20 }  // Notas
       }
     });
 

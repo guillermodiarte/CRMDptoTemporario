@@ -7,10 +7,21 @@ export async function GET() {
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
   try {
-    const setting = await prisma.systemSettings.findUnique({
-      where: { key: "DEFAULT_CLEANING_FEE" },
+    const settings = await prisma.systemSettings.findMany({
+      where: {
+        key: { in: ["DEFAULT_CLEANING_FEE", "RESERVATION_YEAR_START", "RESERVATION_YEAR_END"] }
+      },
     });
-    return NextResponse.json({ value: setting?.value ? parseFloat(setting.value) : 5000 });
+
+    const cleaningFee = settings.find(s => s.key === "DEFAULT_CLEANING_FEE")?.value || "5000";
+    const startYear = settings.find(s => s.key === "RESERVATION_YEAR_START")?.value || "2026";
+    const endYear = settings.find(s => s.key === "RESERVATION_YEAR_END")?.value || "2036";
+
+    return NextResponse.json({
+      cleaningFee: parseFloat(cleaningFee),
+      startYear: parseInt(startYear),
+      endYear: parseInt(endYear)
+    });
   } catch (error) {
     console.error(error);
     return new NextResponse("Internal Error", { status: 500 });
@@ -29,20 +40,36 @@ export async function PUT(req: Request) {
   }
 
   try {
-    const { value } = await req.json();
-    const updated = await prisma.systemSettings.upsert({
-      where: { key: "DEFAULT_CLEANING_FEE" },
-      update: {
-        value: String(value),
-        updatedBy: session.user?.email || "unknown"
-      },
-      create: {
-        key: "DEFAULT_CLEANING_FEE",
-        value: String(value),
-        updatedBy: session.user?.email || "unknown"
-      },
-    });
-    return NextResponse.json(updated);
+    const body = await req.json();
+    const updates = [];
+
+    if (body.cleaningFee !== undefined) {
+      updates.push(prisma.systemSettings.upsert({
+        where: { key: "DEFAULT_CLEANING_FEE" },
+        update: { value: String(body.cleaningFee), updatedBy: session.user?.email || "unknown" },
+        create: { key: "DEFAULT_CLEANING_FEE", value: String(body.cleaningFee), updatedBy: session.user?.email || "unknown" },
+      }));
+    }
+
+    if (body.startYear !== undefined) {
+      updates.push(prisma.systemSettings.upsert({
+        where: { key: "RESERVATION_YEAR_START" },
+        update: { value: String(body.startYear), updatedBy: session.user?.email || "unknown" },
+        create: { key: "RESERVATION_YEAR_START", value: String(body.startYear), updatedBy: session.user?.email || "unknown" },
+      }));
+    }
+
+    if (body.endYear !== undefined) {
+      updates.push(prisma.systemSettings.upsert({
+        where: { key: "RESERVATION_YEAR_END" },
+        update: { value: String(body.endYear), updatedBy: session.user?.email || "unknown" },
+        create: { key: "RESERVATION_YEAR_END", value: String(body.endYear), updatedBy: session.user?.email || "unknown" },
+      }));
+    }
+
+    await prisma.$transaction(updates);
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);
     return new NextResponse("Internal Error", { status: 500 });
