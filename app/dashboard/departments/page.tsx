@@ -10,9 +10,13 @@ export default async function DepartmentsPage() {
     orderBy: { createdAt: "desc" },
   });
 
+  // Calculate Global Active Supplies Cost for display
+  const supplies = await prisma.supply.findMany({ where: { isActive: true } });
+  const totalSuppliesCost = supplies.reduce((acc, curr) => acc + curr.cost, 0);
+
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
-      <DepartmentsClient data={departments} role={userRole} />
+      <DepartmentsClient data={departments} role={userRole} totalSuppliesCost={totalSuppliesCost} />
     </div>
   );
 }

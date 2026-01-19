@@ -6,6 +6,7 @@ export interface ReservationSplit {
   totalAmount: number;
   cleaningFee: number;
   depositAmount: number; // Only for first part
+  amenitiesFee: number; // Only for first part
 }
 
 export function calculateReservationSplits(
@@ -13,7 +14,8 @@ export function calculateReservationSplits(
   checkOut: Date,
   totalAmount: number,
   cleaningFee: number,
-  depositAmount: number = 0
+  depositAmount: number = 0,
+  amenitiesFee: number = 0
 ): ReservationSplit[] {
   const splits: ReservationSplit[] = [];
 
@@ -70,6 +72,7 @@ export function calculateReservationSplits(
       totalAmount: segmentCost,
       cleaningFee: isFirstSegment ? cleaningFee : 0,
       depositAmount: isFirstSegment ? depositAmount : 0,
+      amenitiesFee: isFirstSegment ? amenitiesFee : 0,
     });
 
     // Next segment starts where this one ended

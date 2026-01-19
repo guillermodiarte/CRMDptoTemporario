@@ -95,12 +95,17 @@ export async function POST(req: Request) {
       return new NextResponse("Overlap detected", { status: 409 });
     }
 
+    // Fetch active supplies for snapshot
+    const supplies = await prisma.supply.findMany({ where: { isActive: true } });
+    const amenitiesFee = supplies.reduce((acc, curr) => acc + curr.cost, 0);
+
     // SPLITTING LOGIC
     const splits = calculateReservationSplits(
       start, end,
       Number(totalAmount),
       Number(cleaningFee || 0),
-      Number(depositAmount || 0)
+      Number(depositAmount || 0),
+      amenitiesFee
     );
 
     const groupId = splits.length > 1 ? generateUUID() : null;
@@ -118,6 +123,7 @@ export async function POST(req: Request) {
           totalAmount: split.totalAmount,
           depositAmount: split.depositAmount, // Logic handled in utility
           cleaningFee: split.cleaningFee,     // Logic handled in utility
+          amenitiesFee: split.amenitiesFee,   // Logic handled in utility
           currency: currency || "ARS",
           paymentStatus: paymentStatus || "UNPAID",
           source: source || "DIRECT",

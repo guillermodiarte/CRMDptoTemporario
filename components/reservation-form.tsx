@@ -71,6 +71,17 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const [capacityWarning, setCapacityWarning] = useState(false);
   const [blacklistWarning, setBlacklistWarning] = useState<{ name: string; reason: string } | null>(null);
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
+  const [amenitiesCost, setAmenitiesCost] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/supplies")
+      .then(res => res.json())
+      .then((data: { supplies: any[], totalCost: number }) => {
+        // API returns { supplies: [], totalCost: number }
+        setAmenitiesCost(data.totalCost || 0);
+      })
+      .catch(console.error);
+  }, []);
 
 
 
@@ -399,6 +410,22 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
               </FormItem>
             )}
           />
+
+          <FormItem>
+            <FormLabel>Gasto de Insumos (Global)</FormLabel>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-muted-foreground">$</span>
+              <FormControl>
+                <Input
+                  type="number"
+                  value={amenitiesCost}
+                  disabled={true}
+                  className="bg-muted"
+                />
+              </FormControl>
+            </div>
+            <p className="text-[0.8rem] text-muted-foreground">Informativo. Configurable en Sistema.</p>
+          </FormItem>
 
           <FormField
             control={form.control}

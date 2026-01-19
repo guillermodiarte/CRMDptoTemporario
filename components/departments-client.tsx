@@ -39,9 +39,11 @@ import { cn } from "@/lib/utils";
 interface DepartmentsClientProps {
   data: Department[];
   role?: string;
+  totalSuppliesCost: number;
 }
 
-export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role }) => {
+// Fix duplicated state declarations by replacing the component body
+export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role, totalSuppliesCost }) => {
   const [open, setOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -134,6 +136,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role
                 <TableHead>Cód. Locker</TableHead>
                 <TableHead>Links</TableHead>
                 <TableHead>Precios (Base/Limp)</TableHead>
+                <TableHead>Insumos (Global)</TableHead>
                 <TableHead>Estado</TableHead>
                 {!isVisualizer && <TableHead className="text-right">Acciones</TableHead>}
               </TableRow>
@@ -211,7 +214,10 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role
                   </TableCell>
                   <TableCell className="text-xs">
                     <div>${dept.basePrice}</div>
-                    <div className="text-muted-foreground">+${dept.cleaningFee}</div>
+                    <div className="text-muted-foreground">+${dept.cleaningFee} (Limp)</div>
+                  </TableCell>
+                  <TableCell className="text-xs font-medium text-red-600">
+                    <div>${totalSuppliesCost}</div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={dept.isActive ? "default" : "secondary"}>
@@ -249,7 +255,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role
               ))}
               {visibleData.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={!isVisualizer ? 8 : 7} className="text-center h-24">
+                  <TableCell colSpan={!isVisualizer ? 9 : 8} className="text-center h-24">
                     No se encontraron departamentos.
                   </TableCell>
                 </TableRow>

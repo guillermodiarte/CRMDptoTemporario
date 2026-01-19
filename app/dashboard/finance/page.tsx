@@ -49,17 +49,14 @@ export default async function FinancePage({
 
   // 3. Cálculos de Resumen (Con corrección de decimales)
   // Gastos de limpieza: Solo de reservas PAGADAS y que NO sean NO-SHOW
-  let amenitiesExpenses = 0;
-
   const cleaningExpenses = reservations.reduce((acc: number, curr: any) => {
     if (curr.paymentStatus === 'PAID' && curr.status !== 'NO_SHOW') {
-      amenitiesExpenses += (curr.amenitiesFee || 0);
       return acc + (curr.cleaningFee || 0);
     }
     return acc;
   }, 0);
 
-  const totalExpenseRaw = expenses.reduce((acc: number, curr: { amount: number }) => acc + curr.amount, 0) + cleaningExpenses + amenitiesExpenses;
+  const totalExpenseRaw = expenses.reduce((acc: number, curr: { amount: number }) => acc + curr.amount, 0) + cleaningExpenses;
   const totalExpense = Number(totalExpenseRaw.toFixed(2));
 
   const totalIncomeRaw = reservations.reduce((acc: number, curr: any) => {
@@ -101,7 +98,7 @@ export default async function FinancePage({
     }
 
     if (monthlyStats[month] && r.paymentStatus === 'PAID' && r.status !== 'NO_SHOW') {
-      monthlyStats[month].expense += (r.cleaningFee || 0) + (r.amenitiesFee || 0);
+      monthlyStats[month].expense += (r.cleaningFee || 0);
     }
   });
 
@@ -126,9 +123,6 @@ export default async function FinancePage({
 
   if (cleaningExpenses > 0) {
     distributionMap["Limpieza"] = cleaningExpenses;
-  }
-  if (amenitiesExpenses > 0) {
-    distributionMap["Insumos (Global)"] = amenitiesExpenses;
   }
 
   const distribution = Object.keys(distributionMap).map((key) => ({

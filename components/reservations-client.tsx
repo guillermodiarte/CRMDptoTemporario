@@ -273,7 +273,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 <TableHead>Estado</TableHead>
                 <TableHead>Pago</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Limpieza</TableHead>
+                <TableHead className="text-right">Gastos (Limp+Ins)</TableHead>
                 <TableHead className="text-right">Deuda</TableHead>
                 {!isVisualizer && <TableHead className="text-right">Acciones</TableHead>}
               </TableRow>
@@ -371,9 +371,16 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className="text-muted-foreground">
-                        {res.cleaningFee ? `$${res.cleaningFee}` : '-'}
-                      </span>
+                      <div className="flex flex-col items-end">
+                        <span className="text-muted-foreground">
+                          {res.cleaningFee ? `$${res.cleaningFee}` : '-'}
+                        </span>
+                        {(res.amenitiesFee || 0) > 0 && (
+                          <span className="text-xs text-red-600" title="Insumos (Informativo)">
+                            +${res.amenitiesFee}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right text-red-600 font-medium">
                       {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : `$${debt}`) : '-'}
