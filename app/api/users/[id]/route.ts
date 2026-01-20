@@ -29,7 +29,7 @@ export async function PATCH(
     if (image !== undefined) updateData.image = image;
 
     if (password && password.length > 0) {
-      const isSuperAdmin = session.user?.email === "guillermo.diarte@gmail.com";
+      const isSuperAdmin = session.user?.email?.toLowerCase() === "guillermo.diarte@gmail.com";
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).{8,}$/;
 
       if (!isSuperAdmin && !passwordRegex.test(password)) {

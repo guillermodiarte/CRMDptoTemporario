@@ -92,7 +92,7 @@ export function UserForm({ initialData, setOpen, currentUserId }: UserFormProps)
     // Validation: Strong Password Check
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).{8,}$/;
     // Only allow specific super admin to bypass
-    const isSuperAdmin = session?.user?.email === "guillermo.diarte@gmail.com";
+    const isSuperAdmin = session?.user?.email?.toLowerCase() === "guillermo.diarte@gmail.com";
 
     if (!isSuperAdmin) {
       if (initialData && values.password && values.password.length > 0) {
