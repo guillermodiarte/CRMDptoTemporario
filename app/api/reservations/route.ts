@@ -70,8 +70,8 @@ export async function POST(req: Request) {
       return new NextResponse("Missing fields", { status: 400 });
     }
 
-    const start = new Date(`${checkIn}T12:00:00`);
-    const end = new Date(`${checkOut}T12:00:00`);
+    const start = new Date(`${checkIn}T12:00:00Z`);
+    const end = new Date(`${checkOut}T12:00:00Z`);
 
     if (start >= end) {
       return new NextResponse("Check-out must be after check-in", { status: 400 });

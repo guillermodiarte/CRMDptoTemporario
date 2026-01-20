@@ -19,11 +19,11 @@ export function calculateReservationSplits(
 ): ReservationSplit[] {
   const splits: ReservationSplit[] = [];
 
-  // Normalize dates to start of day to avoid time zone issues during calculation
+  // Normalize dates to UTC Noon to avoid time zone boundaries (00:00 UTC = 21:00 Prev Day in ART)
   const start = new Date(checkIn);
-  start.setHours(0, 0, 0, 0);
+  start.setUTCHours(12, 0, 0, 0);
   const end = new Date(checkOut);
-  end.setHours(0, 0, 0, 0);
+  end.setUTCHours(12, 0, 0, 0);
 
   const totalDays = Math.max(1, differenceInCalendarDays(end, start));
   const pricePerDay = totalAmount / totalDays;
