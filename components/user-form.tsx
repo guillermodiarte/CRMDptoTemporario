@@ -24,6 +24,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { User, Role } from "@prisma/client";
 import Resizer from "react-image-file-resizer";
 
@@ -43,7 +44,9 @@ interface UserFormProps {
   currentUserId?: string;
 }
 
+
 export function UserForm({ initialData, setOpen, currentUserId }: UserFormProps) {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -82,25 +85,30 @@ export function UserForm({ initialData, setOpen, currentUserId }: UserFormProps)
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setError(""); // Clear previous errors
+
+    if (status === "loading") return;
+
     // Validation: Strong Password Check
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).{8,}$/;
+    // Only allow specific super admin to bypass
     const isSuperAdmin = session?.user?.email === "guillermo.diarte@gmail.com";
 
     if (!isSuperAdmin) {
       if (initialData && values.password && values.password.length > 0) {
         if (!passwordRegex.test(values.password)) {
-          form.setError("password", {
-            message: "La contraseña debe tener: min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial."
-          });
+          const msg = "La contraseña debe tener: min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.";
+          form.setError("password", { message: msg });
+          setError(msg); // Set global error for visibility
           return;
         }
       }
 
       if (!initialData) {
         if (!values.password || !passwordRegex.test(values.password)) {
-          form.setError("password", {
-            message: "La contraseña debe tener: min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial."
-          });
+          const msg = "La contraseña debe tener: min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.";
+          form.setError("password", { message: msg });
+          setError(msg); // Set global error for visibility
           return;
         }
       }
