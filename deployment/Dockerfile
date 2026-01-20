@@ -14,6 +14,8 @@ COPY . .
 # Environment variables must be present at build time for Next.js if they are public
 # But strict secrets should be runtime. Next.js inline inlines NEXT_PUBLIC_ vars.
 ENV NEXT_TELEMETRY_DISABLED 1
+# Dummy URL to satisfy Prisma build-time validation
+ENV DATABASE_URL="file:/tmp/dummy.db"
 
 # Generate Prisma Client
 RUN npx prisma generate
