@@ -1,51 +1,56 @@
-# Guía de Despliegue en Dokploy
+# Guía de Despliegue Definitiva en Dokploy (Probada)
 
-Esta guía documenta cómo desplegar la aplicación CRM en Dokploy, basándonos en la configuración que funcionó correctamente.
+Esta guía documenta la configuración exacta que logró estabilizar la aplicación, asegurando persistencia de datos (base de datos eterna) sin errores de permisos ni caídas.
 
-## Opción 1: Despliegue Rápido (Nixpacks)
-Esta opción es la más sencilla y usa la configuración automática de Dokploy. Funciona inmediatamente, pero **NO tiene persistencia garantizada** (si se reinicia el contenedor, podrías perder datos si no configuras volúmenes con cuidado).
+## ✅ Configuración Ganadora (Método Recomendado)
+Usa esta configuración para tener un sistema rápido y con base de datos persistente.
 
-### 1. Configuración General
+### 1. General (Build Settings)
 - **Build Type (Provider):** `Nixpacks`
-- **Base Directory:** `/` (Raíz)
-- **Install Command:** (Vacío / Default)
-- **Start Command:** (Vacío / Default)
+  *(El sistema automático de Dokploy)*.
+- **Base Directory:** `/` (Raíz).
 
 ### 2. Variables de Entorno (Environment)
-Agrega estas variables en la pestaña **Environment**:
+Asegúrate de tener estas variables:
 
 ```env
+# Ruta interna donde la app guardará los datos
 DATABASE_URL="file:/app/database/prod.db"
-AUTH_SECRET="tu_clave_secreta_aqui"
+
+# Clave de seguridad (importante para que no se cierren las sesiones)
+AUTH_SECRET="tu_clave_secreta_larga_aqui"
+
+# Necesario para logins tras proxy (Dokploy)
 AUTH_TRUST_HOST=true
 ```
 
-## Opción 2: Despliegue Robusto (Docker) - Recomendada
-Esta opción usa un `Dockerfile` personalizado que hemos blindado para evitar errores de permisos y caídas. Es la mejor opción si quieres conectar un **Volumen** para que la base de datos sea eterna.
+### 3. Persistencia (Volúmenes) - ¡La Clave!
+Para evitar errores de permisos ("No such container") y que la base de datos no se borre, usaremos **Volúmenes Nombrados** (Docker gestiona los permisos por nosotros).
 
-### 1. Archivos Necesarios
-Asegúrate de que la carpeta `deployment/` contenga el archivo `Dockerfile`.
+Ve a la pestaña **Volumes** y agrega:
 
-### 2. Configuración General
-- **Build Type (Provider):** `Docker`
-- **Dockerfile Path:** `./deployment/Dockerfile`
-- **Context Path:** `/` (o `.`)
+| Configuración | Valor | Nota |
+| :--- | :--- | :--- |
+| **Mount Type** | `VOLUME` | **Importante**: NO usar "BIND". Usar "VOLUME". |
+| **Name (Host Path)** | `crm_data` | Solo el nombre. Sin barras `/` al inicio. |
+| **Mount Path** | `/app/database` | Debe coincidir con la ruta de tu `DATABASE_URL`. |
 
-### 3. Persistencia (Volúmenes)
-Para que la base de datos NO se borre al actualizar, debes conectar un volumen.
+---
 
-**¡ADVERTENCIA CRÍTICA!**: Si agregas un volumen y la app crashea ("No such container"), es por **permisos**.
-**Solución:**
-1. Crea la carpeta en tu servidor (ej: `/etc/dokploy/crm_data`).
-2. Dale permisos totales (solo una vez):
-   ```bash
-   chmod 777 /etc/dokploy/crm_data
-   ```
-3. Ahora sí, configura el volumen en Dokploy:
-   - **Host Path:** `/etc/dokploy/crm_data`
-   - **Container Path:** `/app/database`
+## 🚀 Optimizaciones Aplicadas
+El código actual incluye una optimización crítica en `start.sh`:
+- **Salto de `prisma generate`**: Se desactivó la regeneración de Prisma al arrancar. Esto evita que la aplicación consuma toda la memoria y crashee (`SIGTERM`) durante el inicio. La aplicación arranca usando los archivos generados durante la construcción (Build).
 
-### Resumen de Solución de Problemas
-- **Error "No such container"**: Significa que la app murió al iniciar. Generalmente es porque no puede escribir en la DB.
-  - *Solución Rápida:* Borra el Volumen y haz Redeploy.
-  - *Solución Real:* Arregla los permisos de la carpeta del servidor (chmod 777).
+---
+
+## Solución de Problemas (Troubleshooting)
+
+### Error: "No such container" (Crash al inicio)
+- **Causa probable:** Permisos incorrectos en el volumen o falta de memoria.
+- **Solución:**
+  1. Verifica que estés usando **Mount Type: VOLUME** y no BIND.
+  2. Si usas BIND, el usuario del servidor (host) debe tener permisos 777 en la carpeta.
+
+### La base de datos se borra al actualizar
+- **Causa:** No hay volumen configurado o la `DATABASE_URL` no apunta a la carpeta del volumen.
+- **Verificación:** Asegúrate que `DATABASE_URL` empiece por `file:/app/database/...` y que el volumen esté montado en `/app/database`.
