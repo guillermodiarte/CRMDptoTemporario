@@ -57,11 +57,11 @@ export default async function CalendarPage({ searchParams }: { searchParams: { d
   });
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6 h-[calc(100vh-60px)] flex flex-col">
+    <div className="flex flex-col h-[calc(100vh-120px)] space-y-4">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Calendario</h2>
       </div>
-      <div className="flex-1 border rounded-md overflow-hidden bg-card">
+      <div className="flex-1 border rounded-md overflow-hidden bg-card min-h-0">
         <GlobalCalendar departments={departments} reservations={processedReservations} />
       </div>
     </div>
