@@ -54,3 +54,21 @@ El código actual incluye una optimización crítica en `start.sh`:
 ### La base de datos se borra al actualizar
 - **Causa:** No hay volumen configurado o la `DATABASE_URL` no apunta a la carpeta del volumen.
 - **Verificación:** Asegúrate que `DATABASE_URL` empiece por `file:/app/database/...` y que el volumen esté montado en `/app/database`.
+
+---
+
+## 🔒 Dominio y SSL (HTTPS)
+Dokploy maneja los certificados SSL automáticamente (usando Traefik y Let's Encrypt). No necesitas instalar nada en tu código.
+
+1. **DNS**: Asegúrate de que tu dominio (ej: `app.midominio.com`) apunte a la IP de tu servidor VPS.
+2. **Dokploy UI**:
+   - Ve a la pestaña **Domains** de tu aplicación.
+   - Escribe tu dominio (ej: `app.midominio.com`).
+   - Asegúrate de que el puerto sea `3000` (el puerto interno de nuestra App).
+   - Haz click en "Add Domain" (o Save).
+   - **Activa "Enable HTTPS"** (generalmente es automático, pero verifícalo).
+3. **Certificado Automático**:
+   - Dokploy detectará el dominio y generará el certificado SSL automáticamente en unos segundos.
+   - Ya podrás entrar por `https://app.midominio.com`.
+
+**Nota Importante:** Nuestra configuración ya incluye `AUTH_TRUST_HOST=true`, lo cual es vital para que NextAuth entienda que está seguro detrás del HTTPS de Dokploy y no falle el login.
