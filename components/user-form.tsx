@@ -47,7 +47,6 @@ interface UserFormProps {
 
 export function UserForm({ initialData, setOpen, currentUserId }: UserFormProps) {
   const { data: session, status } = useSession();
-  console.log("DEBUG UserForm Session:", { email: session?.user?.email, status });
 
   const router = useRouter();
   const [loading, setLoading] = useState(false);
