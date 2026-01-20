@@ -39,7 +39,10 @@ export function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {/* Settings and Support removed as requested */}
-        <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+        <DropdownMenuItem onClick={async () => {
+          await signOut({ redirect: false });
+          window.location.href = "/login";
+        }}>
           Cerrar Sesión
         </DropdownMenuItem>
       </DropdownMenuContent>
