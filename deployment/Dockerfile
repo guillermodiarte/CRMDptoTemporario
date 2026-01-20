@@ -9,6 +9,8 @@ RUN npm ci
 # Stage 2: Build the application
 FROM node:20-alpine AS builder
 WORKDIR /app
+# Install necessary system libraries for Prisma (Builder Stage)
+RUN apk add --no-cache libc6-compat openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Environment variables must be present at build time for Next.js if they are public
