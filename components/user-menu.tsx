@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { CircleUser } from "lucide-react";
-import { logout } from "@/app/lib/actions";
+import { signOut } from "next-auth/react";
 
 interface UserMenuProps {
   user: {
@@ -39,7 +39,7 @@ export function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {/* Settings and Support removed as requested */}
-        <DropdownMenuItem onClick={() => logout()}>
+        <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
           Cerrar Sesión
         </DropdownMenuItem>
       </DropdownMenuContent>
