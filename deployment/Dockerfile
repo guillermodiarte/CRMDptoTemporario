@@ -50,7 +50,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Switch to non-root user
-USER nextjs
+# USER nextjs
 
 EXPOSE 3000
 
