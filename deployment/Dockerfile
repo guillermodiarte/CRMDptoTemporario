@@ -47,7 +47,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy prisma schema for migrations/runtime checks if needed
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# Copy and setup entrypoint
+COPY deployment/entrypoint.sh ./
+RUN chmod +x entrypoint.sh
 
 # Switch to non-root user
 # USER nextjs
@@ -56,4 +58,4 @@ EXPOSE 3000
 
 ENV HOSTNAME "0.0.0.0"
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["./entrypoint.sh"]
