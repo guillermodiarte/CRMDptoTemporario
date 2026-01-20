@@ -158,8 +158,20 @@ if [ -f ".next/standalone/server.js" ]; then
         log "WARNING: Seed script not found."
     fi
     
+    # Create database directory if it doesn't exist (Critical for Nixpacks/Volume)
+    if [ ! -d "/app/database" ]; then
+        log "Creating /app/database directory..."
+        mkdir -p /app/database
+        chmod 777 /app/database 2>/dev/null || log "Failed to chmod /app/database"
+    fi
+
     log "Starting Server..."
-    exec node server.js
+    # Remove exec to allow crash handling
+    node server.js || {
+        log "CRITICAL ERROR: Application Crashed."
+        log "Sleeping 1h to allow log inspection..."
+        sleep 3600
+    }
 else
     log "Standalone build not found. Falling back to 'next start'."
     npm start
