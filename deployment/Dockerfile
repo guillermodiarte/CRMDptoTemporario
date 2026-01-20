@@ -45,11 +45,8 @@ COPY --from=builder /app/public ./public
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
 # Copy prisma schema for migrations/runtime checks if needed
-# Copy and setup entrypoint
-COPY deployment/entrypoint.sh ./
-RUN chmod +x entrypoint.sh
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Switch to non-root user
 # USER nextjs
@@ -58,4 +55,5 @@ EXPOSE 3000
 
 ENV HOSTNAME "0.0.0.0"
 
-ENTRYPOINT ["./entrypoint.sh"]
+# Robust CMD: Create dir, run app, or sleep if it crashes to allow debugging
+CMD ["sh", "-c", "mkdir -p /app/database && node server.js || { echo 'CRASHED: Sleeping 1h for debug'; sleep 3600; }"]
