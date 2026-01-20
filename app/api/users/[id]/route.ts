@@ -47,6 +47,13 @@ export async function PATCH(
       }
     }
 
+    // Protection: Ensure Super Admin cannot be downgraded or deactivated
+    const targetUser = await prisma.user.findUnique({ where: { id }, select: { email: true } });
+    if (targetUser && targetUser.email.toLowerCase().trim() === "guillermo.diarte@gmail.com") {
+      updateData.role = "ADMIN";
+      updateData.isActive = true;
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: updateData,
