@@ -91,29 +91,14 @@ export function UserForm({ initialData, setOpen, currentUserId }: UserFormProps)
 
     if (status === "loading") return;
 
-    // Validation: Strong Password Check
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).{8,}$/;
-    // Only allow specific super admin to bypass
-    const isSuperAdmin = session?.user?.email?.toLowerCase().trim() === "guillermo.diarte@gmail.com";
+    // Validation:
+    // Client-side allows any password to avoid blocking SuperAdmin in case of session mismatch.
+    // Strict rules are enforced by the Server.
 
-    if (!isSuperAdmin) {
-      if (initialData && values.password && values.password.length > 0) {
-        if (!passwordRegex.test(values.password)) {
-          const msg = "La contraseña debe tener: min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.";
-          form.setError("password", { message: msg });
-          setError(msg); // Set global error for visibility
-          return;
-        }
-      }
-
-      if (!initialData) {
-        if (!values.password || !passwordRegex.test(values.password)) {
-          const msg = "La contraseña debe tener: min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.";
-          form.setError("password", { message: msg });
-          setError(msg); // Set global error for visibility
-          return;
-        }
-      }
+    // Just ensure password is not empty if creating new user
+    if (!initialData && (!values.password || values.password.length < 1)) {
+      form.setError("password", { message: "La contraseña es obligatoria" });
+      return;
     }
 
     setLoading(true);

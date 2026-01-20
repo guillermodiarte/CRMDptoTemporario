@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     // Determine validation restrictiveness based on user
-    const userEmail = (session?.user as any)?.email?.toLowerCase();
+    const userEmail = (session?.user as any)?.email?.toLowerCase()?.trim();
     const isSuperAdmin = userEmail === "guillermo.diarte@gmail.com";
 
     const passwordSchema = isSuperAdmin
