@@ -156,6 +156,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     if (source === "AIRBNB") {
       form.setValue("currency", "USD");
       form.setValue("paymentStatus", "PAID");
+      form.setValue("totalAmount", 0);
     }
   }, [source, form]);
 
@@ -173,6 +174,9 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const checkOutDate = form.watch("checkOut");
 
   useEffect(() => {
+    // Skip auto-calc for Airbnb (manual pricing or 0)
+    if (source === "AIRBNB") return;
+
     // Only auto-calc for new reservations (or if user changes key params in edit? User said "update", implies edit too?)
     // User said: "al crear la reserva...".
     // "que siga siendo editable".
@@ -211,7 +215,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       const newTotal = nights * dept.basePrice;
       form.setValue("totalAmount", newTotal);
     }
-  }, [selectedDepartmentId, checkInDate, checkOutDate, departments, form]);
+  }, [selectedDepartmentId, checkInDate, checkOutDate, departments, form, source]);
 
   async function onSubmit(values: z.infer<typeof formSchema>, forceOverlap: boolean = false, ignoreCapacity: boolean = false, forceBlacklist: boolean = false) {
     setLoading(true);
