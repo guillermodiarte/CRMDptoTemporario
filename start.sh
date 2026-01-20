@@ -139,7 +139,8 @@ if [ -f ".next/standalone/server.js" ]; then
     
     log "Generating Prisma Client..."
     # Ensure the client is generated for the current platform (Linux)
-    npx prisma generate || log "WARNING: Prisma generate failed. specific binaries might be missing."
+    # OPTIMIZATION: Skipping runtime generation to prevent OOM/Timeouts. Relying on Build time generation.
+    # npx prisma generate || log "WARNING: Prisma generate failed. specific binaries might be missing."
 
     log "Applying Database Migrations..."
     # Capture db push output and log it. Do not exit on fail, but verify.
