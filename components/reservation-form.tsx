@@ -156,9 +156,14 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     if (source === "AIRBNB") {
       form.setValue("currency", "USD");
       form.setValue("paymentStatus", "PAID");
-      form.setValue("totalAmount", 0);
+
+      // Only reset totalAmount if we are NOT editing an existing Airbnb reservation
+      const isExistingAirbnb = initialData?.source === "AIRBNB";
+      if (!isExistingAirbnb) {
+        form.setValue("totalAmount", 0);
+      }
     }
-  }, [source, form]);
+  }, [source, form, initialData]);
 
   // Parking Logic
   // const selectedDepartmentId = form.watch("departmentId"); // Already watched above
