@@ -168,6 +168,12 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
     </Card>
   );
 
+  // Determine default date for new expenses
+  // If viewing current month, default to Today. Else default to 1st of viewed month.
+  const today = new Date();
+  const isCurrentMonth = date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+  const formDefaultDate = isCurrentMonth ? today : date;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -197,6 +203,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                 departments={departments}
                 setOpen={setOpen}
                 initialData={editingExpense}
+                defaultDate={formDefaultDate}
               />
             </DialogContent>
           </Dialog>

@@ -32,15 +32,18 @@ interface ExpenseFormProps {
   departments: Department[];
   setOpen: (open: boolean) => void;
   initialData?: any;
+  defaultDate?: Date;
 }
 
-export function ExpenseForm({ departments, setOpen, initialData }: ExpenseFormProps) {
+export function ExpenseForm({ departments, setOpen, initialData, defaultDate }: ExpenseFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const defaultDate = initialData?.date
+  const defaultDateStr = initialData?.date
     ? new Date(initialData.date).toISOString().split("T")[0]
-    : new Date().toISOString().split("T")[0];
+    : defaultDate
+      ? defaultDate.toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0];
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema) as any,
@@ -51,7 +54,7 @@ export function ExpenseForm({ departments, setOpen, initialData }: ExpenseFormPr
       quantity: initialData.quantity || 1,
       unitPrice: initialData.unitPrice || 0,
       departmentId: initialData.departmentId || "global",
-      date: defaultDate,
+      date: defaultDateStr,
     } : {
       type: "SUPPLY",
       description: "",
@@ -59,7 +62,7 @@ export function ExpenseForm({ departments, setOpen, initialData }: ExpenseFormPr
       quantity: 1,
       unitPrice: 0,
       departmentId: "global",
-      date: new Date().toISOString().split("T")[0],
+      date: defaultDateStr,
     },
   });
 
