@@ -44,6 +44,7 @@ export default async function FinancePage({
   });
 
   const departments = await prisma.department.findMany({
+    where: { isActive: true },
     orderBy: { name: 'asc' }
   });
 
