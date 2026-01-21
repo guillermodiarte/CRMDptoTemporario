@@ -176,6 +176,7 @@ export function ExpenseForm({ departments, setOpen, initialData, defaultDate }: 
                   <FormControl>
                     <Input
                       type="number"
+                      step="0.01"
                       min={0}
                       onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
                       {...field}
@@ -198,6 +199,7 @@ export function ExpenseForm({ departments, setOpen, initialData, defaultDate }: 
               <FormControl>
                 <Input
                   type="number"
+                  step="0.01"
                   min={0}
                   onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
                   {...field}
