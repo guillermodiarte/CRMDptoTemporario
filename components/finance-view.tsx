@@ -33,11 +33,13 @@ interface FinanceViewProps {
   role?: string;
   date?: Date;
   departmentStats?: any[];
+  startYear?: number;
+  endYear?: number;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-export function FinanceView({ expenses, departments, monthlyStats, distribution, summary, role, date = new Date(), departmentStats = [] }: FinanceViewProps) {
+export function FinanceView({ expenses, departments, monthlyStats, distribution, summary, role, date = new Date(), departmentStats = [], startYear, endYear }: FinanceViewProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
@@ -172,7 +174,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
         <div className="w-full md:w-auto">
           <h2 className="text-3xl font-bold tracking-tight">Finanzas</h2>
           <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <MonthSelector />
+            <MonthSelector startYear={startYear} endYear={endYear} />
             <FinanceActions expenses={expenses} departments={departments} date={date} />
           </div>
         </div>

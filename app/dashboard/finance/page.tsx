@@ -172,6 +172,20 @@ export default async function FinancePage({
       profit: Number((d.income - d.expense).toFixed(2))
     }));
 
+  // 7. Configuración de Años
+  const yearSettings = await prisma.systemSettings.findMany({
+    where: {
+      key: { in: ["RESERVATION_YEAR_START", "RESERVATION_YEAR_END"] }
+    }
+  });
+
+  const startYearSetting = yearSettings.find(s => s.key === "RESERVATION_YEAR_START")?.value;
+  const endYearSetting = yearSettings.find(s => s.key === "RESERVATION_YEAR_END")?.value;
+
+  const currentYear = new Date().getFullYear();
+  const configStartYear = startYearSetting ? parseInt(startYearSetting) : currentYear;
+  const configEndYear = endYearSetting ? parseInt(endYearSetting) : currentYear + 10;
+
   return (
     <FinanceView
       expenses={expenses}
@@ -182,6 +196,8 @@ export default async function FinancePage({
       summary={{ totalIncome, totalExpense, netProfit }}
       role={userRole}
       date={startDate}
+      startYear={configStartYear}
+      endYear={configEndYear}
     />
   );
 }
