@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Department, Reservation } from "@prisma/client";
-import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car } from "lucide-react";
+import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -322,8 +322,9 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 <TableHead>Huésped</TableHead>
                 <TableHead>Depto</TableHead>
                 <TableHead>Fechas</TableHead>
-                <TableHead>Noches</TableHead>
-                <TableHead>Personas</TableHead>
+                <TableHead className="text-center">Noches</TableHead>
+                <TableHead className="text-center">Personas</TableHead>
+                <TableHead className="text-center">Camas</TableHead>
                 <TableHead className="text-center">Cochera</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Pago</TableHead>
@@ -392,11 +393,23 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         </span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      {Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))}
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <span>{Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))}</span>
+                        <Moon className="h-4 w-4 text-muted-foreground" />
+                      </div>
                     </TableCell>
-                    <TableCell>
-                      {res.guestPeopleCount}
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <span>{res.guestPeopleCount}</span>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center font-bold">
+                      <div className="flex items-center justify-center gap-1">
+                        <span>{res.bedsRequired || 1}</span>
+                        <BedDouble className="h-4 w-4 text-muted-foreground" />
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       {res.hasParking ? <Car className="h-5 w-5 mx-auto text-blue-600" /> : "-"}

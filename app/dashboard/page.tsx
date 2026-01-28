@@ -37,6 +37,7 @@ export default async function DashboardPage() {
       id: true,
       guestName: true,
       guestPeopleCount: true,
+      bedsRequired: true,
       department: { select: { name: true } }
     }
   });
@@ -159,7 +160,9 @@ export default async function DashboardPage() {
                 {activeReservations.map(res => (
                   <div key={res.id} className="flex justify-between items-center">
                     <span className="truncate max-w-[120px]" title={res.guestName}>{res.guestName}</span>
-                    <span>({res.guestPeopleCount} {res.guestPeopleCount === 1 ? 'persona' : 'personas'})</span>
+                    <span>
+                      ({res.guestPeopleCount} {res.guestPeopleCount === 1 ? 'pers' : 'pers'}, {res.bedsRequired || 1} {res.bedsRequired === 1 ? 'cama' : 'camas'})
+                    </span>
                   </div>
                 ))}
               </div>

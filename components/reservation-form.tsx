@@ -37,15 +37,17 @@ const formSchema = z.object({
   guestName: z.string().min(2, "Nombre requerido"),
   guestPhone: z.string().optional(),
   guestPeopleCount: z.coerce.number().min(1),
+  bedsRequired: z.coerce.number().min(1).default(1),
   checkIn: z.string(),
   checkOut: z.string(),
   totalAmount: z.coerce.number().min(0, "Monto requerido"),
   depositAmount: z.coerce.number().default(0),
-  cleaningFee: z.coerce.number().default(0), // New field for cleaning expenses
+  heatingFee: z.coerce.number().default(0), // Removed? No, waiting.
+  cleaningFee: z.coerce.number().default(0),
+  amenitiesFee: z.coerce.number().default(0),
   currency: z.enum(["ARS", "USD"]).default("ARS"),
   paymentStatus: z.enum(["PAID", "PARTIAL", "UNPAID"]).default("UNPAID"),
   source: z.enum(["AIRBNB", "BOOKING", "DIRECT"]).default("DIRECT"),
-  hasParking: z.boolean().default(false),
   notes: z.string().optional(),
 }).refine((data) => {
   const start = new Date(data.checkIn);
@@ -61,7 +63,7 @@ interface ReservationFormProps {
   setOpen: (open: boolean) => void;
   defaultDepartmentId?: string;
   defaultDate?: Date;
-  initialData?: Reservation | null;
+  initialData?: any; // Relaxed type to include relations if needed
 }
 
 export function ReservationForm({ departments, setOpen, defaultDepartmentId, defaultDate, initialData }: ReservationFormProps) {
@@ -69,16 +71,17 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const [loading, setLoading] = useState(false);
   const [overlapWarning, setOverlapWarning] = useState(false);
   const [capacityWarning, setCapacityWarning] = useState(false);
+  const [bedWarning, setBedWarning] = useState(false);
   const [blacklistWarning, setBlacklistWarning] = useState<{ name: string; reason: string } | null>(null);
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
   const [amenitiesCost, setAmenitiesCost] = useState(initialData?.amenitiesFee || 0);
   const [isTotalManuallyModified, setIsTotalManuallyModified] = useState(false);
 
-  useEffect(() => {
-    // Determine if we should fetch current global cost.
-    // Rule: Fetch if NEW reservation OR if checkIn date is Today or Future.
-    // If it's a past reservation, keep the snapshot (initialData.amenitiesFee).
+  // Determine if we should fetch current global cost.
+  // Rule: Fetch if NEW reservation OR if checkIn date is Today or Future.
+  // If it's a past reservation, keep the snapshot (initialData.amenitiesFee).
 
+  useEffect(() => {
     let shouldFetch = true;
     if (initialData) {
       const today = new Date();
@@ -114,10 +117,11 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
           return { name: data[0].guestName, reason: data[0].reason };
         }
       }
+      return null;
     } catch (e) {
       console.error(e);
+      return null;
     }
-    return null;
   }
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -127,15 +131,16 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       guestName: initialData?.guestName || "",
       guestPhone: initialData?.guestPhone || "",
       guestPeopleCount: initialData?.guestPeopleCount || 1,
+      bedsRequired: initialData?.bedsRequired || 1,
       checkIn: initialData ? format(new Date(initialData.checkIn), "yyyy-MM-dd") : (defaultDate ? format(defaultDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")),
       checkOut: initialData ? format(new Date(initialData.checkOut), "yyyy-MM-dd") : (defaultDate ? format(addDays(defaultDate, 1), "yyyy-MM-dd") : format(addDays(new Date(), 1), "yyyy-MM-dd")),
       totalAmount: initialData?.totalAmount ?? 0,
       depositAmount: initialData?.depositAmount || 0,
       cleaningFee: initialData?.cleaningFee || 0,
+      amenitiesFee: initialData?.amenitiesFee || 0,
       currency: initialData?.source === "AIRBNB" ? "USD" : ((initialData?.currency as "ARS" | "USD") || "ARS"),
       paymentStatus: (initialData?.paymentStatus as "PAID" | "PARTIAL" | "UNPAID") || "UNPAID",
       source: (initialData?.source as "AIRBNB" | "BOOKING" | "DIRECT") || "DIRECT",
-      hasParking: initialData?.hasParking || false,
       notes: initialData?.notes || ""
     },
   });
@@ -177,15 +182,6 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       }
     }
   }, [paymentStatus, form]);
-
-  // Parking Logic
-  // const selectedDepartmentId = form.watch("departmentId"); // Already watched above
-  useEffect(() => {
-    const selectedDept = departments.find(d => d.id === selectedDepartmentId);
-    if (selectedDept && !selectedDept.hasParking) {
-      form.setValue("hasParking", false);
-    }
-  }, [selectedDepartmentId, departments, form]);
 
   // Auto-calculate Total Amount based on Base Price * Nights
   const checkInDate = form.watch("checkIn");
@@ -259,11 +255,20 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     // Capacity Check
     if (!ignoreCapacity) {
       const dept = departments.find(d => d.id === values.departmentId);
-      if (dept && values.guestPeopleCount > dept.maxPeople) {
-        setCapacityWarning(true);
-        setPendingValues(values);
-        setLoading(false);
-        return;
+      if (dept) {
+        if (values.guestPeopleCount > dept.maxPeople) {
+          setCapacityWarning(true);
+          setPendingValues(values);
+          setLoading(false);
+          return;
+        }
+        // Bed Check (New)
+        if (values.bedsRequired > dept.bedCount) {
+          setBedWarning(true);
+          setPendingValues(values);
+          setLoading(false);
+          return;
+        }
       }
     }
 
@@ -328,33 +333,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="hasParking"
-          render={({ field }) => {
-            const selectedDept = departments.find(d => d.id === form.getValues("departmentId"));
-            const canHaveParking = selectedDept ? selectedDept.hasParking : true;
 
-            return (
-              <FormItem className={`flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 mb-4 ${!canHaveParking ? 'opacity-50' : ''}`}>
-                <FormControl>
-                  <input
-                    type="checkbox"
-                    checked={field.value}
-                    onChange={field.onChange}
-                    disabled={!canHaveParking}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    ¿Requiere Cochera? {!canHaveParking && "(No disp. en este depto)"}
-                  </FormLabel>
-                </div>
-              </FormItem>
-            );
-          }}
-        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
@@ -383,7 +362,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
               </FormItem>
             )}
           />
-        </div>
+        </div >
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
@@ -420,61 +399,85 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
             )}
           />
         </div>
-        <FormField
-          control={form.control}
-          name="guestPeopleCount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Cantidad Personas</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min={0}
-                  onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
-                  {...field}
-                  value={field.value ?? ""}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="guestPeopleCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cantidad Personas</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="bedsRequired"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Camas Necesarias</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={1}
+                    onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
 
 
         {/* Partial Payment Logic */}
-        {form.watch("paymentStatus") === "PARTIAL" && (
-          <div className="p-4 border rounded-md bg-muted/50 space-y-4">
-            <FormField
-              control={form.control}
-              name="depositAmount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Monto Abonado (Seña)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex justify-between items-center text-sm font-medium">
-              <span>Monto Total:</span>
-              <span>${form.watch("totalAmount")}</span>
+        {
+          form.watch("paymentStatus") === "PARTIAL" && (
+            <div className="p-4 border rounded-md bg-muted/50 space-y-4">
+              <FormField
+                control={form.control}
+                name="depositAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Monto Abonado (Seña)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-between items-center text-sm font-medium">
+                <span>Monto Total:</span>
+                <span>${form.watch("totalAmount")}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm font-medium text-red-600">
+                <span>Restante a Pagar:</span>
+                <span>${(form.watch("totalAmount") || 0) - (form.watch("depositAmount") || 0)}</span>
+              </div>
             </div>
-            <div className="flex justify-between items-center text-sm font-medium text-red-600">
-              <span>Restante a Pagar:</span>
-              <span>${(form.watch("totalAmount") || 0) - (form.watch("depositAmount") || 0)}</span>
-            </div>
-          </div>
-        )}
+          )
+        }
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
@@ -502,7 +505,10 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
           />
 
           <FormItem>
-            <FormLabel>Gasto de Insumos (Global)</FormLabel>
+            <FormLabel className="flex items-center gap-2">
+              Gasto de Insumos (Global)
+              <span className="text-[10px] font-normal text-muted-foreground">(Informativo)</span>
+            </FormLabel>
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-muted-foreground">$</span>
               <FormControl>
@@ -511,10 +517,10 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                   value={amenitiesCost}
                   disabled={true}
                   className="bg-muted"
+                  title="Configurable en Sistema"
                 />
               </FormControl>
             </div>
-            <p className="text-[0.8rem] text-muted-foreground">Informativo. Configurable en Sistema.</p>
           </FormItem>
 
           <FormField
@@ -631,7 +637,25 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Guardando..." : (initialData ? "Actualizar Reserva" : "Crear Reserva")}
         </Button>
-      </form>
+      </form >
+
+      <AlertDialog open={bedWarning} onOpenChange={setBedWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Exceso de Camas</AlertDialogTitle>
+            <AlertDialogDescription>
+              La cantidad de camas solicitadas ({pendingValues?.bedsRequired}) supera las disponibles en el departamento.
+              ¿Desea continuar de todas formas?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setLoading(false)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-orange-600 hover:bg-orange-700 text-white" onClick={() => pendingValues && onSubmit(pendingValues, false, true, false)}>
+              Sí, Continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={capacityWarning} onOpenChange={setCapacityWarning}>
         <AlertDialogContent>
@@ -689,6 +713,6 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Form>
+    </Form >
   );
 }

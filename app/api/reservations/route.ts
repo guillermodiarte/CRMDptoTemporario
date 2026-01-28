@@ -61,7 +61,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const {
-      departmentId, guestName, guestPhone, guestPeopleCount,
+      departmentId, guestName, guestPhone, guestPeopleCount, bedsRequired,
       checkIn, checkOut, totalAmount, depositAmount, cleaningFee,
       currency, paymentStatus, source, notes, force, hasParking
     } = body;
@@ -111,29 +111,35 @@ export async function POST(req: Request) {
     const groupId = splits.length > 1 ? generateUUID() : null;
 
     // Transaction to create all parts
-    const reservations = await prisma.$transaction(
-      splits.map(split => prisma.reservation.create({
-        data: {
-          departmentId,
-          guestName,
-          guestPhone,
-          guestPeopleCount: Number(guestPeopleCount),
-          checkIn: split.checkIn,
-          checkOut: split.checkOut,
-          totalAmount: split.totalAmount,
-          depositAmount: split.depositAmount, // Logic handled in utility
-          cleaningFee: split.cleaningFee,     // Logic handled in utility
-          amenitiesFee: split.amenitiesFee,   // Logic handled in utility
-          currency: currency || "ARS",
-          paymentStatus: paymentStatus || "UNPAID",
-          source: source || "DIRECT",
-          notes,
-          hasParking: !!hasParking,
-          status: "CONFIRMED",
-          groupId: groupId
-        }
-      }))
-    );
+    const reservations = await prisma.$transaction(async (prisma) => {
+      const createdReservations = await Promise.all(
+        splits.map(split => prisma.reservation.create({
+          data: {
+            departmentId,
+            guestName,
+            guestPhone,
+            guestPeopleCount: Number(guestPeopleCount),
+            bedsRequired: Number(bedsRequired || 1), // Default to 1 if missing
+            checkIn: split.checkIn,
+            checkOut: split.checkOut,
+            totalAmount: split.totalAmount,
+            depositAmount: split.depositAmount, // Logic handled in utility
+            cleaningFee: split.cleaningFee,     // Logic handled in utility
+            amenitiesFee: split.amenitiesFee,   // Logic handled in utility
+            currency: currency || "ARS",
+            paymentStatus: paymentStatus || "UNPAID",
+            source: source || "DIRECT",
+            notes,
+            hasParking: !!hasParking,
+            status: "CONFIRMED",
+            groupId: groupId
+          }
+        }))
+      );
+
+      // If parking is requested, create a ParkingRental entry
+      return createdReservations;
+    });
 
     return NextResponse.json(reservations[0]);
 
@@ -142,3 +148,4 @@ export async function POST(req: Request) {
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
+```

@@ -6,6 +6,7 @@ import {
   UserCog,
   ShieldAlert,
   Settings,
+  Car,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"

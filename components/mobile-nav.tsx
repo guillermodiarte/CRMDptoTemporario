@@ -15,7 +15,8 @@ import {
   UserCog,
   Settings,
   ShieldAlert,
-  Search
+  Search,
+  Car
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { UserMenu } from "@/components/user-menu";

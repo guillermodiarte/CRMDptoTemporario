@@ -66,6 +66,7 @@ export async function PATCH(
             guestName: body.guestName || firstPart.guestName,
             guestPhone: body.guestPhone || firstPart.guestPhone,
             guestPeopleCount: body.guestPeopleCount !== undefined ? Number(body.guestPeopleCount) : firstPart.guestPeopleCount,
+            bedsRequired: body.bedsRequired !== undefined ? Number(body.bedsRequired) : (firstPart.bedsRequired || 1),
             checkIn: split.checkIn,
             checkOut: split.checkOut,
             totalAmount: split.totalAmount,
@@ -105,25 +106,80 @@ export async function PATCH(
         return NextResponse.json(updated);
       }
 
+      const {
+        departmentId,
+        guestName,
+        guestPhone,
+        guestPeopleCount,
+        bedsRequired,
+        checkIn,
+        checkOut,
+        totalAmount,
+        depositAmount,
+        cleaningFee,
+        amenitiesFee,
+        currency,
+        paymentStatus,
+        source,
+        hasParking,
+        notes,
+        status,
+        force
+      } = body;
+
+      const start = checkIn ? new Date(`${checkIn}T12:00:00Z`) : undefined;
+      const end = checkOut ? new Date(`${checkOut}T12:00:00Z`) : undefined;
+
+      // Check current dates if not provided
+      const effectiveStart = start || currentRes.checkIn;
+      const effectiveEnd = end || currentRes.checkOut;
+
+      if (effectiveStart >= effectiveEnd) {
+        return new NextResponse("Check-out must be after check-in", { status: 400 });
+      }
+
+      // Check overlaps if dates or department changed
+      if ((start || end || departmentId) && !force) {
+        const targetDept = departmentId || currentRes.departmentId;
+        const overlaps = await prisma.reservation.findMany({
+          where: {
+            departmentId: targetDept,
+            id: { not: id }, // Exclude self
+            status: { not: "CANCELLED" },
+            OR: [
+              {
+                checkIn: { lt: effectiveEnd },
+                checkOut: { gt: effectiveStart }
+              }
+            ]
+          }
+        });
+
+        if (overlaps.length > 0) {
+          return new NextResponse("Overlap detected", { status: 409 });
+        }
+      }
+
       const reservation = await prisma.reservation.update({
         where: { id },
         data: {
-          departmentId: body.departmentId,
-          guestName: body.guestName,
-          guestPhone: body.guestPhone,
-          guestPeopleCount: body.guestPeopleCount !== undefined ? Number(body.guestPeopleCount) : undefined,
-          checkIn: body.checkIn ? new Date(`${body.checkIn}T12:00:00`) : undefined,
-          checkOut: body.checkOut ? new Date(`${body.checkOut}T12:00:00`) : undefined,
-          totalAmount: body.totalAmount !== undefined ? Number(body.totalAmount) : undefined,
-          depositAmount: body.depositAmount !== undefined ? Number(body.depositAmount) : undefined,
-          cleaningFee: body.cleaningFee !== undefined ? Number(body.cleaningFee) : undefined,
-          amenitiesFee: body.amenitiesFee !== undefined ? Number(body.amenitiesFee) : undefined,
-          currency: body.currency,
-          paymentStatus: body.paymentStatus,
-          source: body.source,
-          notes: body.notes,
-          hasParking: body.hasParking !== undefined ? !!body.hasParking : undefined,
-          status: body.status
+          departmentId,
+          guestName,
+          guestPhone,
+          guestPeopleCount: guestPeopleCount ? Number(guestPeopleCount) : undefined,
+          bedsRequired: bedsRequired ? Number(bedsRequired) : undefined,
+          checkIn: start,
+          checkOut: end,
+          totalAmount: totalAmount !== undefined ? Number(totalAmount) : undefined,
+          depositAmount: depositAmount !== undefined ? Number(depositAmount) : undefined,
+          cleaningFee: cleaningFee !== undefined ? Number(cleaningFee) : undefined,
+          amenitiesFee: amenitiesFee !== undefined ? Number(amenitiesFee) : undefined,
+          currency,
+          paymentStatus,
+          source,
+          notes,
+          hasParking,
+          status: status as any
         },
       });
       return NextResponse.json(reservation);
