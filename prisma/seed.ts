@@ -4,18 +4,43 @@ import { hash } from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  const password = await hash('Gad33224122', 12)
-  const admin = await prisma.user.upsert({
-    where: { email: 'guillermodiarte@gmail.com' },
-    update: {},
-    create: {
-      email: 'guillermodiarte@gmail.com',
-      name: 'Guillermo Diarte',
+  console.log('Cleaning database (limpiando base de datos)...')
+
+  // Clean in order of dependencies to avoid FK constraints issues
+  // Note: Note and BlacklistEntry depend on User (sometimes) or just have string refs?
+  // User has many Notes. BlacklistEntry has reportedBy (User).
+  // Reservation has Department. Expense has Department.
+
+  await prisma.note.deleteMany()
+  await prisma.blacklistEntry.deleteMany()
+  await prisma.expense.deleteMany()
+  await prisma.reservation.deleteMany()
+  await prisma.department.deleteMany()
+  await prisma.supply.deleteMany()
+  await prisma.systemSettings.deleteMany()
+  await prisma.user.deleteMany()
+
+  console.log('Database cleaned.')
+  console.log('Creating default user (creando usuario por defecto)...')
+
+  const password = await hash('Diarte1035', 12)
+
+  const admin = await prisma.user.create({
+    data: {
+      email: 'guillermo.diarte@gmail.com',
+      name: 'Guillermo A. Diarte',
       password,
       role: Role.ADMIN,
+      isActive: true,
     },
   })
-  console.log({ admin })
+
+  console.log('Default user created:')
+  console.log({
+    name: admin.name,
+    email: admin.email,
+    role: admin.role
+  })
 }
 
 main()

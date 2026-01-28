@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import Papa from "papaparse";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { format, isValid, parse } from "date-fns";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { BlacklistEntry } from "@prisma/client";
+import { User, Role } from "@prisma/client";
 import {
   Download,
   Upload,
@@ -28,21 +28,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ImportPreviewModal, ImportPreviewRow, ImportStats } from "./import-preview-modal";
 
-interface BlacklistActionsProps {
-  data: (BlacklistEntry & { reportedBy?: { name: string | null; email: string | null } | null })[];
+interface UsersActionsProps {
+  data: User[];
 }
 
 const CSV_CONFIG = [
-  { label: "GuestName", key: "guestName", type: "string", required: true },
-  { label: "GuestPhone", key: "guestPhone", type: "string", required: true },
-  { label: "Reason", key: "reason", type: "string", required: true },
-  { label: "DepartmentName", key: "departmentName", type: "string" }, // Optional
-  { label: "CheckIn", key: "checkIn", type: "date" },
-  { label: "CheckOut", key: "checkOut", type: "date" },
-  { label: "TotalAmount", key: "totalAmount", type: "number" }
+  { label: "Name", key: "name", type: "string", required: true },
+  { label: "Email", key: "email", type: "string", required: true },
+  { label: "Role", key: "role", type: "string", required: true },
+  { label: "Phone", key: "phone", type: "string" },
+  { label: "Password", key: "password", type: "string" }, // Required for creation
+  { label: "IsActive", key: "isActive", type: "boolean" },
 ];
 
-export function BlacklistActions({ data }: BlacklistActionsProps) {
+export function UsersActions({ data }: UsersActionsProps) {
   const router = useRouter();
 
   const [importOpen, setImportOpen] = useState(false);
@@ -53,21 +52,20 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
   // --- Export Logic ---
 
   const getExportFileName = (ext: string) => {
-    return `lista_negra_${format(new Date(), "MMMM_yyyy", { locale: es })}.${ext}`;
+    return `usuarios_${format(new Date(), "MMMM_yyyy", { locale: es })}.${ext}`;
   };
 
   const exportToCSV = () => {
-    const headers = ["Huésped", "Teléfono", "Motivo", "Reportado Por", "Fecha", "Check-In", "Check-Out"];
+    const headers = ["Nombre", "Email", "Rol", "Teléfono", "Activo", "Creado"];
 
-    const rows = data.map(entry => {
+    const rows = data.map(user => {
       return [
-        `"${entry.guestName.replace(/"/g, '""')}"`,
-        `"${(entry.guestPhone || "").replace(/"/g, '""')}"`,
-        `"${entry.reason.replace(/"/g, '""')}"`,
-        `"${(entry.reportedBy?.name || "Sistema").replace(/"/g, '""')}"`,
-        format(new Date(entry.createdAt), "yyyy-MM-dd"),
-        entry.checkIn ? format(new Date(entry.checkIn), "yyyy-MM-dd") : "",
-        entry.checkOut ? format(new Date(entry.checkOut), "yyyy-MM-dd") : "",
+        `"${user.name?.replace(/"/g, '""') || ""}"`,
+        `"${user.email.replace(/"/g, '""')}"`,
+        user.role,
+        `"${(user.phone || "").replace(/"/g, '""')}"`,
+        user.isActive ? "SI" : "NO",
+        format(new Date(user.createdAt), "yyyy-MM-dd"),
       ].join(",");
     });
 
@@ -80,29 +78,25 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
-    doc.text("Reporte de Lista Negra", 14, 15);
+    const doc = new jsPDF('l', 'mm', 'a4');
+    doc.text("Reporte de Usuarios", 14, 15);
     doc.setFontSize(10);
     doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 22);
 
-    const tableRows = data.map(entry => [
-      entry.guestName,
-      entry.guestPhone || "",
-      entry.reason,
-      entry.reportedBy?.name || "Sistema",
-      format(new Date(entry.createdAt), "dd/MM/yyyy"),
-      entry.checkIn ? format(new Date(entry.checkIn), "dd/MM/yyyy") : "-",
-      entry.checkOut ? format(new Date(entry.checkOut), "dd/MM/yyyy") : "-"
+    const tableRows = data.map(user => [
+      user.name || "-",
+      user.email,
+      user.role,
+      user.phone || "-",
+      user.isActive ? "SI" : "NO",
+      format(new Date(user.createdAt), "dd/MM/yyyy")
     ]);
 
     autoTable(doc, {
-      head: [["Huésped", "Teléfono", "Motivo", "Reportado", "Fecha Rep.", "Check-In", "Check-Out"]],
+      head: [["Nombre", "Email", "Rol", "Teléfono", "Activo", "Creado"]],
       body: tableRows,
       startY: 30,
-      styles: { fontSize: 8 },
-      columnStyles: {
-        2: { cellWidth: 50 } // Motivo wider
-      }
+      styles: { fontSize: 8 }
     });
 
     doc.save(getExportFileName("pdf"));
@@ -112,12 +106,12 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
 
   const downloadTemplate = () => {
     const headers = CSV_CONFIG.map(c => c.label).join(",");
-    const example = "Juan Perez,123456789,Rompió una mesa,Depto 1,2024-01-01,2024-01-05,50000";
+    const example = "Juan Perez,juan@example.com,VISUALIZER,123456,Secret123,SI";
     const content = "\uFEFF" + headers + "\n" + example;
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "plantilla_blacklist.csv";
+    link.download = "plantilla_usuarios.csv";
     link.click();
   };
 
@@ -148,58 +142,48 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
       const entry: any = {};
       const rowErrors: string[] = [];
 
-      // 1. Map Columns (Flexible matching)
+      // 1. Map Columns
       CSV_CONFIG.forEach(config => {
-        // Try exact match first, then spanish variants
         let val = row[config.label];
-
-        // Handle aliases if essential
         if (val === undefined) {
           const lowerKey = config.label.toLowerCase();
-          const foundKey = Object.keys(row).find(k => {
-            const kLow = k.toLowerCase().trim();
-            if (kLow === lowerKey) return true;
-            // Common aliases
-            if (config.key === "guestName" && (kLow === "huesped" || kLow === "huésped")) return true;
-            if (config.key === "guestPhone" && (kLow === "telefono" || kLow === "teléfono")) return true;
-            if (config.key === "reason" && kLow === "motivo") return true;
-            return false;
-          });
+          const foundKey = Object.keys(row).find(k => k.toLowerCase().trim() === lowerKey);
           if (foundKey) val = row[foundKey];
         }
 
-        entry[config.key] = val?.trim();
+        if (config.key === "isActive") {
+          val = ["si", "yes", "true", "1"].includes(val?.toLowerCase());
+        }
+
+        entry[config.key] = typeof val === "boolean" ? val : val?.trim();
       });
 
-      // 2. Validate Required
-      if (!entry.guestName) rowErrors.push("Falta Nombre");
-      if (!entry.guestPhone) rowErrors.push("Falta Teléfono");
-      if (!entry.reason) rowErrors.push("Falta Motivo");
-
-      // 3. Validate Date Formats
-      if (entry.checkIn && !isValid(parse(entry.checkIn, "yyyy-MM-dd", new Date()))) {
-        rowErrors.push("CheckIn inválido (YYYY-MM-DD)");
-      }
-      if (entry.checkOut && !isValid(parse(entry.checkOut, "yyyy-MM-dd", new Date()))) {
-        rowErrors.push("CheckOut inválido (YYYY-MM-DD)");
+      // 2. Validate
+      if (!entry.name) rowErrors.push("Falta Nombre");
+      if (!entry.email) rowErrors.push("Falta Email");
+      if (!entry.role || !["ADMIN", "VISUALIZER"].includes(entry.role.toUpperCase())) {
+        rowErrors.push("Rol inválido (ADMIN/VISUALIZER)");
+      } else {
+        entry.role = entry.role.toUpperCase();
       }
 
-      if (rowErrors.length > 0) {
-        statsParams.errors++;
+      // 3. Check Duplicate (Email)
+      const exists = data.find(u => u.email.toLowerCase() === entry.email?.toLowerCase());
+
+      if (exists) {
+        statsParams.same++;
         preview.push({
-          status: "ERROR",
-          data: { ...entry, _errors: rowErrors }
+          status: "SAME",
+          data: { ...entry, _message: "Ya existe" }
         });
       } else {
-        // 4. Validate Duplicate (Phone)
-        const exists = data.some(existing =>
-          existing.guestPhone?.trim() === entry.guestPhone?.trim()
-        );
-        if (exists) {
-          statsParams.same++;
+        if (!entry.password) rowErrors.push("Falta Contraseña (para nuevos)");
+
+        if (rowErrors.length > 0) {
+          statsParams.errors++;
           preview.push({
-            status: "SAME",
-            data: { ...entry, _message: "Ya existe" }
+            status: "ERROR",
+            data: { ...entry, _errors: rowErrors }
           });
         } else {
           statsParams.new++;
@@ -225,25 +209,31 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
     for (const rowObj of rowsToImport) {
       const row = rowObj.data;
       try {
-        const { _errors, _id, _valid, _duplicate, ...payload } = row;
+        const body = {
+          name: row.name,
+          email: row.email,
+          password: row.password,
+          role: row.role,
+          phone: row.phone,
+          isActive: row.isActive !== undefined ? row.isActive : true,
+          image: ""
+        };
 
-        const res = await fetch("/api/blacklist", {
+        const res = await fetch("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(body)
         });
 
-        if (!res.ok) {
-          throw new Error(await res.text());
-        }
+        if (!res.ok) throw new Error(await res.text());
         success++;
       } catch (e: any) {
-        errors.push(`Error en ${row.guestName}: ${e.message}`);
+        errors.push(`Error en ${row.email}: ${e.message}`);
       }
     }
 
     if (errors.length > 0) {
-      alert("Algunos errores ocurrieron:\n" + errors.join("\n"));
+      alert("Errores:\n" + errors.join("\n"));
     }
 
     setImporting(false);
@@ -252,9 +242,9 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
   };
 
   const columns = [
-    { header: "Huésped", accessorKey: "guestName" },
-    { header: "Teléfono", accessorKey: "guestPhone" },
-    { header: "Motivo", accessorKey: "reason" },
+    { header: "Nombre", accessorKey: "name" },
+    { header: "Email", accessorKey: "email" },
+    { header: "Rol", accessorKey: "role" },
     {
       header: "Error",
       accessorKey: "_errors",
@@ -280,14 +270,14 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
             <FileText className="mr-2 h-4 w-4" /> Exportar PDF
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => document.getElementById("blacklist-file-upload")?.click()}>
+          <DropdownMenuItem onClick={() => document.getElementById("users-file-upload")?.click()}>
             <Upload className="mr-2 h-4 w-4" /> Importar CSV
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <input
-        id="blacklist-file-upload"
+        id="users-file-upload"
         type="file"
         accept=".csv"
         className="hidden"
@@ -299,7 +289,7 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
         onClose={() => setImportOpen(false)}
         onConfirm={handleConfirmImport}
         isImporting={importing}
-        title="Importar Lista Negra"
+        title="Importar Usuarios"
         rows={previewRows}
         columns={columns}
         stats={stats}

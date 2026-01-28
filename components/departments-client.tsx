@@ -292,39 +292,39 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role
                 </div>
 
                 {/* Details Grid */}
-                <div className="grid grid-cols-2 gap-x-2 gap-y-3 text-sm border-t pt-2 border-b pb-2">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-4 text-sm border-t pt-3 border-b pb-3">
                   {/* Capacity */}
-                  <div>
-                    <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">Capacidad</span>
-                    <span className="font-medium text-xs">{dept.maxPeople} pax / {dept.bedCount} camas</span>
+                  <div className="pl-3">
+                    <span className="text-muted-foreground block text-xs uppercase tracking-wider">Capacidad</span>
+                    <span className="font-medium text-sm">{dept.maxPeople} pax / {dept.bedCount} camas</span>
                   </div>
 
                   {/* Prices */}
                   <div>
-                    <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">Precios</span>
-                    <div className="font-medium text-xs flex flex-wrap gap-1">
+                    <span className="text-muted-foreground block text-xs uppercase tracking-wider">Precios</span>
+                    <div className="font-medium text-sm flex flex-wrap gap-1">
                       <span>${dept.basePrice}</span>
                       <span className="text-muted-foreground">+${dept.cleaningFee} Limp.</span>
                     </div>
                   </div>
 
                   {/* Wifi */}
-                  <div className="col-span-2 bg-muted/30 p-2 rounded-md">
-                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1">
-                      <Wifi className="h-3 w-3" /> Connectividad
+                  <div className="col-span-2 bg-muted/30 p-3 rounded-md">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                      <Wifi className="h-4 w-4" /> Connectividad
                     </div>
-                    <div className="font-medium text-xs whitespace-normal break-all">
+                    <div className="font-medium text-sm whitespace-normal break-all">
                       {dept.wifiName || "-"}
                     </div>
-                    <div className="text-xs break-all select-all font-mono text-muted-foreground">
+                    <div className="text-sm break-all select-all font-mono text-muted-foreground">
                       Pass: {dept.wifiPass}
                     </div>
                   </div>
 
                   {/* Keys/Locker */}
                   {(dept as any).lockBoxCode && (
-                    <div className="col-span-2 flex items-center gap-2 border px-2 py-1 rounded bg-background text-xs">
-                      <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <div className="col-span-2 flex items-center gap-2 border px-3 py-2 rounded bg-background text-sm">
+                      <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="text-muted-foreground">Locker:</span>
                       <span className="font-mono font-medium select-all">{(dept as any).lockBoxCode}</span>
                     </div>
@@ -332,22 +332,22 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role
                 </div>
 
                 {/* Footer: Links & Actions */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1 pl-3">
                   {/* Links Row */}
                   <div className="flex gap-3">
                     {(dept as any).googleMapsLink && (
                       <a href={(dept as any).googleMapsLink} target="_blank" rel="noopener noreferrer">
-                        <img src="/icons/maps.png" alt="Maps" className="w-6 h-6 object-contain hover:scale-110 transition-transform" />
+                        <img src="/icons/maps.png" alt="Maps" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
                       </a>
                     )}
                     {(dept as any).airbnbLink && (
                       <a href={(dept as any).airbnbLink} target="_blank" rel="noopener noreferrer">
-                        <img src="/icons/airbnb.png" alt="Airbnb" className="w-6 h-6 object-contain hover:scale-110 transition-transform" />
+                        <img src="/icons/airbnb.png" alt="Airbnb" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
                       </a>
                     )}
                     {(dept as any).bookingLink && (
                       <a href={(dept as any).bookingLink} target="_blank" rel="noopener noreferrer">
-                        <img src="/icons/booking.png" alt="Booking" className="w-6 h-6 object-contain hover:scale-110 transition-transform" />
+                        <img src="/icons/booking.png" alt="Booking" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
                       </a>
                     )}
                   </div>
@@ -358,24 +358,24 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ data, role
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 w-8 p-0"
+                        className="h-10 w-10 p-0"
                         onClick={() => toggleActive(dept)}
                         disabled={togglingId === dept.id}
                         title={dept.isActive ? "Desactivar" : "Activar"}
                       >
-                        {dept.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                        {dept.isActive ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5 text-muted-foreground" />}
                       </Button>
-                      <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => handleEdit(dept)}>
+                      <Button variant="outline" size="sm" className="h-10 px-4 text-sm" onClick={() => handleEdit(dept)}>
                         Editar
                       </Button>
                       {!dept.isActive && (
                         <Button
                           variant="destructive"
                           size="sm"
-                          className="h-8 w-8 p-0"
+                          className="h-10 w-10 p-0"
                           onClick={() => setDeleteId(dept.id)}
                         >
-                          <Trash className="h-4 w-4" />
+                          <Trash className="h-5 w-5" />
                         </Button>
                       )}
                     </div>

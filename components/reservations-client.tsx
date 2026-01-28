@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Department, Reservation } from "@prisma/client";
-import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search } from "lucide-react";
+import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,7 +57,7 @@ import { ReservationsActions } from "./reservations-actions";
 import { BlacklistForm } from "./blacklist-form";
 import { normalizePhone } from "@/lib/phone-utils";
 import { formatCurrency } from "@/lib/utils";
-import { Car } from "lucide-react";
+
 
 
 export const ReservationsClient: React.FC<ReservationsClientProps> = ({
@@ -231,7 +231,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
                   {/* New Button (Mobile Only) */}
                   <DialogTrigger asChild>
-                    <Button onClick={handleCreate} className="md:hidden whitespace-nowrap px-6 h-10 text-base">
+                    <Button onClick={handleCreate} className="md:hidden whitespace-nowrap w-[140px] h-10 text-base">
                       <Plus className="mr-2 h-5 w-5" /> Nueva
                     </Button>
                   </DialogTrigger>
@@ -524,42 +524,42 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
             return (
               <Card key={res.id} className={cardClass}>
-                <CardContent className="p-3 space-y-2">
+                <CardContent className="p-4 space-y-3">
                   {/* Header: Name, Dept, Status (Wrapped) */}
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-start gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className={`font-bold text-base whitespace-normal break-words leading-tight ${isNoShow ? "line-through text-muted-foreground" : ""}`}>
+                        <div className={`font-bold text-xl whitespace-normal break-words leading-tight ${isNoShow ? "line-through text-muted-foreground" : ""}`}>
                           {res.guestName}
                         </div>
-                        <div className="text-xs font-medium text-blue-600 mt-0.5 whitespace-normal break-words">
+                        <div className="text-base font-medium text-blue-600 mt-1 whitespace-normal break-words">
                           {res.department.name}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${isPaid ? "bg-green-100 text-green-700 border-green-200" : isPartial ? "bg-orange-100 text-orange-700 border-orange-200" : "bg-red-100 text-red-700 border-red-200"}`}>
+                        <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isPaid ? "bg-green-100 text-green-700 border-green-200" : isPartial ? "bg-orange-100 text-orange-700 border-orange-200" : "bg-red-100 text-red-700 border-red-200"}`}>
                           {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : 'PEND.'}
                         </span>
-                        {isNoShow && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-gray-100 text-gray-600 whitespace-nowrap">NO SHOW</span>}
-                        {isBlacklisted && <span className="text-[10px] bg-red-100 text-red-600 px-1 rounded font-bold whitespace-nowrap">BLACKLIST</span>}
+                        {isNoShow && <span className="text-xs font-bold px-2 py-1 rounded border bg-gray-100 text-gray-600 whitespace-nowrap">NO SHOW</span>}
+                        {isBlacklisted && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap">BLACKLIST</span>}
                       </div>
                     </div>
                   </div>
 
                   {/* Dates & Financials (Grid - Wrap enabled) */}
-                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground border-t pt-2 border-b pb-2">
+                  <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground border-t pt-3 border-b pb-3">
                     <div className="col-span-2 sm:col-span-1 flex flex-wrap items-center gap-x-2">
                       <span>📅</span>
-                      <span className="font-medium text-gray-700">{format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}</span>
-                      <span>({Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))} noc)</span>
+                      <span className="font-medium text-gray-700 text-base">{format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}</span>
+                      <span className="text-sm">({Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))} noc)</span>
                     </div>
 
-                    <div className="col-span-2 flex justify-between items-center sm:hidden">
+                    <div className="col-span-2 flex justify-between items-center sm:hidden mt-1">
                       {/* Mobile Row for Financials */}
-                      <div className="font-semibold text-black">
+                      <div className="font-bold text-base text-black">
                         Total: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
                       </div>
-                      <div className={`font-semibold ${!isPaid && !isNoShow ? "text-red-600" : ""}`}>
+                      <div className={`font-bold text-base ${!isPaid && !isNoShow ? "text-red-600" : ""}`}>
                         Deuda: {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)) : '-'}
                       </div>
                     </div>
@@ -571,14 +571,14 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       {/* Indicators */}
                       <div className="flex gap-2">
                         {res.hasParking && (
-                          <span title="Cochera" className="text-green-600 flex items-center gap-1 text-[10px] bg-green-100 px-1.5 py-0.5 rounded"><Check className="h-3 w-3" /> Auto</span>
+                          <span title="Cochera" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium whitespace-nowrap"><Car className="h-5 w-5" /> Requiere Cochera</span>
                         )}
                         {res.notes && (
                           <Popover>
                             <PopoverTrigger asChild>
-                              <button title="Ver nota" className="text-blue-600 flex items-center gap-1 text-[10px] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100"><NotepadText className="h-3 w-3" /> Nota</button>
+                              <button title="Ver nota" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium"><NotepadText className="h-5 w-5" /> Nota</button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-64 p-3 text-xs bg-white shadow-lg border rounded-md">
+                            <PopoverContent className="w-64 p-3 text-sm bg-white shadow-lg border rounded-md">
                               {res.notes}
                             </PopoverContent>
                           </Popover>
@@ -586,15 +586,15 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
 
                       {/* Buttons */}
-                      <div className="flex gap-1 ml-auto">
+                      <div className="flex gap-2 ml-auto">
                         {!isPaid && !isNoShow && (
-                          <Button variant="outline" size="sm" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)} className="h-8 w-8 p-0 text-green-600 bg-green-50/50 border-green-200">
-                            <DollarSign className="h-4 w-4" />
+                          <Button variant="outline" size="sm" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)} className="h-10 w-10 p-0 text-green-600 bg-green-50/50 border-green-200">
+                            <DollarSign className="h-5 w-5" />
                           </Button>
                         )}
                         {canMarkNoShow && (
-                          <Button variant="outline" size="sm" onClick={() => handleNoShowClick(res.id)} className="h-8 w-8 p-0 text-orange-500 bg-orange-50/50 border-orange-200">
-                            <UserX className="h-4 w-4" />
+                          <Button variant="outline" size="sm" onClick={() => handleNoShowClick(res.id)} className="h-10 w-10 p-0 text-orange-500 bg-orange-50/50 border-orange-200">
+                            <UserX className="h-5 w-5" />
                           </Button>
                         )}
                         {!isBlacklisted && (

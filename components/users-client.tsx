@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash, Search, Ban } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { UserForm } from "./user-form";
+import { UsersActions } from "./users-actions";
 import {
   Select,
   SelectContent,
@@ -104,26 +105,29 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
         </div>
 
         {isMounted && (
-          <Dialog open={open} onOpenChange={(val) => {
-            setOpen(val);
-            if (!val) setEditingUser(null);
-          }}>
-            <DialogTrigger asChild>
-              <Button onClick={handleCreate} className="w-full md:w-auto">
-                <Plus className="mr-2 h-4 w-4" /> Nuevo Usuario
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md" onCloseAutoFocus={(e) => e.preventDefault()}>
-              <DialogHeader>
-                <DialogTitle>{editingUser ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
-              </DialogHeader>
-              <UserForm
-                initialData={editingUser}
-                setOpen={setOpen}
-                currentUserId={currentUserId}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <UsersActions data={data} />
+            <Dialog open={open} onOpenChange={(val) => {
+              setOpen(val);
+              if (!val) setEditingUser(null);
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={handleCreate} className="w-full md:w-auto">
+                  <Plus className="mr-2 h-4 w-4" /> Nuevo Usuario
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md" onCloseAutoFocus={(e) => e.preventDefault()}>
+                <DialogHeader>
+                  <DialogTitle>{editingUser ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
+                </DialogHeader>
+                <UserForm
+                  initialData={editingUser}
+                  setOpen={setOpen}
+                  currentUserId={currentUserId}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
       </div>
 

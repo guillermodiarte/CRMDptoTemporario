@@ -13,11 +13,7 @@ import {
   Upload,
   FileSpreadsheet,
   FileText,
-  FileDown,
-  Loader2,
-  CheckCircle,
-  AlertCircle,
-  CheckCircle2
+  FileDown
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,23 +26,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { ImportPreviewModal, ImportPreviewRow, ImportStats } from "./import-preview-modal";
 
 interface FinanceActionsProps {
   expenses: (Expense & { department: { name: string } | null })[];
@@ -91,9 +71,8 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
 
   const [importOpen, setImportOpen] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [csvData, setCsvData] = useState<any[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
-  const [successCount, setSuccessCount] = useState(0);
+  const [previewRows, setPreviewRows] = useState<ImportPreviewRow[]>([]);
+  const [stats, setStats] = useState<ImportStats>({ total: 0, new: 0, updated: 0, same: 0, errors: 0 });
 
   // --- Export Logic ---
 
@@ -166,21 +145,26 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setCsvData([]);
-    setErrors([]);
-    setSuccessCount(0);
+    setPreviewRows([]);
+    setStats({ total: 0, new: 0, updated: 0, same: 0, errors: 0 });
 
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (result) => validateAndSetPreview(result.data),
-      error: (err) => setErrors(["Error leyendo CSV: " + err.message])
+      complete: (result) => {
+        validateAndSetPreview(result.data);
+        setImportOpen(true);
+      },
+      error: (err) => alert("Error leyendo CSV: " + err.message)
     });
     e.target.value = "";
   };
 
   const validateAndSetPreview = (rows: any[]) => {
-    const processed = rows.map((row, idx) => {
+    const preview: ImportPreviewRow[] = [];
+    let statsParams = { total: rows.length, new: 0, updated: 0, same: 0, errors: 0 };
+
+    rows.map((row, idx) => {
       const entry: any = {};
       const rowErrors: string[] = [];
 
@@ -211,7 +195,7 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
 
       // Date
       if (!entry.date) rowErrors.push("Falta Fecha");
-      else if (!isValid(parse(entry.date, "yyyy-MM-dd", new Date()))) rowErrors.push("Fecha inválida (YYYY-MM-DD)");
+      else if (!isValid(parse(entry.date, "yyyy-MM-dd", new Date()))) rowErrors.push("Fecha inválida");
 
       // Amount
       if (!entry.amount) rowErrors.push("Falta Monto");
@@ -243,20 +227,66 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
 
       if (!entry.description) rowErrors.push("Falta Descripción");
 
-      return { ...entry, _errors: rowErrors, _id: idx, _valid: rowErrors.length === 0 };
+      if (rowErrors.length > 0) {
+        statsParams.errors++;
+        preview.push({
+          status: "ERROR",
+          data: { ...entry, _errors: rowErrors }
+        });
+      } else {
+        // 3. Check for Duplicates (Date + Amount + Description + Dept)
+        const duplicate = expenses.find(e => {
+          const eDate = format(new Date(e.date), "yyyy-MM-dd");
+          const eAmount = e.amount;
+          const eDesc = e.description.toLowerCase();
+          const eDeptId = e.departmentId; // can be null
+
+          const iDate = entry.date;
+          const iAmount = entry.amount;
+          const iDesc = (entry.description || "").toLowerCase();
+          const iDeptId = entry._departmentId || null;
+
+          // Type check
+          const eType = e.type;
+          const iType = entry.type;
+
+          return eDate === iDate &&
+            eAmount === iAmount &&
+            eDesc === iDesc &&
+            eDeptId === iDeptId &&
+            eType === iType;
+        });
+
+        if (duplicate) {
+          statsParams.same++;
+          preview.push({
+            status: "SAME",
+            data: { ...entry, _message: "Ya existe" }
+          });
+        } else {
+          statsParams.new++;
+          preview.push({
+            status: "NEW",
+            data: entry
+          });
+        }
+      }
     });
 
-    setCsvData(processed);
+    setPreviewRows(preview);
+    setStats(statsParams);
   };
 
-  const executeImport = async () => {
+  const handleConfirmImport = async () => {
     setImporting(true);
     let success = 0;
-    const globalErrors: string[] = [];
+    const errors: string[] = [];
 
-    const validRows = csvData.filter(r => r._valid);
+    // Filter NEW rows
+    const rowsToImport = previewRows.filter(r => r.status === "NEW");
 
-    for (const row of validRows) {
+    for (const rowObj of rowsToImport) {
+      const row = rowObj.data;
       try {
         const body = {
           type: row.type,
@@ -276,23 +306,35 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
 
         if (!res.ok) throw new Error(await res.text());
         success++;
-
       } catch (e: any) {
-        globalErrors.push(`Error en ${row.description}: ${e.message}`);
+        errors.push(`Error en ${row.description}: ${e.message}`);
       }
     }
 
-    setSuccessCount(success);
-    if (globalErrors.length > 0) {
-      setErrors(globalErrors);
-    } else {
-      setTimeout(() => {
-        setImportOpen(false);
-        router.refresh();
-      }, 1500);
+    if (errors.length > 0) {
+      alert("Algunos errores ocurrieron:\n" + errors.join("\n"));
     }
+
     setImporting(false);
+    setImportOpen(false);
+    router.refresh();
   };
+
+  const columns = [
+    { header: "Fecha", accessorKey: "date" },
+    { header: "Tipo", accessorKey: "type", cell: (val: string) => <span className="capitalize">{(val || "").toLowerCase()}</span> },
+    { header: "Desc.", accessorKey: "description" },
+    {
+      header: "Monto",
+      accessorKey: "amount",
+      cell: (val: any) => <span>${val}</span>
+    },
+    {
+      header: "Error",
+      accessorKey: "_errors",
+      cell: (val: any) => val ? <span className="text-red-600 text-xs font-bold">{val.join(", ")}</span> : null
+    }
+  ];
 
   return (
     <div className="flex items-center gap-2">
@@ -312,100 +354,30 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
             <FileText className="mr-2 h-4 w-4" /> Exportar PDF
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setImportOpen(true)}>
+          <DropdownMenuItem onClick={() => document.getElementById("finance-file-upload")?.click()}>
             <Upload className="mr-2 h-4 w-4" /> Importar CSV
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Importar Gastos</DialogTitle>
-            <DialogDescription>
-              Carga un archivo CSV para importar gastos masivamente.
-            </DialogDescription>
-          </DialogHeader>
+      <input
+        id="finance-file-upload"
+        type="file"
+        accept=".csv"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
 
-          <div className="flex gap-4 items-center my-4">
-            <Input type="file" accept=".csv" onChange={handleFileUpload} />
-            <Button variant="secondary" onClick={downloadTemplate}>
-              <FileDown className="mr-2 h-4 w-4" /> Template
-            </Button>
-          </div>
-
-          {errors.length > 0 && (
-            <Alert variant="destructive" className="mb-4 max-h-32 overflow-y-auto">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Errores de validación</AlertTitle>
-              <AlertDescription>
-                <div className="text-xs">
-                  {errors.map((e, i) => <div key={i}>{e}</div>)}
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {successCount > 0 && (
-            <Alert className="mb-4 bg-green-50 text-green-900 border-green-200">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertTitle>Importación Parcial</AlertTitle>
-              <AlertDescription>
-                Se importaron {successCount} gastos correctamente.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="flex-1 overflow-auto border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">Status</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Desc.</TableHead>
-                  <TableHead>Monto</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {csvData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      Sube un archivo CSV para previsualizar.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {csvData.map((row, i) => (
-                  <TableRow key={i} className={!row._valid ? "bg-red-50" : "bg-white"}>
-                    <TableCell>
-                      {row._valid
-                        ? <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        : <AlertCircle className="h-4 w-4 text-red-500" />
-                      }
-                    </TableCell>
-                    <TableCell>{row.date}</TableCell>
-                    <TableCell className="capitalize">{row.type?.toLowerCase()}</TableCell>
-                    <TableCell>
-                      {row.description}
-                      {row._errors.length > 0 && (
-                        <div className="text-xs text-red-600 font-medium">{row._errors.join(", ")}</div>
-                      )}
-                    </TableCell>
-                    <TableCell>${row.amount}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <DialogFooter className="mt-4">
-            <Button variant="ghost" onClick={() => setImportOpen(false)}>Cancelar</Button>
-            <Button onClick={executeImport} disabled={importing || csvData.filter(r => r._valid).length === 0}>
-              {importing ? "Importando..." : `Importar ${csvData.filter(r => r._valid).length} gastos`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ImportPreviewModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        onConfirm={handleConfirmImport}
+        isImporting={importing}
+        title="Importar Gastos"
+        rows={previewRows}
+        columns={columns}
+        stats={stats}
+      />
     </div>
   );
 }

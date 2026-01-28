@@ -24,7 +24,19 @@ AUTH_SECRET="tu_clave_secreta_larga_aqui"
 AUTH_TRUST_HOST=true
 ```
 
-### 3. Persistencia (Volúmenes) - ¡La Clave!
+### 3. Inicialización de Base de Datos (Seed)
+Para dejar la base de datos lista para usar (limpia y con el usuario admin por defecto), ejecuta este comando en la consola del servidor (tras el despliegue):
+
+```bash
+npx prisma db seed
+```
+
+Esto creará el siguiente usuario:
+- **Nombre:** Guillermo A. Diarte
+- **Email:** guillermo.diarte@gmail.com
+- **Password:** Diarte1035
+
+### 4. Persistencia (Volúmenes) - ¡La Clave!
 Para evitar errores de permisos ("No such container") y que la base de datos no se borre, usaremos **Volúmenes Nombrados** (Docker gestiona los permisos por nosotros).
 
 Ve a la pestaña **Volumes** y agrega:
