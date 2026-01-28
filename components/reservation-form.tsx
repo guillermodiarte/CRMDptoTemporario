@@ -72,6 +72,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const [blacklistWarning, setBlacklistWarning] = useState<{ name: string; reason: string } | null>(null);
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
   const [amenitiesCost, setAmenitiesCost] = useState(initialData?.amenitiesFee || 0);
+  const [isTotalManuallyModified, setIsTotalManuallyModified] = useState(false);
 
   useEffect(() => {
     // Determine if we should fetch current global cost.
@@ -227,12 +228,16 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
     const dept = departments.find(d => d.id === selectedDepartmentId);
     if (dept && dept.basePrice) {
-      // We set value. This allows overwrite if user types later (as long as dependencies don't re-trigger).
-      // Dependencies are date/dept. So if those stay same, user can edit total.
+      // Check if manually modified and not 0
+      const currentTotal = form.getValues("totalAmount");
+      if (isTotalManuallyModified && currentTotal !== 0) {
+        return;
+      }
+
       const newTotal = nights * dept.basePrice;
       form.setValue("totalAmount", newTotal);
     }
-  }, [selectedDepartmentId, checkInDate, checkOutDate, departments, form, source]);
+  }, [selectedDepartmentId, checkInDate, checkOutDate, departments, form, source, isTotalManuallyModified]);
 
   async function onSubmit(values: z.infer<typeof formSchema>, forceOverlap: boolean = false, ignoreCapacity: boolean = false, forceBlacklist: boolean = false) {
     setLoading(true);
@@ -527,6 +532,10 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                       step="0.01"
                       onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
                       {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setIsTotalManuallyModified(true);
+                      }}
                       value={field.value ?? ""}
                     />
                   </FormControl>
