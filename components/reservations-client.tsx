@@ -37,7 +37,7 @@ import {
 import { format } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type ReservationWithDept = Reservation & { department: Department };
+type ReservationWithDept = Reservation & { department: Department; bedsRequired?: number };
 
 interface ReservationsClientProps {
   data: ReservationWithDept[];
@@ -320,14 +320,14 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Huésped</TableHead>
-                <TableHead>Depto</TableHead>
-                <TableHead>Fechas</TableHead>
+                <TableHead className="text-center">Departamento</TableHead>
+                <TableHead className="text-center">Fechas</TableHead>
                 <TableHead className="text-center">Noches</TableHead>
                 <TableHead className="text-center">Personas</TableHead>
                 <TableHead className="text-center">Camas</TableHead>
                 <TableHead className="text-center">Cochera</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Pago</TableHead>
+                <TableHead className="text-center">Estado</TableHead>
+                <TableHead className="text-center">Pago</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Gastos (Limp+Ins)</TableHead>
                 <TableHead className="text-right">Deuda</TableHead>
@@ -336,7 +336,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             </TableHeader>
 
             <TableBody>
-              {sortedData.map((res) => {
+              {[...sortedData].reverse().map((res) => {
                 const isPaid = res.paymentStatus === 'PAID';
                 const isPartial = res.paymentStatus === 'PARTIAL';
                 const isNext = nextReservation?.id === res.id;
@@ -374,7 +374,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         </div>
 
                         {/* Info Derecha */}
-                        <div className="flex flex-col">
+                        <div className="flex flex-col text-left">
                           <div className={isNoShow ? "line-through" : ""}>{res.guestName}</div>
                           <div className="text-xs text-muted-foreground">{res.guestPhone}</div>
                           <div className="text-xs text-muted-foreground font-semibold">{res.source === 'DIRECT' ? 'DIRECTO' : res.source}</div>
@@ -382,10 +382,10 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       {res.department.name}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       {format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}
                       {res.groupId && (
                         <span title="Parte de una reserva dividida" className="ml-2 inline-block">
@@ -414,12 +414,12 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     <TableCell className="text-center">
                       {res.hasParking ? <Car className="h-5 w-5 mx-auto text-blue-600" /> : "-"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       <Badge variant={isNoShow ? "secondary" : "outline"}>
-                        {isNoShow ? "NO PRESENTADO" : res.status}
+                        {isNoShow ? "NO PRESENTADO" : (new Date(res.checkOut) < today ? "FINALIZADO" : "CONFIRMADO")}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       <Badge variant={isPaid ? 'default' : isPartial ? 'secondary' : 'destructive'}>
                         {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : 'PENDIENTE'}
                       </Badge>
@@ -490,10 +490,10 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             <ShieldAlert className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(res)}>
+                        <Button variant="ghost" size="icon" title="Editar" onClick={() => handleEdit(res)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteClick(res.id)}>
+                        <Button variant="ghost" size="icon" title="Eliminar" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteClick(res.id)}>
                           <Trash className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -514,7 +514,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
         {/* Mobile Card View (Compact & Wrapped) */}
         <div className="md:hidden space-y-3">
-          {sortedData.map((res) => {
+          {[...sortedData].reverse().map((res) => {
             const isPaid = res.paymentStatus === 'PAID';
             const isPartial = res.paymentStatus === 'PARTIAL';
             const isNext = nextReservation?.id === res.id;
@@ -541,19 +541,32 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   {/* Header: Name, Dept, Status (Wrapped) */}
                   <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className={`font-bold text-xl whitespace-normal break-words leading-tight ${isNoShow ? "line-through text-muted-foreground" : ""}`}>
-                          {res.guestName}
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        {/* Platform Icon (Mobile) */}
+                        <div className="shrink-0 flex items-center justify-center w-8 pt-1">
+                          {res.source === 'AIRBNB' && <img src="/icons/airbnb.png" alt="Airbnb" className="h-6 w-6 object-contain" title="Airbnb" />}
+                          {res.source === 'BOOKING' && <img src="/icons/booking.png" alt="Booking" className="h-6 w-6 object-contain" title="Booking" />}
+                          {res.source === 'DIRECT' && <img src="/icons/direct.png" alt="Directo" className="h-6 w-6 object-contain" title="Directo" />}
+                          {!['AIRBNB', 'BOOKING', 'DIRECT'].includes(res.source || '') && <span className="text-xs text-muted-foreground font-bold">{res.source?.substring(0, 3)}</span>}
                         </div>
-                        <div className="text-base font-medium text-blue-600 mt-1 whitespace-normal break-words">
-                          {res.department.name}
+
+                        <div className="flex-1">
+                          <div className={`font-bold text-xl whitespace-normal break-words leading-tight ${isNoShow ? "line-through text-muted-foreground" : ""}`}>
+                            {res.guestName}
+                          </div>
+                          <div className="text-base font-medium text-blue-600 mt-1 whitespace-normal break-words">
+                            {res.department.name}
+                          </div>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isPaid ? "bg-green-100 text-green-700 border-green-200" : isPartial ? "bg-orange-100 text-orange-700 border-orange-200" : "bg-red-100 text-red-700 border-red-200"}`}>
                           {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : 'PEND.'}
                         </span>
-                        {isNoShow && <span className="text-xs font-bold px-2 py-1 rounded border bg-gray-100 text-gray-600 whitespace-nowrap">NO SHOW</span>}
+                        {/* Status Badge Update for Mobile */}
+                        <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isNoShow ? "bg-gray-100 text-gray-600" : "bg-white text-gray-600"}`}>
+                          {isNoShow ? "NO PRESENTADO" : (new Date(res.checkOut) < today ? "FINALIZADO" : "CONFIRMADO")}
+                        </span>
                         {isBlacklisted && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap">BLACKLIST</span>}
                       </div>
                     </div>
@@ -564,10 +577,25 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     <div className="col-span-2 sm:col-span-1 flex flex-wrap items-center gap-x-2">
                       <span>📅</span>
                       <span className="font-medium text-gray-700 text-base">{format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}</span>
-                      <span className="text-sm">({Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))} noc)</span>
                     </div>
 
-                    <div className="col-span-2 flex justify-between items-center sm:hidden mt-1">
+                    {/* New Info Row: Nights, People, Beds (Mobile) */}
+                    <div className="col-span-2 flex justify-start gap-4 text-sm mt-1">
+                      <div className="flex items-center gap-1">
+                        <span>{Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))}</span>
+                        <Moon className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span>{res.guestPeopleCount}</span>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span>{res.bedsRequired || 1}</span>
+                        <BedDouble className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+
+                    <div className="col-span-2 flex justify-between items-center sm:hidden mt-2">
                       {/* Mobile Row for Financials */}
                       <div className="font-bold text-base text-black">
                         Total: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
@@ -580,47 +608,51 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
                   {/* Actions Row (Wrapped) */}
                   {!isVisualizer && (
-                    <div className="flex flex-wrap justify-between items-center gap-2 pt-1">
-                      {/* Indicators */}
-                      <div className="flex gap-2">
-                        {res.hasParking && (
-                          <span title="Cochera" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium whitespace-nowrap"><Car className="h-5 w-5" /> Requiere Cochera</span>
-                        )}
-                        {res.notes && (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button title="Ver nota" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium"><NotepadText className="h-5 w-5" /> Nota</button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-3 text-sm bg-white shadow-lg border rounded-md">
-                              {res.notes}
-                            </PopoverContent>
-                          </Popover>
-                        )}
+                    <div className="flex flex-col gap-3 pt-1">
+                      {/* Top Row: Indicators + Edit/Delete */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+                        <div className="flex items-center gap-2">
+                          {res.hasParking && (
+                            <span title="Cochera" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium whitespace-nowrap"><Car className="h-5 w-5" /> Requiere Cochera</span>
+                          )}
+                          {res.notes && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button title="Ver nota" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium"><NotepadText className="h-5 w-5" /> Nota</button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-3 text-sm bg-white shadow-lg border rounded-md">
+                                {res.notes}
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(res)} className="h-10 px-3 text-gray-600 bg-white border-gray-300">
+                            <Pencil className="h-4 w-4 mr-2" /> Editar
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(res.id)} className="h-10 px-3">
+                            <Trash className="h-4 w-4 mr-2" /> Eliminar
+                          </Button>
+                        </div>
                       </div>
 
-                      {/* Buttons */}
-                      <div className="flex gap-2 ml-auto">
+                      {/* Bottom Row: Status Actions */}
+                      <div className="flex flex-wrap gap-2 w-full justify-end">
                         {!isPaid && !isNoShow && (
-                          <Button variant="outline" size="sm" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)} className="h-10 w-10 p-0 text-green-600 bg-green-50/50 border-green-200">
-                            <DollarSign className="h-5 w-5" />
+                          <Button variant="outline" size="sm" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)} className="h-10 px-3 text-green-600 bg-green-50/50 border-green-200">
+                            <DollarSign className="h-4 w-4 mr-2" /> Pagado
                           </Button>
                         )}
                         {canMarkNoShow && (
-                          <Button variant="outline" size="sm" onClick={() => handleNoShowClick(res.id)} className="h-10 w-10 p-0 text-orange-500 bg-orange-50/50 border-orange-200">
-                            <UserX className="h-5 w-5" />
+                          <Button variant="outline" size="sm" onClick={() => handleNoShowClick(res.id)} className="h-10 px-3 text-orange-500 bg-orange-50/50 border-orange-200">
+                            <UserX className="h-4 w-4 mr-2" /> No Show
                           </Button>
                         )}
                         {!isBlacklisted && (
-                          <Button variant="outline" size="sm" onClick={() => setReportBlacklistData(res)} className="h-8 w-8 p-0 text-red-500 bg-red-50/50 border-red-200">
-                            <ShieldAlert className="h-4 w-4" />
+                          <Button variant="outline" size="sm" onClick={() => setReportBlacklistData(res)} className="h-10 px-3 text-red-500 bg-red-50/50 border-red-200">
+                            <ShieldAlert className="h-4 w-4 mr-2" /> Reportar a Lista Negra
                           </Button>
                         )}
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(res)} className="h-8 px-3 text-xs">
-                          Editar
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(res.id)} className="h-8 w-8 p-0">
-                          <Trash className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
                   )}
