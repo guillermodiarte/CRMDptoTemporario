@@ -165,6 +165,18 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     }
   }, [source, form, initialData]);
 
+  // Default Deposit for Partial Payment
+  const paymentStatus = form.watch("paymentStatus");
+  useEffect(() => {
+    if (paymentStatus === "PARTIAL") {
+      const currentDeposit = form.getValues("depositAmount");
+      // Only set default if currently 0 (to avoid overwriting user input if they toggle back and forth)
+      if (currentDeposit === 0) {
+        form.setValue("depositAmount", 10000);
+      }
+    }
+  }, [paymentStatus, form]);
+
   // Parking Logic
   // const selectedDepartmentId = form.watch("departmentId"); // Already watched above
   useEffect(() => {

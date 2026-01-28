@@ -56,62 +56,62 @@ export default async function DashboardLayout({
             <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
               >
-                <Home className="h-4 w-4" />
+                <Home className="h-4 w-4 text-sky-500" />
                 Panel General
               </Link>
               <Link
                 href="/dashboard/calendar"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
               >
-                <CalendarDays className="h-4 w-4" />
+                <CalendarDays className="h-4 w-4 text-purple-500" />
                 Calendario
               </Link>
               <Link
                 href="/dashboard/reservations"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
               >
-                <CreditCard className="h-4 w-4" />
+                <CreditCard className="h-4 w-4 text-emerald-500" />
                 Reservas
               </Link>
               <Link
                 href="/dashboard/departments"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
               >
-                <Building className="h-4 w-4" />
+                <Building className="h-4 w-4 text-blue-500" />
                 Departamentos
               </Link>
               <Link
                 href="/dashboard/finance"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
               >
-                <LineChart className="h-4 w-4" />
+                <LineChart className="h-4 w-4 text-green-500" />
                 Finanzas
               </Link>
               {role === 'ADMIN' && (
                 <Link
                   href="/dashboard/users"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                 >
-                  <UserCog className="h-4 w-4" />
+                  <UserCog className="h-4 w-4 text-pink-500" />
                   Usuarios
                 </Link>
               )}
               {role === 'ADMIN' && (
                 <Link
                   href="/dashboard/settings"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                 >
-                  <Settings className="h-4 w-4" />
+                  <Settings className="h-4 w-4 text-slate-500" />
                   Configuración
                 </Link>
               )}
               <Link
                 href="/dashboard/blacklist"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
               >
-                <ShieldAlert className="h-4 w-4" />
+                <ShieldAlert className="h-4 w-4 text-red-500" />
                 Lista Negra
               </Link>
             </nav>
@@ -119,7 +119,7 @@ export default async function DashboardLayout({
         </div>
       </div>
       <div className="flex flex-col">
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+        <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-muted/40 px-4 backdrop-blur-md lg:h-[60px] lg:px-6">
           <MobileNav role={role} user={user} />
           <div className="w-full flex-1">
             <form action="/dashboard/search">

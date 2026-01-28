@@ -315,7 +315,7 @@ export function SettingsForm() {
       )}
 
       {/* Layout Grid */}
-      <div className="grid gap-6 md:grid-cols-3 items-start">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-3 items-start">
 
         {/* Main Column: Supplies */}
         <div className="md:col-span-2 space-y-6">
@@ -326,30 +326,30 @@ export function SettingsForm() {
             </CardHeader>
             <CardContent className="space-y-6">
 
-              <div className="flex gap-4 items-end bg-slate-50 p-4 rounded-md border">
-                <div className="grid gap-1.5 flex-1">
+              <div className="flex flex-col md:flex-row gap-4 items-end bg-slate-50 p-4 rounded-md border">
+                <div className="grid gap-1.5 w-full md:flex-1">
                   <Label htmlFor="sName">{editingSupply ? "Editar Nombre" : "Nombre del Insumo"}</Label>
                   <Input id="sName" value={newSupplyName} onChange={e => setNewSupplyName(e.target.value)} placeholder="Ej: Papel Higiénico" />
                 </div>
-                <div className="grid gap-1.5 w-32">
+                <div className="grid gap-1.5 w-full md:w-32">
                   <Label htmlFor="sCost">Costo ($)</Label>
                   <Input id="sCost" type="number" value={newSupplyCost} onChange={e => setNewSupplyCost(e.target.value)} placeholder="0" />
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full md:w-auto">
                   {editingSupply && (
-                    <Button variant="outline" onClick={handleCancelEdit}>
+                    <Button variant="outline" onClick={handleCancelEdit} className="flex-1 md:flex-none">
                       Cancelar
                     </Button>
                   )}
-                  <Button onClick={handleSaveSupply} disabled={!newSupplyName || !newSupplyCost}>
+                  <Button onClick={handleSaveSupply} disabled={!newSupplyName || !newSupplyCost} className="flex-1 md:flex-none">
                     {editingSupply ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
                     {editingSupply ? "Actualizar" : "Agregar"}
                   </Button>
                 </div>
               </div>
 
-              <div className="border rounded-md">
+              <div className="border rounded-md overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-muted/50">
                     <tr>

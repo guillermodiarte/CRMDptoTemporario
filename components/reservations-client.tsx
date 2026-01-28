@@ -57,6 +57,7 @@ import { ReservationsActions } from "./reservations-actions";
 import { BlacklistForm } from "./blacklist-form";
 import { normalizePhone } from "@/lib/phone-utils";
 import { formatCurrency } from "@/lib/utils";
+import { Car } from "lucide-react";
 
 
 export const ReservationsClient: React.FC<ReservationsClientProps> = ({
@@ -314,10 +315,23 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   return (
                     <TableRow key={res.id} className={rowClass}>
                       <TableCell className="font-medium">
-                        <div className={isNoShow ? "line-through" : ""}>{res.guestName}</div>
-                        <div className="text-xs text-muted-foreground">{res.guestPhone}</div>
-                        <div className="text-xs text-muted-foreground">{res.source}</div>
-                        {isBlacklisted && <Badge variant="destructive" className="mt-1 text-[10px]">Lista Negra</Badge>}
+                        <div className="flex items-center gap-3">
+                          {/* Icono Izquierda */}
+                          <div className="shrink-0 flex items-center justify-center w-8">
+                            {res.source === 'AIRBNB' && <img src="/icons/airbnb.png" alt="Airbnb" className="h-8 w-8 object-contain" title="Airbnb" />}
+                            {res.source === 'BOOKING' && <img src="/icons/booking.png" alt="Booking" className="h-8 w-8 object-contain" title="Booking" />}
+                            {res.source === 'DIRECT' && <img src="/icons/direct.png" alt="Directo" className="h-8 w-8 object-contain" title="Directo" />}
+                            {!['AIRBNB', 'BOOKING', 'DIRECT'].includes(res.source || '') && <span className="text-xs text-muted-foreground font-bold">{res.source?.substring(0, 3)}</span>}
+                          </div>
+
+                          {/* Info Derecha */}
+                          <div className="flex flex-col">
+                            <div className={isNoShow ? "line-through" : ""}>{res.guestName}</div>
+                            <div className="text-xs text-muted-foreground">{res.guestPhone}</div>
+                            <div className="text-xs text-muted-foreground font-semibold">{res.source === 'DIRECT' ? 'DIRECTO' : res.source}</div>
+                            {isBlacklisted && <Badge variant="destructive" className="mt-1 text-[10px] w-fit">Lista Negra</Badge>}
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell>
                         {res.department.name}
@@ -337,7 +351,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         {res.guestPeopleCount}
                       </TableCell>
                       <TableCell className="text-center">
-                        {res.hasParking ? <Check className="h-4 w-4 mx-auto text-green-600" /> : "-"}
+                        {res.hasParking ? <Car className="h-5 w-5 mx-auto text-blue-600" /> : "-"}
                       </TableCell>
                       <TableCell>
                         <Badge variant={isNoShow ? "secondary" : "outline"}>

@@ -80,6 +80,24 @@ export default async function DashboardPage() {
 
   const monthlyRevenue = Number(monthlyRevenueRaw.toFixed(2));
 
+  // Calculate Monthly Expenses
+  const monthlyExpensesList = await prisma.expense.findMany({
+    where: {
+      isDeleted: false,
+      date: { gte: startOfMonth, lte: endOfMonth }
+    }
+  });
+
+  const cleaningExpenses = monthlyReservations.reduce((acc: number, curr: any) => {
+    if (curr.paymentStatus === 'PAID' && curr.status !== 'NO_SHOW') {
+      return acc + (curr.cleaningFee || 0);
+    }
+    return acc;
+  }, 0);
+
+  const totalMonthlyExpenses = monthlyExpensesList.reduce((acc, curr) => acc + curr.amount, 0) + cleaningExpenses;
+  const netIncome = monthlyRevenue - totalMonthlyExpenses;
+
   // Capitalize helper
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -93,18 +111,25 @@ export default async function DashboardPage() {
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Panel General</h2>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {/* WIDGET 1: INGRESOS TOTALES */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Ingresos Totales (Mes)
             </CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <CreditCard className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(monthlyRevenue)}</div>
-            <p className="text-xs text-muted-foreground mt-1 capitalize">
+            <div className={`text-xl lg:text-2xl font-bold truncate ${monthlyRevenue >= 0 ? "text-blue-600" : "text-red-600"}`}>
+              <span className="md:hidden">{formatCurrency(monthlyRevenue, 'ARS', 0)}</span>
+              <span className="hidden md:inline">{formatCurrency(monthlyRevenue)}</span>
+            </div>
+            <div className={`text-xs font-semibold mt-1 ${netIncome >= 0 ? "text-green-600" : "text-red-600"}`}>
+              <span className="md:hidden">Neto: {formatCurrency(netIncome, 'ARS', 0)}</span>
+              <span className="hidden md:inline">Neto: {formatCurrency(netIncome)}</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">
               {format(today, "MMMM", { locale: es })}
             </p>
           </CardContent>
@@ -116,7 +141,7 @@ export default async function DashboardPage() {
             <CardTitle className="text-sm font-medium">
               Ocupación Actual
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeCount}</div>
@@ -142,7 +167,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pagos Pendientes</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <Activity className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingPayments}</div>
@@ -158,7 +183,7 @@ export default async function DashboardPage() {
             <CardTitle className="text-sm font-medium">
               Próximo Ingreso
             </CardTitle>
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            <CalendarDays className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -170,13 +195,13 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <div className="md:col-span-2 lg:col-span-2 h-full">
+        <div className="col-span-2 md:col-span-2 lg:col-span-2 h-full">
           <NotesWidget />
         </div>
-        <div className="col-span-1">
+        <div className="col-span-2 md:col-span-1">
           <WeatherWidget data={weatherData} />
         </div>
-        <div className="col-span-1">
+        <div className="col-span-2 md:col-span-1">
           <DollarWidget data={dollarData} />
         </div>
       </div>
