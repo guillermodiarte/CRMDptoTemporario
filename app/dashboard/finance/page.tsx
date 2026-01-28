@@ -29,7 +29,6 @@ export default async function FinancePage({
   // 2. Fetch de datos
   const expenses = await prisma.expense.findMany({
     where: {
-      isDeleted: false,
       date: { gte: startDate, lte: endDate },
     },
     include: { department: true },
@@ -76,7 +75,7 @@ export default async function FinancePage({
   const yearEnd = new Date(selectedYear, 11, 31);
 
   const allYearExpenses = await prisma.expense.findMany({
-    where: { isDeleted: false, date: { gte: yearStart, lte: yearEnd } }
+    where: { date: { gte: yearStart, lte: yearEnd } }
   });
   const allYearReservations = await prisma.reservation.findMany({
     where: { status: { not: "CANCELLED" }, checkIn: { gte: yearStart, lte: yearEnd } }
@@ -187,6 +186,19 @@ export default async function FinancePage({
   const configStartYear = startYearSetting ? parseInt(startYearSetting) : currentYear;
   const configEndYear = endYearSetting ? parseInt(endYearSetting) : currentYear + 10;
 
+  // 8. Estadísticas por Plataforma (Gráfico de Torta)
+  const platformStatsMap: Record<string, number> = {};
+  reservations.forEach((r: any) => {
+    const source = r.source || "DIRECT";
+    if (!platformStatsMap[source]) platformStatsMap[source] = 0;
+    platformStatsMap[source]++;
+  });
+
+  const platformStats = Object.keys(platformStatsMap).map(key => ({
+    name: key,
+    value: platformStatsMap[key]
+  }));
+
   return (
     <FinanceView
       expenses={expenses}
@@ -194,6 +206,7 @@ export default async function FinancePage({
       monthlyStats={cleanedMonthlyStats}
       distribution={distribution}
       departmentStats={departmentStats}
+      platformStats={platformStats}
       summary={{ totalIncome, totalExpense, netProfit }}
       role={userRole}
       date={startDate}

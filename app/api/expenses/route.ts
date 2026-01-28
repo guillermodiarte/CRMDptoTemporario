@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
     const expenses = await prisma.expense.findMany({
-      where: { isDeleted: false },
+
       orderBy: { date: 'desc' },
       include: { department: { select: { name: true } } }
     });

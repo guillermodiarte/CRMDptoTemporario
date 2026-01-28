@@ -57,6 +57,14 @@ export default async function DashboardPage() {
     }
   });
 
+  // 4. Future Reservations Count (from today onwards)
+  const futureReservationsCount = await prisma.reservation.count({
+    where: {
+      checkIn: { gte: startOfToday },
+      status: { not: "CANCELLED" }
+    }
+  });
+
   // Calculate Monthly Revenue (Finance Page Logic)
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -151,7 +159,7 @@ export default async function DashboardPage() {
                 {activeReservations.map(res => (
                   <div key={res.id} className="flex justify-between items-center">
                     <span className="truncate max-w-[120px]" title={res.guestName}>{res.guestName}</span>
-                    <span>({res.guestPeopleCount}p)</span>
+                    <span>({res.guestPeopleCount} {res.guestPeopleCount === 1 ? 'persona' : 'personas'})</span>
                   </div>
                 ))}
               </div>
@@ -166,14 +174,24 @@ export default async function DashboardPage() {
         {/* WIDGET 3: PAGOS PENDIENTES */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pagos Pendientes</CardTitle>
+            <CardTitle className="text-sm font-medium">Pagos Pendientes y Reservas</CardTitle>
             <Activity className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingPayments}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Reservas sin pagar o parciales
-            </p>
+            <div className="flex justify-between items-end">
+              <div>
+                <div className="text-2xl font-bold">{pendingPayments}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Sin pagar o parciales
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-xl font-bold">{futureReservationsCount}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Reservas Futuras
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

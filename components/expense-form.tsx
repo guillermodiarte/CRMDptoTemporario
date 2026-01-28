@@ -86,8 +86,8 @@ export function ExpenseForm({ departments, setOpen, initialData, defaultDate }: 
         departmentId: values.departmentId === "global" ? null : values.departmentId,
       };
 
-      const url = initialData ? `/api/expenses/${initialData.id}` : "/api/expenses";
-      const method = initialData ? "PATCH" : "POST";
+      const url = initialData?.id ? `/api/expenses/${initialData.id}` : "/api/expenses";
+      const method = initialData?.id ? "PATCH" : "POST";
 
       const res = await fetch(url, {
         method: method,
@@ -251,7 +251,7 @@ export function ExpenseForm({ departments, setOpen, initialData, defaultDate }: 
         />
 
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Guardando..." : (initialData ? "Actualizar Gasto" : "Guardar Gasto")}
+          {loading ? "Guardando..." : (initialData?.id ? "Actualizar Gasto" : "Guardar Gasto")}
         </Button>
       </form>
     </Form>

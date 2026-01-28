@@ -46,10 +46,9 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Soft delete
-    const expense = await prisma.expense.update({
+    // Hard delete
+    const expense = await prisma.expense.delete({
       where: { id },
-      data: { isDeleted: true },
     });
 
     return NextResponse.json(expense);

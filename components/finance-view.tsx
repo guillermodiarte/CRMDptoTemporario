@@ -33,14 +33,21 @@ interface FinanceViewProps {
   summary: { totalIncome: number; totalExpense: number; netProfit: number };
   role?: string;
   date?: Date;
+  platformStats?: any[];
   departmentStats?: any[];
   startYear?: number;
   endYear?: number;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+const PLATFORM_COLORS: Record<string, string> = {
+  'AIRBNB': '#FF5A5F', // Airbnb Red
+  'BOOKING': '#003580', // Booking Blue
+  'DIRECT': '#10b981',  // Green
+  'OTHER': '#888888'
+};
 
-export function FinanceView({ expenses, departments, monthlyStats, distribution, summary, role, date = new Date(), departmentStats = [], startYear, endYear }: FinanceViewProps) {
+export function FinanceView({ expenses, departments, monthlyStats, distribution, summary, role, date = new Date(), departmentStats = [], platformStats = [], startYear, endYear }: FinanceViewProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
@@ -76,10 +83,27 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
     }
   };
 
-  const renderExpenseTable = (list: typeof expenses, title: string, showDetails: boolean = false) => (
+  const onAddWithType = (type: string) => {
+    setEditingExpense({
+      type,
+      description: "",
+      amount: 0,
+      quantity: 1,
+      unitPrice: 0,
+      departmentId: "global",
+    });
+    setOpen(true);
+  };
+
+  const renderExpenseTable = (list: typeof expenses, title: string, showDetails: boolean = false, defaultType?: string) => (
     <Card className="h-full">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg">{title}</CardTitle>
+        {!isVisualizer && defaultType && (
+          <Button size="sm" variant="outline" className="h-8 gap-1" onClick={() => onAddWithType(defaultType)}>
+            <Plus className="h-3 w-3" /> <span className="sr-only sm:not-sr-only sm:inline-block">Agregar</span>
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="p-0 overflow-auto max-h-[400px]">
         {/* Desktop Table */}
@@ -170,7 +194,6 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
   );
 
   // Determine default date for new expenses
-  // If viewing current month, default to Today. Else default to 1st of viewed month.
   const today = new Date();
   const isCurrentMonth = date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
   const formDefaultDate = isCurrentMonth ? today : date;
@@ -198,7 +221,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
             </DialogTrigger>
             <DialogContent onCloseAutoFocus={(e) => e.preventDefault()}>
               <DialogHeader>
-                <DialogTitle>{editingExpense ? "Editar Gasto" : "Agregar Gasto"}</DialogTitle>
+                <DialogTitle>{editingExpense?.id ? "Editar Gasto" : "Agregar Gasto"}</DialogTitle>
               </DialogHeader>
               <ExpenseForm
                 departments={departments}
@@ -228,7 +251,6 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
         )}
       </div>
 
-      {/* Summary Cards */}
       {/* Summary Cards */}
       <div className="grid gap-2 grid-cols-3 md:gap-4 md:grid-cols-3">
         <Card>
@@ -275,8 +297,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
         </Card>
       </div>
 
-      {/* Charts */}
-      {/* Charts */}
+      {/* Top Charts Row */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
@@ -324,7 +345,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -339,7 +360,6 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={monthlyStats}>
                 <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value)} />
                 <Tooltip formatter={(value: number | undefined) => formatCurrency(value || 0)} />
                 <Legend />
@@ -351,11 +371,63 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
         </Card>
       </div>
 
-      {/* Categorized Expenses Tables */}
+      {/* Middle Row: Platform Chart, Tax, Commission */}
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-        {renderExpenseTable(supplyExpenses, "Insumos y Mantenimiento", true)}
-        {renderExpenseTable(taxExpenses, "Impuestos y Servicios")}
-        {renderExpenseTable(commissionExpenses, "Comisiones Booking/Airbnb")}
+        {/* Platform Pie Chart */}
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Reservas por Plataforma</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={platformStats}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {platformStats.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={PLATFORM_COLORS[entry.name] || PLATFORM_COLORS['OTHER']}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: any, name: string) => [
+                    `${value} reservas`,
+                    name === 'AIRBNB' ? 'Airbnb' : name === 'BOOKING' ? 'Booking' : name === 'DIRECT' ? 'Directo' : name
+                  ]}
+                />
+                <Legend formatter={(val) => {
+                  const label = val === 'AIRBNB' ? 'Airbnb' : val === 'BOOKING' ? 'Booking' : val === 'DIRECT' ? 'Directo' : val;
+                  const count = platformStats.find(p => p.name === val)?.value || 0;
+                  return `${label} (${count})`;
+                }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Tax Table */}
+        <div className="col-span-1">
+          {renderExpenseTable(taxExpenses, "Impuestos y Servicios", false, "TAX")}
+        </div>
+
+        {/* Commission Table */}
+        <div className="col-span-1">
+          {renderExpenseTable(commissionExpenses, "Comisiones Booking/Airbnb", false, "COMMISSION")}
+        </div>
+
+        {/* Supply Table (Span 2 columns) */}
+        <div className="col-span-1 lg:col-span-2">
+          {renderExpenseTable(supplyExpenses, "Insumos y Mantenimiento", true, "SUPPLY")}
+        </div>
       </div>
     </div>
   );
