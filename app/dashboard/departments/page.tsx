@@ -15,7 +15,7 @@ export default async function DepartmentsPage() {
   const totalSuppliesCost = supplies.reduce((acc, curr) => acc + curr.cost, 0);
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
+    <div className="flex-1 space-y-4">
       <DepartmentsClient data={departments} role={userRole} totalSuppliesCost={totalSuppliesCost} />
     </div>
   );

@@ -201,10 +201,10 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
               </div>
               {isAdmin && (
                 <div className="flex gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(entry)}>
-                    <Pencil className="h-4 w-4" />
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(entry)} className="h-8 px-3 text-xs">
+                    Editar
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => setDeleteId(entry.id)}>
+                  <Button variant="destructive" size="sm" className="h-8 w-8 p-0" onClick={() => setDeleteId(entry.id)}>
                     <Trash className="h-4 w-4" />
                   </Button>
                 </div>

@@ -349,7 +349,7 @@ export function SettingsForm() {
                 </div>
               </div>
 
-              <div className="border rounded-md overflow-x-auto">
+              <div className="hidden md:block border rounded-md overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-muted/50">
                     <tr>
@@ -402,6 +402,52 @@ export function SettingsForm() {
                     </tr>
                   </tfoot>
                 </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
+                {supplies.map(supply => (
+                  <div key={supply.id} className={`p-4 rounded-lg border bg-white shadow-sm ${!supply.isActive ? 'bg-slate-50 opacity-70' : ''}`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="font-bold text-base leading-tight">{supply.name}</div>
+                        <div className="text-sm font-medium mt-1">${supply.cost}</div>
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${supply.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+                        {supply.isActive ? "Activo" : "Inactivo"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-3 pt-3 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleSupply(supply)}
+                        title={supply.isActive ? "Desactivar" : "Activar"}
+                        className={`h-8 w-8 p-0 ${supply.isActive ? 'text-amber-600 border-amber-200 bg-amber-50' : 'text-green-600 border-green-200 bg-green-50'}`}
+                      >
+                        {supply.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleEditSupply(supply)} className="h-8 px-3 text-xs">
+                        Editar
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteSupply(supply.id)} className="h-8 w-8 p-0">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {supplies.length === 0 && (
+                  <div className="text-center py-6 text-muted-foreground bg-slate-50 rounded-lg border border-dashed">
+                    No hay insumos cargados.
+                  </div>
+                )}
+                {supplies.length > 0 && (
+                  <div className="bg-slate-100 p-3 rounded-md font-semibold flex justify-between items-center text-sm">
+                    <span>TOTAL (Activos)</span>
+                    <span className="text-lg">${totalSuppliesCost}</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

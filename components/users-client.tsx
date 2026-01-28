@@ -245,17 +245,17 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
                 )}
 
                 <div className="flex gap-1 ml-auto">
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
-                    <Pencil className="h-4 w-4" />
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(user)} className="h-8 px-3 text-xs">
+                    Editar
                   </Button>
                   {!isCurrentUser && (
                     <>
                       {user.isActive ? (
-                        <Button variant="ghost" size="icon" className="text-orange-500 hover:text-orange-600" onClick={() => setDeleteId({ id: user.id, action: "DEACTIVATE" })}>
+                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-orange-500 bg-orange-50/50 border-orange-200" onClick={() => setDeleteId({ id: user.id, action: "DEACTIVATE" })}>
                           <Ban className="h-4 w-4" />
                         </Button>
                       ) : (
-                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => setDeleteId({ id: user.id, action: "DELETE" })}>
+                        <Button variant="destructive" size="sm" className="h-8 w-8 p-0" onClick={() => setDeleteId({ id: user.id, action: "DELETE" })}>
                           <Trash className="h-4 w-4" />
                         </Button>
                       )}

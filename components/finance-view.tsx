@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Department, Expense } from "@prisma/client";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExpenseForm } from "./expense-form";
@@ -148,11 +148,11 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                 <div className="font-bold text-sm text-red-600">-${exp.amount}</div>
                 {!isVisualizer && (
                   <div className="flex justify-end gap-1 mt-1">
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(exp)}>
-                      <Pencil className="h-3 w-3" />
+                    <Button variant="outline" size="sm" onClick={() => onEdit(exp)} className="h-8 px-3 text-xs">
+                      Editar
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => setDeleteId(exp.id)}>
-                      <Trash2 className="h-3 w-3" />
+                    <Button variant="destructive" size="sm" onClick={() => setDeleteId(exp.id)} className="h-8 w-8 p-0">
+                      <Trash className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
@@ -229,18 +229,49 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Summary Cards */}
+      <div className="grid gap-2 grid-cols-3 md:gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Ingresos Totales (Mes)</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-green-600">+{formatCurrency(summary.totalIncome)}</div></CardContent>
+          <CardHeader className="p-2 md:p-6 pb-1 md:pb-2">
+            <CardTitle className="text-base md:text-sm font-bold leading-tight md:leading-none text-center md:text-left">
+              <span className="md:hidden">Ingresos</span>
+              <span className="hidden md:inline">Ingresos Totales (Mes)</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 md:p-6 pt-0 md:pt-0 text-center md:text-left">
+            <div className="text-xl md:text-2xl font-bold text-green-600 truncate tracking-tight">
+              <span className="md:hidden">+{formatCurrency(summary.totalIncome, 'ARS', 0)}</span>
+              <span className="hidden md:inline">+{formatCurrency(summary.totalIncome)}</span>
+            </div>
+          </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Gastos Totales (Mes)</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-red-600">-{formatCurrency(summary.totalExpense)}</div></CardContent>
+          <CardHeader className="p-2 md:p-6 pb-1 md:pb-2">
+            <CardTitle className="text-base md:text-sm font-bold leading-tight md:leading-none text-center md:text-left">
+              <span className="md:hidden">Gastos</span>
+              <span className="hidden md:inline">Gastos Totales (Mes)</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 md:p-6 pt-0 md:pt-0 text-center md:text-left">
+            <div className="text-xl md:text-2xl font-bold text-red-600 truncate tracking-tight">
+              <span className="md:hidden">-{formatCurrency(summary.totalExpense, 'ARS', 0)}</span>
+              <span className="hidden md:inline">-{formatCurrency(summary.totalExpense)}</span>
+            </div>
+          </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Ganancia Neta (Mes)</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-blue-600">{formatCurrency(summary.netProfit)}</div></CardContent>
+          <CardHeader className="p-2 md:p-6 pb-1 md:pb-2">
+            <CardTitle className="text-base md:text-sm font-bold leading-tight md:leading-none text-center md:text-left">
+              <span className="md:hidden">Ganancia</span>
+              <span className="hidden md:inline">Ganancia Neta (Mes)</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 md:p-6 pt-0 md:pt-0 text-center md:text-left">
+            <div className="text-xl md:text-2xl font-bold text-blue-600 truncate tracking-tight">
+              <span className="md:hidden">{formatCurrency(summary.netProfit, 'ARS', 0)}</span>
+              <span className="hidden md:inline">{formatCurrency(summary.netProfit)}</span>
+            </div>
+          </CardContent>
         </Card>
       </div>
 

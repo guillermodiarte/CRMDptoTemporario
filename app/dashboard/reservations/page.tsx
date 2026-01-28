@@ -61,7 +61,7 @@ export default async function ReservationsPage({
   const configEndYear = endYearSetting ? parseInt(endYearSetting) : currentYear + 10;
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
+    <div className="flex-1 space-y-4">
       <ReservationsClient
         data={reservations as any}
         departments={departments}
