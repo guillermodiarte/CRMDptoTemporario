@@ -365,8 +365,10 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     <div className="flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="gap-2">
-            <Download className="h-4 w-4" /> Exportar / Importar
+          <Button variant="outline" className="gap-2 px-3 md:px-4 h-10 text-base">
+            <Download className="h-5 w-5" />
+            <span className="md:hidden">Imp/Exp</span>
+            <span className="hidden md:inline">Exportar / Importar</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

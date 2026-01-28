@@ -50,7 +50,7 @@ export function MonthSelector({ startYear = 2026, endYear = 2036 }: MonthSelecto
   return (
     <div className="flex gap-2">
       <Select value={month} onValueChange={(val) => handleUpdate("month", val)}>
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="w-[140px] h-10 text-base">
           <SelectValue placeholder="Mes" />
         </SelectTrigger>
         <SelectContent>
@@ -61,7 +61,7 @@ export function MonthSelector({ startYear = 2026, endYear = 2036 }: MonthSelecto
       </Select>
 
       <Select value={year} onValueChange={(val) => handleUpdate("year", val)}>
-        <SelectTrigger className="w-[100px]">
+        <SelectTrigger className="w-[100px] h-10 text-base">
           <SelectValue placeholder="Año" />
         </SelectTrigger>
         <SelectContent>
