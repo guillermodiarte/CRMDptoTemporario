@@ -56,6 +56,8 @@ import { Check, DollarSign, ShieldAlert, Ban, UserX } from "lucide-react";
 import { ReservationsActions } from "./reservations-actions";
 import { BlacklistForm } from "./blacklist-form";
 import { normalizePhone } from "@/lib/phone-utils";
+import { formatCurrency } from "@/lib/utils";
+
 
 export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   data,
@@ -350,30 +352,30 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       <TableCell className="text-right">
                         <div className="flex flex-col items-end">
                           <span className={isNoShow ? "line-through text-muted-foreground" : ""}>
-                            {res.currency === 'USD' ? `US$ ${res.totalAmount}` : `$${res.totalAmount}`}
+                            {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
                           </span>
                           {res.currency === 'USD' && !isNoShow && (
-                            <span className="text-xs text-muted-foreground">≈ ${Math.round(res.totalAmount * dollarRate).toLocaleString()}</span>
+                            <span className="text-xs text-muted-foreground">≈ {formatCurrency(Math.round(res.totalAmount * dollarRate))}</span>
                           )}
                           {isNoShow && (
-                            <span className="text-xs text-orange-600 font-semibold">Seña: ${res.depositAmount}</span>
+                            <span className="text-xs text-orange-600 font-semibold">Seña: {formatCurrency(res.depositAmount || 0)}</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex flex-col items-end">
                           <span className="text-muted-foreground">
-                            {res.cleaningFee ? `$${res.cleaningFee}` : '-'}
+                            {res.cleaningFee ? formatCurrency(res.cleaningFee) : '-'}
                           </span>
                           {(res.amenitiesFee || 0) > 0 && (
                             <span className="text-xs text-red-600" title="Insumos (Informativo)">
-                              +${res.amenitiesFee}
+                              +{formatCurrency(res.amenitiesFee || 0)}
                             </span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell className="text-right text-red-600 font-medium">
-                        {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : `$${debt}`) : '-'}
+                        {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)) : '-'}
                       </TableCell>
                       {!isVisualizer && (
                         <TableCell className="text-right flex justify-end gap-1">
@@ -493,10 +495,10 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       <div className="col-span-2 flex justify-between items-center sm:hidden">
                         {/* Mobile Row for Financials */}
                         <div className="font-semibold text-black">
-                          Total: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : `$${res.totalAmount}`}
+                          Total: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
                         </div>
                         <div className={`font-semibold ${!isPaid && !isNoShow ? "text-red-600" : ""}`}>
-                          Deuda: {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : `$${debt}`) : '-'}
+                          Deuda: {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)) : '-'}
                         </div>
                       </div>
                     </div>

@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, CreditCard, CalendarDays, Activity } from "lucide-react";
 import { format } from "date-fns";
@@ -42,18 +43,24 @@ export default async function DashboardPage() {
 
   const activeCount = activeReservations.length;
 
-  // 3. Pending Payments
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  // 3. Pending Payments (Future/Current & NOT No-Show)
+  // Logic: "de la fecha actual en adelante" -> checkOut >= today (Includes current stay + future).
+  // Exclude cancelled and no-show.
+  const startOfToday = new Date(today);
+  startOfToday.setHours(0, 0, 0, 0);
 
   const pendingPayments = await prisma.reservation.count({
     where: {
       paymentStatus: { not: "PAID" },
-      status: { not: "CANCELLED" }
+      status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      checkOut: { gte: startOfToday }
     }
   });
 
   // Calculate Monthly Revenue (Finance Page Logic)
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
   const monthlyReservations = await prisma.reservation.findMany({
     where: {
       checkIn: { gte: startOfMonth, lte: endOfMonth },
@@ -96,7 +103,7 @@ export default async function DashboardPage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${monthlyRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{formatCurrency(monthlyRevenue)}</div>
             <p className="text-xs text-muted-foreground mt-1 capitalize">
               {format(today, "MMMM", { locale: es })}
             </p>

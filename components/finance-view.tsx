@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { MonthSelector } from "./month-selector";
 import { FinanceActions } from "./finance-actions";
+import { formatCurrency } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -103,8 +104,8 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                     <div className="text-muted-foreground text-[10px] truncate">{exp.department?.name || "Global"}</div>
                   </TableCell>
                   {showDetails && <TableCell className="text-right text-xs">{exp.quantity || 1}</TableCell>}
-                  {showDetails && <TableCell className="text-right text-xs">${exp.unitPrice || 0}</TableCell>}
-                  <TableCell className="text-right text-xs font-medium">${exp.amount}</TableCell>
+                  {showDetails && <TableCell className="text-right text-xs">{formatCurrency(exp.unitPrice || 0)}</TableCell>}
+                  <TableCell className="text-right text-xs font-medium">{formatCurrency(exp.amount)}</TableCell>
                   {!isVisualizer && (
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -139,7 +140,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                 <div className="text-xs text-muted-foreground mt-0.5">{format(new Date(exp.date), "dd/MM")} • {exp.department?.name || "Global"}</div>
                 {showDetails && ((exp.quantity || 0) > 1 || (exp.unitPrice || 0) > 0) && (
                   <div className="text-[10px] text-muted-foreground mt-1">
-                    {exp.quantity || 1} x ${exp.unitPrice || 0}
+                    {exp.quantity || 1} x {formatCurrency(exp.unitPrice || 0)}
                   </div>
                 )}
               </div>
@@ -231,15 +232,15 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Ingresos Totales (Mes)</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-green-600">+${summary.totalIncome.toLocaleString()}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-green-600">+{formatCurrency(summary.totalIncome)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Gastos Totales (Mes)</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-red-600">-${summary.totalExpense.toLocaleString()}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-red-600">-{formatCurrency(summary.totalExpense)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Ganancia Neta (Mes)</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-blue-600">${summary.netProfit.toLocaleString()}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-blue-600">{formatCurrency(summary.netProfit)}</div></CardContent>
         </Card>
       </div>
 
@@ -254,8 +255,8 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={departmentStats}>
                 <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-                <Tooltip />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value)} />
+                <Tooltip formatter={(value: number | undefined) => formatCurrency(value || 0)} />
                 <Legend />
                 <Bar dataKey="income" name="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="profit" name="Ganancia" fill="#3b82f6" radius={[4, 4, 0, 0]} />
@@ -307,8 +308,9 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={monthlyStats}>
                 <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-                <Tooltip />
+                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value)} />
+                <Tooltip formatter={(value: number | undefined) => formatCurrency(value || 0)} />
                 <Legend />
                 <Bar dataKey="income" name="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="expense" name="Gastos" fill="#ef4444" radius={[4, 4, 0, 0]} />
