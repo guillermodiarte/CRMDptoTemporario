@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { MonthSelector } from "./month-selector";
 import { FinanceActions } from "./finance-actions";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatAxisNumber } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -307,7 +307,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={departmentStats}>
                 <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value)} />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatAxisNumber(value)} width={80} />
                 <Tooltip formatter={(value: number | undefined) => formatCurrency(value || 0)} />
                 <Legend />
                 <Bar dataKey="income" name="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />
@@ -360,7 +360,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={monthlyStats}>
                 <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value)} />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatAxisNumber(value)} width={80} />
                 <Tooltip formatter={(value: number | undefined) => formatCurrency(value || 0)} />
                 <Legend />
                 <Bar dataKey="income" name="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />
