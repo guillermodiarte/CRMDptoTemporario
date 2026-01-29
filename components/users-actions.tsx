@@ -267,7 +267,15 @@ export function UsersActions({ data }: UsersActionsProps) {
           // Logic: keep simple. If CSV provided password, update it.
           const { password, ...updateBody } = body;
           // Only include password if provided
-          const finalBody = row.password ? body : updateBody;
+          const finalBody: any = row.password ? body : updateBody;
+
+          // CRITICAL FIX: Prevent double-hashing.
+          // If the CSV contains the hashed password (from export) and it matches the DB,
+          // generally we should NOT send it, because the API will hash it again.
+          const existingUser = data.find(u => u.id === row._dbId);
+          if (existingUser && existingUser.password === row.password) {
+            delete finalBody.password;
+          }
 
           // If image is empty in CSV and we are updating, should we wipe it? 
           // Current logic: yes, if CSV says "", then image becomes "".

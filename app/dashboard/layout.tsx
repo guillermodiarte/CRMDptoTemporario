@@ -26,6 +26,7 @@ import { Search, LineChart, Home } from "lucide-react"
 import { UserMenu } from "@/components/user-menu";
 import { Logo } from "@/components/logo";
 import { MobileNav } from "@/components/mobile-nav";
+import Image from "next/image";
 
 export default async function DashboardLayout({
   children,
@@ -47,10 +48,15 @@ export default async function DashboardLayout({
     <div className="grid min-h-screen w-full md:grid-cols-[240px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:block">
         <div className="flex h-full max-h-screen flex-col gap-2">
-          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-            <Link href="/" className="flex items-center gap-2 font-semibold">
-              <Logo className="h-7 w-7" />
-              <span className="text-lg">Alojamientos Di'Arte</span>
+          <div className="flex h-14 items-center justify-center border-b px-4 lg:h-[60px] lg:px-6">
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/Logo Di'Arte horizontal transparente.png"
+                alt="Alojamientos Di'Arte"
+                width={250}
+                height={75}
+                className="h-[50px] w-auto object-contain"
+              />
             </Link>
           </div>
           <div className="flex-1">

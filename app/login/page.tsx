@@ -1,6 +1,6 @@
 import LoginForm from '@/components/login-form';
 import { Metadata } from 'next';
-import { Logo } from '@/components/logo';
+import Image from 'next/image';
 
 export const metadata: Metadata = {
   title: 'Login',
@@ -24,9 +24,15 @@ export default function LoginPage() {
       <div className="relative z-20 w-full max-w-md px-4">
         <div className="bg-white/95 backdrop-blur-sm shadow-2xl rounded-xl p-8 border border-white/20">
           <div className="mb-8 text-center">
-            <div className="flex flex-col items-center gap-2 mb-2">
-              <Logo className="h-12 w-12 text-primary" />
-              <h1 className="text-3xl font-bold text-gray-900">Alojamientos Di'Arte</h1>
+            <div className="flex justify-center mb-4">
+              <Image
+                src="/Logo Di'Arte 2 trasparente.png"
+                alt="Logo Di'Arte"
+                width={225}
+                height={90}
+                className="object-contain"
+                priority
+              />
             </div>
             <p className="text-gray-500 text-sm">Bienvenido al sistema de gestión</p>
           </div>
