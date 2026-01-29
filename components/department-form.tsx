@@ -18,16 +18,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Department } from "@prisma/client";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
+  type: z.enum(["APARTMENT", "PARKING"]).default("APARTMENT"),
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
   alias: z.string().optional(),
   description: z.string().optional(),
   address: z.string().optional(),
   googleMapsLink: z.string().url("Debe ser una URL válida").optional().or(z.literal("")),
 
-  bedCount: z.coerce.number().min(1),
-  maxPeople: z.coerce.number().min(1),
+  bedCount: z.coerce.number().min(0),
+  maxPeople: z.coerce.number().min(0),
   basePrice: z.coerce.number().min(0),
   cleaningFee: z.coerce.number().min(0),
 
@@ -57,15 +60,14 @@ const formSchema = z.object({
 interface DepartmentFormProps {
   setOpen: (open: boolean) => void;
   initialData?: Department | null;
+  forcedType?: "APARTMENT" | "PARKING";
 }
 
-export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
+export function DepartmentForm({ setOpen, initialData, forcedType }: DepartmentFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  // Parse images if editing (Legacy support internal only, mostly empty now)
-  // Removed ImageUrls field as requested, but we keep the logic to not break schema if data exists.
-  // Parse images if editing (Legacy support internal only, mostly empty now)
+  // ... initialImages logic ...
   const initialImages = (() => {
     if (!initialData?.images) return "";
     try {
@@ -79,7 +81,9 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
+      type: forcedType || (initialData as any)?.type || "APARTMENT",
       name: initialData?.name || "",
+      // ... other defaults
       alias: initialData?.alias || "",
       description: initialData?.description || "",
       address: initialData?.address || "",
@@ -113,7 +117,11 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
     },
   });
 
+  const selectedType = form.watch("type");
+  const isParking = selectedType === "PARKING";
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    // ... onSubmit logic ...
     setLoading(true);
     try {
       const url = initialData
@@ -126,6 +134,9 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
         method: method,
         body: JSON.stringify({
           ...values,
+          // Force 0 for parking capacity
+          bedCount: isParking ? 0 : values.bedCount,
+          maxPeople: isParking ? 0 : values.maxPeople,
           // Preserve existing images or send empty array since we removed the input
           images: initialImages ? initialImages.split("\n") : []
         }),
@@ -146,7 +157,29 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-h-[70vh] overflow-y-auto px-1">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-1">
+
+        {/* TYPE SELECTOR - Show only if not forced */}
+        {!forcedType && (
+          <FormField
+            control={form.control}
+            name="type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de Unidad</FormLabel>
+                <FormControl>
+                  <Tabs onValueChange={field.onChange} defaultValue={field.value} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="APARTMENT">Departamento</TabsTrigger>
+                      <TabsTrigger value="PARKING">Cochera</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* BASICS */}
         <div className="space-y-4">
@@ -159,7 +192,7 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
                 <FormItem>
                   <FormLabel>Nombre Oficial</FormLabel>
                   <FormControl>
-                    <Input placeholder="Depto 101" {...field} />
+                    <Input placeholder={isParking ? "Cochera 1" : "Depto 101"} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -172,7 +205,7 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
                 <FormItem>
                   <FormLabel>Alias / Código</FormLabel>
                   <FormControl>
-                    <Input placeholder="D1" {...field} />
+                    <Input placeholder={isParking ? "C1" : "D1"} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -209,35 +242,41 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
 
         {/* CAPACITY & PRICES */}
         <div className="space-y-4">
-          <h3 className="font-medium text-sm text-muted-foreground border-b pb-1">Capacidad y Precios</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="bedCount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Camas</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={0} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="maxPeople"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Max Personas</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={0} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <h3 className="font-medium text-sm text-muted-foreground border-b pb-1">
+            {isParking ? "Precios" : "Capacidad y Precios"}
+          </h3>
+
+          {!isParking && (
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="bedCount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Camas</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="maxPeople"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Max Personas</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -272,34 +311,36 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
         <div className="space-y-4">
           <h3 className="font-medium text-sm text-muted-foreground border-b pb-1">Operativa</h3>
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="wifiName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>WiFi Nombre</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Fibertel Wifi 999" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="wifiPass"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>WiFi Clave</FormLabel>
-                  <FormControl>
-                    <Input placeholder="clave123" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          {!isParking && (
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="wifiName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>WiFi Nombre</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Fibertel Wifi 999" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="wifiPass"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>WiFi Clave</FormLabel>
+                    <FormControl>
+                      <Input placeholder="clave123" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <FormField
@@ -350,7 +391,7 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
               name="airbnbLink"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Airbnb Link</FormLabel>
+                  <FormLabel>Airbnb / Publicación 1</FormLabel>
                   <FormControl>
                     <Input placeholder="https://airbnb.com/..." {...field} />
                   </FormControl>
@@ -363,7 +404,7 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
               name="bookingLink"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Booking Link</FormLabel>
+                  <FormLabel>Booking / Publicación 2</FormLabel>
                   <FormControl>
                     <Input placeholder="https://booking.com/..." {...field} />
                   </FormControl>
@@ -374,80 +415,82 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
           </div>
         </div>
 
-        {/* UTILITIES & INVENTORY */}
-        <div className="space-y-4">
-          <h3 className="font-medium text-sm text-muted-foreground border-b pb-1">Servicios e Inventario</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="meterLuz"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>N° Cliente Luz</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123456789" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="meterGas"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>N° Cliente Gas</FormLabel>
-                  <FormControl>
-                    <Input placeholder="GAS-123" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="meterAgua"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>N° Cliente Agua</FormLabel>
-                  <FormControl>
-                    <Input placeholder="AGUA-123" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="meterWifi"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>N° Cliente Internet</FormLabel>
-                  <FormControl>
-                    <Input placeholder="WIFI-123" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+        {/* UTILITIES & INVENTORY (Hide completely for Parking?) */}
+        {!isParking && (
+          <div className="space-y-4">
+            <h3 className="font-medium text-sm text-muted-foreground border-b pb-1">Servicios e Inventario</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="meterLuz"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>N° Cliente Luz</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123456789" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="meterGas"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>N° Cliente Gas</FormLabel>
+                    <FormControl>
+                      <Input placeholder="GAS-123" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="meterAgua"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>N° Cliente Agua</FormLabel>
+                    <FormControl>
+                      <Input placeholder="AGUA-123" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="meterWifi"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>N° Cliente Internet</FormLabel>
+                    <FormControl>
+                      <Input placeholder="WIFI-123" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-          <FormField
-            control={form.control}
-            name="inventoryNotes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Inventario Crítico</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="3 juegos de sábanas, 6 toallas..." className="h-20" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+            <FormField
+              control={form.control}
+              name="inventoryNotes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Inventario Crítico</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="3 juegos de sábanas, 6 toallas..." className="h-20" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
 
         {/* VISUAL & STATUS */}
         <div className="space-y-4">
@@ -460,78 +503,123 @@ export function DepartmentForm({ setOpen, initialData }: DepartmentFormProps) {
               <FormItem>
                 <FormLabel>Descripción Interna</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Estudio acogedor..." className="h-20" {...field} />
+                  <Textarea placeholder="Detalles operativos..." className="h-20" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="color"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Color Distintivo</FormLabel>
-                <div className="flex gap-2 items-center">
-                  <FormControl>
-                    <Input type="color" className="w-12 h-10 p-1 cursor-pointer" {...field} />
-                  </FormControl>
-                  <span className="text-xs text-muted-foreground">{field.value}</span>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {isParking ? (
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Color Distintivo</FormLabel>
+                    <div className="flex gap-2 items-center">
+                      <FormControl>
+                        <Input type="color" className="w-12 h-10 p-1 cursor-pointer" {...field} />
+                      </FormControl>
+                      <span className="text-xs text-muted-foreground">{field.value}</span>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Cochera Activa
+                      </FormLabel>
+                      <p className="text-[0.8rem] text-muted-foreground">
+                        Si se desactiva, no aparecerá para nuevas reservas.
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+          ) : (
+            <>
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Color Distintivo</FormLabel>
+                    <div className="flex gap-2 items-center">
+                      <FormControl>
+                        <Input type="color" className="w-12 h-10 p-1 cursor-pointer" {...field} />
+                      </FormControl>
+                      <span className="text-xs text-muted-foreground">{field.value}</span>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="hasParking"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      Tiene Cochera
-                    </FormLabel>
-                  </div>
-                </FormItem>
-              )}
-            />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="hasParking"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Tiene Cochera
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="isActive"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      Departamento Activo
-                    </FormLabel>
-                    <p className="text-[0.8rem] text-muted-foreground">
-                      Si se desactiva, no aparecerá para nuevas reservas.
-                    </p>
-                  </div>
-                </FormItem>
-              )}
-            />
-          </div>
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Departamento Activo
+                        </FormLabel>
+                        <p className="text-[0.8rem] text-muted-foreground">
+                          Si se desactiva, no aparecerá para nuevas reservas.
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Guardando..." : (initialData ? "Actualizar" : "Crear Departamento")}
+          {loading ? "Guardando..." : (initialData ? "Actualizar" : "Crear Unidad")}
         </Button>
       </form>
     </Form>

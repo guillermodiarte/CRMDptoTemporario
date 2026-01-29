@@ -14,6 +14,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
     const {
+      type, // Extract Type
       name, description, address, bedCount, maxPeople, hasParking, images,
       wifiName, wifiPass, basePrice, cleaningFee, alias, color, isActive,
       googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink
@@ -22,11 +23,12 @@ export async function PATCH(
     const department = await prisma.department.update({
       where: { id },
       data: {
+        type: type, // Update type
         name,
         description,
         address,
-        bedCount: Number(bedCount),
-        maxPeople: Number(maxPeople),
+        bedCount: Number(bedCount || 0),
+        maxPeople: Number(maxPeople || 0),
         basePrice: Number(basePrice || 0),
         cleaningFee: Number(cleaningFee || 0),
         wifiName,

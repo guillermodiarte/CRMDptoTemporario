@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { calculateReservationSplits } from "@/lib/reservation-logic";
+import { revalidatePath } from "next/cache";
 
 // Using native crypto for UUID
 const generateUUID = () => crypto.randomUUID();
@@ -140,6 +141,10 @@ export async function POST(req: Request) {
       // If parking is requested, create a ParkingRental entry
       return createdReservations;
     });
+
+    revalidatePath("/dashboard/reservations");
+    revalidatePath("/dashboard/calendar");
+    revalidatePath("/dashboard/finance");
 
     return NextResponse.json(reservations[0]);
 

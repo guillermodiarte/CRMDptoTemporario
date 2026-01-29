@@ -58,8 +58,15 @@ model User {
   reportedBlacklistEntries BlacklistEntry[]
 }
 
+
+enum DepartmentType {
+  APARTMENT
+  PARKING
+}
+
 model Department {
   id          String   @id @default(cuid())
+  type        DepartmentType @default(APARTMENT)
   name        String
   description String?
   address     String?

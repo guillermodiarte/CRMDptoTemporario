@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { calculateReservationSplits } from "@/lib/reservation-logic";
+import { revalidatePath } from "next/cache";
 
 export async function PATCH(
   req: Request,
@@ -84,6 +85,10 @@ export async function PATCH(
         })));
       });
 
+      revalidatePath("/dashboard/reservations");
+      revalidatePath("/dashboard/calendar");
+      revalidatePath("/dashboard/finance");
+
       return NextResponse.json({ message: "Group updated", groupId });
 
     } else {
@@ -103,6 +108,11 @@ export async function PATCH(
         );
 
         const updated = await prisma.reservation.findUnique({ where: { id } });
+
+        revalidatePath("/dashboard/reservations");
+        revalidatePath("/dashboard/calendar");
+        revalidatePath("/dashboard/finance");
+
         return NextResponse.json(updated);
       }
 
@@ -182,6 +192,11 @@ export async function PATCH(
           status: status as any
         },
       });
+
+      revalidatePath("/dashboard/reservations");
+      revalidatePath("/dashboard/calendar");
+      revalidatePath("/dashboard/finance");
+
       return NextResponse.json(reservation);
     }
 
@@ -209,11 +224,21 @@ export async function DELETE(
       await prisma.reservation.deleteMany({
         where: { groupId: res.groupId }
       });
+
+      revalidatePath("/dashboard/reservations");
+      revalidatePath("/dashboard/calendar");
+      revalidatePath("/dashboard/finance");
+
       return NextResponse.json({ message: "Group deleted" });
     } else {
       const reservation = await prisma.reservation.delete({
         where: { id }
       });
+
+      revalidatePath("/dashboard/reservations");
+      revalidatePath("/dashboard/calendar");
+      revalidatePath("/dashboard/finance");
+
       return NextResponse.json(reservation);
     }
 

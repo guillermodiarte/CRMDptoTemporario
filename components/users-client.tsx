@@ -203,7 +203,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
                             <Ban className="h-4 w-4" />
                           </Button>
                         ) : (
-                          <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => setDeleteId({ id: user.id, action: "DELETE" })}>
+                          <Button variant="ghost" size="icon" className="bg-red-500 hover:bg-red-600 text-black" onClick={() => setDeleteId({ id: user.id, action: "DELETE" })}>
                             <Trash className="h-4 w-4" />
                           </Button>
                         )}
@@ -259,7 +259,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
                           <Ban className="h-4 w-4" />
                         </Button>
                       ) : (
-                        <Button variant="destructive" size="sm" className="h-8 w-8 p-0" onClick={() => setDeleteId({ id: user.id, action: "DELETE" })}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-red-500 hover:bg-red-600 text-black" onClick={() => setDeleteId({ id: user.id, action: "DELETE" })}>
                           <Trash className="h-4 w-4" />
                         </Button>
                       )}

@@ -169,7 +169,7 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(entry)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => setDeleteId(entry.id)}>
+                    <Button variant="ghost" size="icon" className="bg-red-500 hover:bg-red-600 text-black" onClick={() => setDeleteId(entry.id)}>
                       <Trash className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -204,7 +204,7 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
                   <Button variant="outline" size="sm" onClick={() => handleEdit(entry)} className="h-8 px-3 text-xs">
                     Editar
                   </Button>
-                  <Button variant="destructive" size="sm" className="h-8 w-8 p-0" onClick={() => setDeleteId(entry.id)}>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-red-500 hover:bg-red-600 text-black" onClick={() => setDeleteId(entry.id)}>
                     <Trash className="h-4 w-4" />
                   </Button>
                 </div>

@@ -1,29 +1,30 @@
+
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { DepartmentsClient } from "@/components/departments-client";
-import { auth } from "@/auth";
 
-export default async function DepartmentsPage() {
+export default async function ParkingPage() {
   const session = await auth();
   const userRole = (session?.user as any)?.role;
 
   const departments = await prisma.department.findMany({
     where: {
-      type: 'APARTMENT'
+      // @ts-ignore
+      type: 'PARKING'
     },
     orderBy: { createdAt: "desc" },
   });
 
-  // Calculate Global Active Supplies Cost for display
-  const totalSuppliesCost = 0; // Calcular si es necesario
+  const totalSuppliesCost = 0;
 
   return (
     <div className="flex-1 space-y-4">
       <DepartmentsClient
         initialDepartments={departments}
-        role={session?.user?.role}
+        role={userRole}
         totalSuppliesCost={totalSuppliesCost}
-        defaultType="APARTMENT"
-        title="Departamentos"
+        defaultType="PARKING"
+        title="Cocheras"
       />
     </div>
   );

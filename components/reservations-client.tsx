@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Department, Reservation } from "@prisma/client";
-import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble } from "lucide-react";
+import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble, X, Home, MoreHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +34,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -105,6 +113,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   const [payConfirmationData, setPayConfirmationData] = useState<{ id: string, total: number } | null>(null);
   const [reportBlacklistData, setReportBlacklistData] = useState<ReservationWithDept | null>(null);
   const [noShowConfirmationId, setNoShowConfirmationId] = useState<string | null>(null);
+  const [viewNotesRes, setViewNotesRes] = useState<ReservationWithDept | null>(null);
   const [search, setSearch] = useState("");
 
   const handleDeleteClick = (id: string) => {
@@ -320,7 +329,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Huésped</TableHead>
-                <TableHead className="text-center">Departamento</TableHead>
+                <TableHead className="text-center">Dpto / Cochera</TableHead>
                 <TableHead className="text-center">Fechas</TableHead>
                 <TableHead className="text-center">Noches</TableHead>
                 <TableHead className="text-center">Personas</TableHead>
@@ -341,6 +350,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 const isPartial = res.paymentStatus === 'PARTIAL';
                 const isNext = nextReservation?.id === res.id;
                 const isNoShow = (res.status as any) === 'NO_SHOW';
+                const isParkingUnit = (res.department as any).type === 'PARKING';
 
                 const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
                 const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
@@ -383,7 +393,10 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      {res.department.name}
+                      <div className="flex items-center justify-center gap-2">
+                        {isParkingUnit ? <Car className="h-4 w-4 text-muted-foreground" /> : <Home className="h-4 w-4 text-muted-foreground" />}
+                        {res.department.name}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       {format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}
@@ -401,18 +414,18 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <span>{res.guestPeopleCount}</span>
+                        {isParkingUnit ? <X className="h-4 w-4 text-red-500" /> : <span>{res.guestPeopleCount}</span>}
                         <Users className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </TableCell>
                     <TableCell className="text-center font-bold">
                       <div className="flex items-center justify-center gap-1">
-                        <span>{res.bedsRequired || 1}</span>
+                        {isParkingUnit ? <X className="h-4 w-4 text-red-500" /> : <span>{res.bedsRequired || 1}</span>}
                         <BedDouble className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      {res.hasParking ? <Car className="h-5 w-5 mx-auto text-blue-600" /> : "-"}
+                      {res.hasParking || isParkingUnit ? <Car className="h-5 w-5 mx-auto text-blue-600" /> : "-"}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={isNoShow ? "secondary" : "outline"}>
@@ -442,7 +455,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         <span className="text-muted-foreground">
                           {res.cleaningFee ? formatCurrency(res.cleaningFee) : '-'}
                         </span>
-                        {(res.amenitiesFee || 0) > 0 && (
+                        {(res.amenitiesFee || 0) > 0 && !isParkingUnit && (
                           <span className="text-xs text-red-600" title="Insumos (Informativo)">
                             +{formatCurrency(res.amenitiesFee || 0)}
                           </span>
@@ -454,48 +467,115 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     </TableCell>
                     {!isVisualizer && (
                       <TableCell className="text-right flex justify-end gap-1">
-                        {res.notes && (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="ghost" size="icon" title="Ver notas">
-                                <NotepadText className="h-4 w-4 text-blue-500" />
+                        {(() => {
+                          const actions = [];
+
+                          if (res.notes) {
+                            actions.push({
+                              label: "Ver Nota",
+                              icon: <NotepadText className="h-4 w-4 text-blue-500" />,
+                              onClick: () => setViewNotesRes(res),
+                              className: "text-blue-500 hover:text-blue-600 hover:bg-blue-50",
+                              title: "Ver nota"
+                            });
+                          }
+
+                          if (!isPaid && !isNoShow) {
+                            actions.push({
+                              label: "Marcar Pagado",
+                              icon: <DollarSign className="h-4 w-4" />,
+                              onClick: () => handleMarkPaidClick(res.id, res.totalAmount),
+                              className: "text-green-600 hover:text-green-700 hover:bg-green-100",
+                              title: "Marcar Pagado"
+                            });
+                          }
+
+                          if (canMarkNoShow) {
+                            actions.push({
+                              label: "Marcar No Show",
+                              icon: <UserX className="h-4 w-4" />,
+                              onClick: () => handleNoShowClick(res.id),
+                              className: "text-orange-500 hover:text-orange-600 hover:bg-orange-50",
+                              title: "Marcar No Presentado"
+                            });
+                          }
+
+                          if (isBlacklisted) {
+                            actions.push({
+                              label: "En Lista Negra",
+                              icon: <Ban className="h-4 w-4" />,
+                              onClick: () => { },
+                              disabled: true,
+                              className: "text-red-500 opacity-70 cursor-not-allowed",
+                              title: "Huésped ya en lista negra"
+                            });
+                          } else {
+                            actions.push({
+                              label: "Reportar",
+                              icon: <ShieldAlert className="h-4 w-4" />,
+                              onClick: () => setReportBlacklistData(res),
+                              className: "text-orange-500 hover:text-orange-600",
+                              title: "Reportar a Lista Negra"
+                            });
+                          }
+
+                          actions.push({
+                            label: "Editar",
+                            icon: <Pencil className="h-4 w-4" />,
+                            onClick: () => handleEdit(res),
+                            className: "hover:bg-slate-100",
+                            title: "Editar"
+                          });
+
+                          actions.push({
+                            label: "Eliminar",
+                            icon: <Trash className="h-4 w-4" />,
+                            onClick: () => handleDeleteClick(res.id),
+                            className: "text-red-500 hover:text-red-600 hover:bg-red-50",
+                            title: "Eliminar"
+                          });
+
+                          if (actions.length > 4) {
+                            return (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm" className="h-8 px-2 text-xs">
+                                    Acciones
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {actions.map((action, idx) => (
+                                    <DropdownMenuItem
+                                      key={idx}
+                                      onClick={action.onClick}
+                                      disabled={action.disabled}
+                                      className={action.className ? action.className.replace("hover:bg-", "") : ""} // Remove specific hover bgs for menu items if needed, or keep for colored text
+                                    >
+                                      <span className="flex items-center gap-2 w-full">
+                                        {action.icon}
+                                        {action.label}
+                                      </span>
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            );
+                          } else {
+                            return actions.map((action, idx) => (
+                              <Button
+                                key={idx}
+                                variant="ghost"
+                                size="icon"
+                                onClick={action.onClick}
+                                disabled={action.disabled}
+                                title={action.title}
+                                className={action.className}
+                              >
+                                {action.icon}
                               </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 p-4 bg-white border rounded shadow-lg z-50">
-                              <div className="space-y-2">
-                                <h4 className="font-semibold leading-none mb-1">Nota de Reserva</h4>
-                                <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                                  {res.notes}
-                                </p>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        )}
-                        {!isPaid && !isNoShow && (
-                          <Button variant="ghost" size="icon" title="Marcar Pagado" className="text-green-600 hover:text-green-700 hover:bg-green-100" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)}>
-                            <DollarSign className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {canMarkNoShow && (
-                          <Button variant="ghost" size="icon" title="Marcar No Presentado" className="text-orange-500 hover:text-orange-600 hover:bg-orange-50" onClick={() => handleNoShowClick(res.id)}>
-                            <UserX className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {isBlacklisted ? (
-                          <Button variant="ghost" size="icon" title="Huésped ya en lista negra" className="text-red-500 cursor-not-allowed opacity-70" disabled>
-                            <Ban className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button variant="ghost" size="icon" title="Reportar a Lista Negra" className="text-orange-500 hover:text-orange-600" onClick={() => setReportBlacklistData(res)}>
-                            <ShieldAlert className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" title="Editar" onClick={() => handleEdit(res)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Eliminar" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteClick(res.id)}>
-                          <Trash className="h-4 w-4" />
-                        </Button>
+                            ));
+                          }
+                        })()}
                       </TableCell>
                     )}
                   </TableRow>
@@ -519,6 +599,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             const isPartial = res.paymentStatus === 'PARTIAL';
             const isNext = nextReservation?.id === res.id;
             const isNoShow = (res.status as any) === 'NO_SHOW';
+            const isParkingUnit = (res.department as any).type === 'PARKING';
             const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
             const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
             const debt = res.totalAmount - (res.depositAmount || 0);
@@ -559,6 +640,16 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           </div>
                         </div>
                       </div>
+
+                      {/* Icono Central Tipo Unidad (Mobile) */}
+                      <div className="shrink-0 flex items-center justify-center px-2 self-center">
+                        {isParkingUnit ? (
+                          <Car className="h-10 w-10 text-blue-700" />
+                        ) : (
+                          <Home className="h-10 w-10 text-gray-600" />
+                        )}
+                      </div>
+
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isPaid ? "bg-green-100 text-green-700 border-green-200" : isPartial ? "bg-orange-100 text-orange-700 border-orange-200" : "bg-red-100 text-red-700 border-red-200"}`}>
                           {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : 'PEND.'}
@@ -585,14 +676,18 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         <span>{Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))}</span>
                         <Moon className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span>{res.guestPeopleCount}</span>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span>{res.bedsRequired || 1}</span>
-                        <BedDouble className="h-4 w-4 text-muted-foreground" />
-                      </div>
+                      {!isParkingUnit && (
+                        <>
+                          <div className="flex items-center gap-1">
+                            <span>{res.guestPeopleCount}</span>
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span>{res.bedsRequired || 1}</span>
+                            <BedDouble className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     <div className="col-span-2 flex justify-between items-center sm:hidden mt-2">
@@ -746,6 +841,27 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 totalAmount: reportBlacklistData.totalAmount
               }}
             />
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!viewNotesRes} onOpenChange={(val) => !val && setViewNotesRes(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <NotepadText className="h-5 w-5 text-blue-500" />
+              Nota de Reserva
+            </DialogTitle>
+          </DialogHeader>
+          {viewNotesRes && (
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-sm text-gray-900 mb-1">Huésped</h4>
+                <p className="text-sm text-gray-600">{viewNotesRes.guestName}</p>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-md border text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                {viewNotesRes.notes}
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

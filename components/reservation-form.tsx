@@ -13,7 +13,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,8 +38,8 @@ const formSchema = z.object({
   departmentId: z.string().min(1, "Departamento requerido"),
   guestName: z.string().min(2, "Nombre requerido"),
   guestPhone: z.string().optional(),
-  guestPeopleCount: z.coerce.number().min(1),
-  bedsRequired: z.coerce.number().min(1).default(1),
+  guestPeopleCount: z.coerce.number().min(0),
+  bedsRequired: z.coerce.number().min(0).default(0),
   checkIn: z.string(),
   checkOut: z.string(),
   totalAmount: z.coerce.number().min(0, "Monto requerido"),
@@ -76,6 +78,18 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
   const [amenitiesCost, setAmenitiesCost] = useState(initialData?.amenitiesFee || 0);
   const [isTotalManuallyModified, setIsTotalManuallyModified] = useState(false);
+
+  // Initialize Type
+  const initialType = (initialData?.department as any)?.type ||
+    (defaultDepartmentId ? departments.find(d => d.id === defaultDepartmentId && (d as any).type)?.type ?? (departments.find(d => d.id === defaultDepartmentId) as any)?.type : "APARTMENT") as "APARTMENT" | "PARKING";
+
+  // Safe fallback if 'type' is missing in department object (e.g. older fetches), though prisma include should have it.
+  // Actually, 'departments' prop might not have 'type' if checkIn page request didn't verify it.
+  // app/dashboard/reservations/page.tsx: prisma.department.findMany() -> returns all fields including type.
+
+  const [unitType, setUnitType] = useState<"APARTMENT" | "PARKING">(initialType || "APARTMENT");
+
+  const filteredDepartments = departments.filter(d => ((d as any).type || "APARTMENT") === unitType);
 
   // Determine if we should fetch current global cost.
   // Rule: Fetch if NEW reservation OR if checkIn date is Today or Future.
@@ -253,7 +267,8 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     }
 
     // Capacity Check
-    if (!ignoreCapacity) {
+    // Capacity Check - Skipped for Parking
+    if (!ignoreCapacity && unitType !== 'PARKING') {
       const dept = departments.find(d => d.id === values.departmentId);
       if (dept) {
         if (values.guestPeopleCount > dept.maxPeople) {
@@ -308,6 +323,28 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     <Form {...form}>
       <form onSubmit={form.handleSubmit((v) => onSubmit(v, false))} className="space-y-4">
 
+        {/* Type Selector */}
+        {!initialData && (
+          <Tabs value={unitType} onValueChange={(v) => {
+            setUnitType(v as any);
+            form.setValue("departmentId", ""); // Clear selection on switch
+            // Adjust defaults
+            if (v === "PARKING") {
+              form.setValue("guestPeopleCount", 0);
+              form.setValue("bedsRequired", 0);
+              form.setValue("amenitiesFee", 0);
+            } else {
+              form.setValue("guestPeopleCount", 1);
+              form.setValue("bedsRequired", 1);
+            }
+          }} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="APARTMENT">Departamento</TabsTrigger>
+              <TabsTrigger value="PARKING">Cochera</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+
 
 
         <FormField
@@ -323,7 +360,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {departments.map((d) => (
+                  {filteredDepartments.map((d) => (
                     <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -399,47 +436,50 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
             )}
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="guestPeopleCount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cantidad Personas</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={0}
-                    onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
-                    {...field}
-                    value={field.value ?? ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
-          <FormField
-            control={form.control}
-            name="bedsRequired"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Camas Necesarias</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={1}
-                    onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
-                    {...field}
-                    value={field.value ?? ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        {unitType !== "PARKING" && (
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="guestPeopleCount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cantidad Personas</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="bedsRequired"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Camas Necesarias</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
 
 
 
@@ -504,24 +544,26 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
             )}
           />
 
-          <FormItem>
-            <FormLabel className="flex items-center gap-2">
-              Gasto de Insumos (Global)
-              <span className="text-[10px] font-normal text-muted-foreground">(Informativo)</span>
-            </FormLabel>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-muted-foreground">$</span>
-              <FormControl>
-                <Input
-                  type="number"
-                  value={amenitiesCost}
-                  disabled={true}
-                  className="bg-muted"
-                  title="Configurable en Sistema"
-                />
-              </FormControl>
-            </div>
-          </FormItem>
+          {unitType !== "PARKING" && (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                Gasto de Insumos (Global)
+                <span className="text-[10px] font-normal text-muted-foreground">(Informativo)</span>
+              </FormLabel>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-muted-foreground">$</span>
+                <FormControl>
+                  <Input
+                    type="number"
+                    value={amenitiesCost}
+                    disabled={true}
+                    className="bg-muted"
+                    title="Configurable en Sistema"
+                  />
+                </FormControl>
+              </div>
+            </FormItem>
+          )}
 
           <FormField
             control={form.control}

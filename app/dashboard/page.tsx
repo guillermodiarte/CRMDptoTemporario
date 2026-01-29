@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, CreditCard, CalendarDays, Activity } from "lucide-react";
+import { Users, CreditCard, CalendarDays, Activity, Car } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { getFullDollarData, getDollarRate } from "@/lib/dollar";
@@ -38,11 +38,23 @@ export default async function DashboardPage() {
       guestName: true,
       guestPeopleCount: true,
       bedsRequired: true,
-      department: { select: { name: true } }
+      department: { select: { name: true, type: true } }
     }
   });
 
   const activeCount = activeReservations.length;
+  const hasParking = activeReservations.some(r => r.department.type === 'PARKING');
+  const hasApartment = activeReservations.some(r => r.department.type === 'APARTMENT');
+
+  // Icon Logic
+  let HeaderIcon = Users; // Default
+  let showBothIcons = false;
+
+  if (hasParking && !hasApartment) {
+    HeaderIcon = Car;
+  } else if (hasParking && hasApartment) {
+    showBothIcons = true;
+  }
 
   // 3. Pending Payments (Future/Current & NOT No-Show)
   // Logic: "de la fecha actual en adelante" -> checkOut >= today (Includes current stay + future).
@@ -150,7 +162,14 @@ export default async function DashboardPage() {
             <CardTitle className="text-sm font-medium">
               Ocupación Actual
             </CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
+            {showBothIcons ? (
+              <div className="flex gap-1">
+                <Users className="h-4 w-4 text-blue-600" />
+                <Car className="h-4 w-4 text-blue-600" />
+              </div>
+            ) : (
+              <HeaderIcon className="h-4 w-4 text-blue-600" />
+            )}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeCount}</div>
@@ -160,8 +179,12 @@ export default async function DashboardPage() {
                 {activeReservations.map(res => (
                   <div key={res.id} className="flex justify-between items-center">
                     <span className="truncate max-w-[120px]" title={res.guestName}>{res.guestName}</span>
-                    <span>
-                      ({res.guestPeopleCount} {res.guestPeopleCount === 1 ? 'pers' : 'pers'}, {res.bedsRequired || 1} {res.bedsRequired === 1 ? 'cama' : 'camas'})
+                    <span className="text-xs text-muted-foreground">
+                      {res.department.type === 'PARKING' ? (
+                        "Cochera"
+                      ) : (
+                        `${res.guestPeopleCount} ${res.guestPeopleCount === 1 ? 'pers' : 'pers'}, ${res.bedsRequired || 1} ${res.bedsRequired === 1 ? 'cama' : 'camas'}`
+                      )}
                     </span>
                   </div>
                 ))}

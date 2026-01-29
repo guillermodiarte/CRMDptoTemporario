@@ -84,6 +84,13 @@ export default async function DashboardLayout({
                 Departamentos
               </Link>
               <Link
+                href="/dashboard/parking"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+              >
+                <Car className="h-5 w-5 text-orange-500" />
+                Cocheras
+              </Link>
+              <Link
                 href="/dashboard/finance"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
               >

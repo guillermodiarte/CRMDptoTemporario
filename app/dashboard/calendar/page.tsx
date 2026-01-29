@@ -14,16 +14,18 @@ export default async function CalendarPage({ searchParams }: { searchParams: { d
       address: true,
       bedCount: true,
       isActive: true,
-      color: true
+      color: true,
+      type: true
     }
   });
 
   // Fetch reservations server-side or let client fetch?
   // Server fetching is better.
   // Window: Fetch enough for Month view navigation buffering
+  // Create a wider window: 24 months back, 18 months forward
   const today = new Date();
-  const start = startOfMonth(subMonths(today, 1));
-  const end = endOfMonth(addMonths(today, 2));
+  const start = startOfMonth(subMonths(today, 24));
+  const end = endOfMonth(addMonths(today, 18));
 
   const reservations = await prisma.reservation.findMany({
     where: {

@@ -28,14 +28,13 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const {
+      type, // Extract Type
       name, description, address, bedCount, maxPeople, hasParking, images,
       wifiName, wifiPass, basePrice, cleaningFee, alias, color,
       googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink
     } = body;
 
-    if (!name || !maxPeople) {
-      return new NextResponse("Missing required fields", { status: 400 });
-    }
+    // ...
 
     const existingDept = await prisma.department.findFirst({
       where: { name }
@@ -53,10 +52,11 @@ export async function POST(req: Request) {
           data: {
             isActive: true,
             isArchived: false,
+            type: type || "APARTMENT", // Update type
             description,
             address,
-            bedCount: Number(bedCount || 1),
-            maxPeople: Number(maxPeople),
+            bedCount: Number(bedCount || 0), // Allow 0
+            maxPeople: Number(maxPeople || 0), // Allow 0
             basePrice: Number(basePrice || 0),
             cleaningFee: Number(cleaningFee || 0),
             wifiName,
@@ -72,11 +72,12 @@ export async function POST(req: Request) {
     } else {
       department = await prisma.department.create({
         data: {
+          type: type || "APARTMENT", // Create with type
           name,
           description,
           address,
-          bedCount: Number(bedCount || 1),
-          maxPeople: Number(maxPeople),
+          bedCount: Number(bedCount || 0),
+          maxPeople: Number(maxPeople || 0),
           basePrice: Number(basePrice || 0),
           cleaningFee: Number(cleaningFee || 0),
           wifiName,

@@ -19,7 +19,7 @@ import {
   isWeekend as isWeekendFn,
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, ShieldAlert, Home } from "lucide-react"; // Removed Zoom icons
+import { ChevronLeft, ChevronRight, ShieldAlert, Home, Car } from "lucide-react"; // Removed Zoom icons
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -38,6 +38,7 @@ interface CalendarDepartment {
   bedCount: number;
   isActive: boolean;
   color: string;
+  type?: string;
 }
 
 interface GlobalCalendarProps {
@@ -46,7 +47,7 @@ interface GlobalCalendarProps {
 }
 
 // Helper component for Department Image with Icon Fallback
-const DepartmentImage = ({ src, name }: { src: string, name: string }) => {
+const DepartmentImage = ({ src, name, type }: { src: string, name: string, type?: string }) => {
   const [imgSrc, setImgSrc] = useState(src);
   const [error, setError] = useState(false);
 
@@ -59,7 +60,11 @@ const DepartmentImage = ({ src, name }: { src: string, name: string }) => {
   if (error || !imgSrc || imgSrc === "/placeholder-house.png") {
     return (
       <div className="h-full aspect-[4/3] rounded-lg overflow-hidden bg-indigo-50 shrink-0 border border-indigo-100 flex items-center justify-center">
-        <Home className="w-8 h-8 text-indigo-500" />
+        {type === 'PARKING' ? (
+          <Car className="w-8 h-8 text-indigo-500" />
+        ) : (
+          <Home className="w-8 h-8 text-indigo-500" />
+        )}
       </div>
     );
   }
@@ -355,7 +360,7 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
                   {/* Sticky Sidebar */}
                   <div className="sticky left-0 z-30 bg-white border-r flex p-3 gap-3 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.05)] transition-colors group-hover:bg-slate-50/40" style={{ width: deptWidthPx, minWidth: deptWidthPx }}>
                     {isDesktop && (
-                      <DepartmentImage src={imageUrl} name={dept.name} />
+                      <DepartmentImage src={imageUrl} name={dept.name} type={dept.type} />
                     )}
                     <div className="flex flex-col justify-center min-w-0 flex-1">
                       <div className="font-bold text-sm text-slate-800 truncate leading-tight">{dept.name}</div>
@@ -384,11 +389,11 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
                         else if (status === 'PARTIAL') bgClass = "bg-[#FFB400] text-white shadow-sm ring-1 ring-[#FFB400]";
                         else bgClass = "bg-[#FF5A5F] text-white shadow-sm ring-1 ring-[#FF5A5F]";
                       }
-                      const isPast = new Date(res.checkOut) < new Date();
+                      const isPast = isBefore(new Date(res.checkOut), startOfToday()) || isSameDay(new Date(res.checkOut), startOfToday());
 
                       const statusTranslations: Record<string, string> = {
-                        "CONFIRMED": isPast ? "Finalizado" : "Confirmada",
-                        "PAID": isPast ? "Finalizado" : "Confirmada",
+                        "CONFIRMED": isPast ? "Finalizado" : "Confirmado",
+                        "PAID": isPast ? "Finalizado" : "Confirmado",
                         "PENDING": "Pendiente",
                         "PARTIAL": "Parcial",
                         "CANCELLED": "Cancelada",
@@ -403,6 +408,17 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
                       else if (isPaid) displayAmountLabel = "Total Cobrado:";
 
                       const displayAmount = isNoShow ? res.depositAmount : res.totalAmount;
+
+                      // Helper for display status
+                      const getDisplayStatus = () => {
+                        if (res.status === 'NO_SHOW') return "No Presentado";
+                        if (res.status === 'CANCELLED') return "Cancelada";
+
+                        // Payment Status Logic
+                        if (res.paymentStatus === 'PAID') return isPast ? "Finalizado" : "Confirmado";
+                        if (res.paymentStatus === 'PARTIAL') return "Parcial";
+                        return "Pendiente"; // Default for PENDING
+                      };
 
                       return (
                         <TooltipProvider key={res.id}>
@@ -425,8 +441,13 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
                                 <div className="font-bold text-sm">{res.guestName}</div>
                                 <div className="text-xs text-slate-400 mb-2">{format(new Date(res.checkIn), "dd MMM")} - {format(new Date(res.checkOut), "dd MMM")}</div>
                                 <div className="space-y-1 text-xs">
-                                  <div className="flex justify-between"><span>Depto:</span> <span className="font-medium text-slate-200">{dept.name}</span></div>
-                                  <div className="flex justify-between"><span>Estado:</span> <span className="font-medium text-slate-200">{statusTranslations[res.status] || res.status}</span></div>
+                                  <div className="flex justify-between"><span>{dept.type === 'PARKING' ? 'Cochera:' : 'Depto:'}</span> <span className="font-medium text-slate-200">{dept.name}</span></div>
+                                  <div className="flex justify-between">
+                                    <span>Estado:</span>
+                                    <span className="font-medium text-slate-200">
+                                      {getDisplayStatus()}
+                                    </span>
+                                  </div>
                                   <div className="flex justify-between pt-2 mt-2 border-t border-slate-700">
                                     <span>{displayAmountLabel}</span>
                                     <span className="font-bold text-emerald-400">
