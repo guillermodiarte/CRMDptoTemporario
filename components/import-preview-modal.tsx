@@ -8,6 +8,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useState, useEffect } from "react";
 
 export type ImportStatus = "NEW" | "UPDATE" | "SAME" | "ERROR";
 
@@ -34,7 +42,7 @@ export interface ImportStats {
 interface ImportPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (selectedRows: ImportPreviewRow[]) => void;
   isImporting: boolean;
   title?: string;
   rows: ImportPreviewRow[];
@@ -52,6 +60,58 @@ export function ImportPreviewModal({
   columns,
   stats
 }: ImportPreviewModalProps) {
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+
+  // Initialize selection when rows change
+  useEffect(() => {
+    if (isOpen && rows.length > 0) {
+      const initialSelection = new Set<number>();
+      rows.forEach((row, idx) => {
+        // Default select NEW and UPDATE. ERROR cannot be selected? Assuming we skip errors.
+        if (row.status === "NEW" || row.status === "UPDATE") {
+          initialSelection.add(idx);
+        }
+      });
+      setSelectedIndices(initialSelection);
+    }
+  }, [rows, isOpen]);
+
+  const toggleRow = (idx: number) => {
+    const newSet = new Set(selectedIndices);
+    if (newSet.has(idx)) {
+      newSet.delete(idx);
+    } else {
+      newSet.add(idx);
+    }
+    setSelectedIndices(newSet);
+  };
+
+  const toggleAll = () => {
+    const validIndices = rows
+      .map((r, i) => (r.status === "NEW" || r.status === "UPDATE") ? i : -1)
+      .filter(i => i !== -1);
+
+    // If all valid are selected, deselect all. Otherwise select all.
+    const allSelected = validIndices.every(i => selectedIndices.has(i));
+
+    if (allSelected) {
+      setSelectedIndices(new Set());
+    } else {
+      setSelectedIndices(new Set(validIndices));
+    }
+  };
+
+  // Calculate stats based on selection
+  const selectedCount = selectedIndices.size;
+  // Determine if "All" checkbox should be checked
+  const validRowsCount = rows.filter(r => r.status === "NEW" || r.status === "UPDATE").length;
+  const isAllSelected = validRowsCount > 0 && selectedIndices.size === validRowsCount;
+  const isIndeterminate = selectedIndices.size > 0 && selectedIndices.size < validRowsCount;
+
+  const handleConfirm = () => {
+    const selected = rows.filter((_, idx) => selectedIndices.has(idx));
+    onConfirm(selected);
+  };
 
   const getStatusBadge = (status: ImportStatus) => {
     switch (status) {
@@ -70,7 +130,7 @@ export function ImportPreviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-[98vw] w-full max-h-[95vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -108,26 +168,67 @@ export function ImportPreviewModal({
           </div>
 
           {/* Table Area */}
-          <div className="flex-1 overflow-auto px-6 py-4">
-            <div className="border rounded-md bg-white shadow-sm overflow-hidden">
+          <div className="flex-1 px-6 py-4 min-h-0 flex flex-col">
+            <div className="border rounded-md bg-white shadow-sm flex-1 overflow-auto">
               <Table>
                 <TableHeader className="bg-gray-50 sticky top-0 z-10">
                   <TableRow>
-                    <TableHead className="w-[100px]">Estado</TableHead>
+                    <TableHead className="w-[40px] p-2 text-center">
+                      <Checkbox
+                        checked={isAllSelected}
+                        onCheckedChange={toggleAll}
+                      // indeterminate={isIndeterminate} // Checkbox component might not support indeterminate prop directly if standard shadcn
+                      />
+                    </TableHead>
+                    <TableHead className="w-[80px] text-xs h-8">Estado</TableHead>
                     {columns.map((col) => (
-                      <TableHead key={col.accessorKey}>{col.header}</TableHead>
+                      <TableHead key={col.accessorKey} className="text-xs h-8 whitespace-nowrap">{col.header}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((row, idx) => (
                     <TableRow key={idx} className={row.status === "SAME" ? "opacity-60 bg-gray-50/30" : ""}>
-                      <TableCell>{getStatusBadge(row.status)}</TableCell>
-                      {columns.map((col) => (
-                        <TableCell key={col.accessorKey}>
-                          {col.cell ? col.cell(row.data[col.accessorKey], row) : row.data[col.accessorKey]}
-                        </TableCell>
-                      ))}
+                      <TableCell className="w-[40px] p-2 text-center">
+                        {(row.status === "NEW" || row.status === "UPDATE") && (
+                          <Checkbox
+                            checked={selectedIndices.has(idx)}
+                            onCheckedChange={() => toggleRow(idx)}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell className="p-2 py-1">{getStatusBadge(row.status)}</TableCell>
+                      {columns.map((col) => {
+                        const diff = row.data._diff?.[col.accessorKey];
+                        const cellContent = col.cell ? col.cell(row.data[col.accessorKey], row) : row.data[col.accessorKey];
+
+                        if (diff) {
+                          return (
+                            <TableCell key={col.accessorKey} className="p-2 py-1 text-xs whitespace-nowrap bg-yellow-50 relative">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help font-medium text-orange-700 underline decoration-dotted underline-offset-2">
+                                      {cellContent}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">
+                                      <span className="font-semibold">Anterior:</span> {String(diff.old)}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </TableCell>
+                          );
+                        }
+
+                        return (
+                          <TableCell key={col.accessorKey} className="p-2 py-1 text-xs whitespace-nowrap">
+                            {cellContent}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   ))}
                   {rows.length === 0 && (
@@ -147,9 +248,9 @@ export function ImportPreviewModal({
           <Button variant="outline" onClick={onClose} disabled={isImporting}>
             Cancelar
           </Button>
-          <Button onClick={onConfirm} disabled={isImporting || stats.total === 0 || (stats.new === 0 && stats.updated === 0)}>
+          <Button onClick={handleConfirm} disabled={isImporting || selectedCount === 0}>
             {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isImporting ? "Importando..." : `Confirmar Importación (${stats.new + stats.updated} cambios)`}
+            {isImporting ? "Importando..." : `Confirmar Importación (${selectedCount} seleccionados)`}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -7,15 +7,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Download, Upload, FileSpreadsheet, FileText } from "lucide-react";
+import { Download, Upload, FileSpreadsheet } from "lucide-react";
 import { Department, Reservation } from "@prisma/client";
 import { format, parse, isValid } from "date-fns";
 import { es } from "date-fns/locale";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
 import { useRouter } from "next/navigation";
 import { normalizePhone } from "@/lib/phone-utils";
@@ -48,7 +45,7 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     const csvRows = [];
     csvRows.push([
       "Huésped", "Teléfono", "Departamento", "Check-In", "Check-Out",
-      "Personas", "Total", "Seña", "Limpieza", "Moneda", "Estado", "Pago", "No-Show", "Lista Negra", "Motivo Lista Negra", "Fuente", "Notas"
+      "Personas", "Camas", "Cochera", "Total", "Seña", "Limpieza", "Insumos", "Moneda", "Estado", "Pago", "No-Show", "Lista Negra", "Motivo Lista Negra", "Fuente", "Notas"
     ].join(","));
 
     data.forEach(res => {
@@ -64,9 +61,12 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
         format(new Date(res.checkIn), "yyyy-MM-dd"),
         format(new Date(res.checkOut), "yyyy-MM-dd"),
         res.guestPeopleCount,
+        res.bedsRequired || 1,
+        res.hasParking ? "SI" : "NO",
         res.totalAmount,
         res.depositAmount,
         res.cleaningFee || 0,
+        res.amenitiesFee || 0,
         res.currency || "ARS",
         res.status,
         res.paymentStatus,
@@ -89,64 +89,6 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     document.body.removeChild(link);
   };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF('l', 'mm', 'a4');
-    doc.text("Reporte de Reservas", 14, 10);
-    doc.setFontSize(10);
-    doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 16);
-    doc.text(`Período: ${format(date, "MMMM yyyy", { locale: es })}`, 14, 21);
-
-    const tableColumn = [
-      "Huésped", "Teléfono", "Depto", "Personas",
-      "In", "Out", "Total", "Seña", "Limp.",
-      "Moneda", "Estado", "Pago",
-      "No-Show", "Blacklist", "Motivo", "Fuente", "Notas"
-    ];
-    const tableRows: any[] = [];
-
-    data.forEach(res => {
-      const normalizedPhone = res.guestPhone ? normalizePhone(res.guestPhone) : "";
-      const isBlacklisted = blacklistedPhones.includes(normalizedPhone);
-      const blacklistEntry = blacklistEntries.find(e => normalizePhone(e.guestPhone) === normalizedPhone);
-      const isNoShow = (res.status as any) === 'NO_SHOW';
-
-      const row = [
-        res.guestName,
-        res.guestPhone || "",
-        res.department.name,
-        res.guestPeopleCount || 1,
-        format(new Date(res.checkIn), "dd/MM"),
-        format(new Date(res.checkOut), "dd/MM"),
-        `$${res.totalAmount}`,
-        `$${res.depositAmount || 0}`,
-        `$${res.cleaningFee || 0}`,
-        res.currency || "ARS",
-        res.status,
-        res.paymentStatus,
-        isNoShow ? "SI" : "NO",
-        isBlacklisted ? "SI" : "NO",
-        blacklistEntry?.reason || "",
-        res.source || "",
-        res.notes || ""
-      ];
-      tableRows.push(row);
-    });
-
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 25,
-      styles: { fontSize: 6 }, // Reduced font size to fit columns
-      columnStyles: {
-        0: { cellWidth: 20 }, // Huésped
-        14: { cellWidth: 20 }, // Motivo
-        16: { cellWidth: 20 }  // Notas
-      }
-    });
-
-    doc.save(getExportFileName("pdf"));
-  };
-
   // --- Import Logic ---
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,7 +106,7 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
         const normalizedData = results.data.map((row: any) => {
           const newRow: any = {};
           Object.keys(row).forEach(key => {
-            const normalizedKey = key.trim().toLowerCase();
+            const normalizedKey = key.trim().toLowerCase().replace(/^\uFEFF/, "");
             // Map Spanish/mixed keys to English
             if (normalizedKey === "huésped" || normalizedKey === "huesped") newRow["GuestName"] = row[key];
             else if (normalizedKey === "teléfono" || normalizedKey === "telefono") newRow["GuestPhone"] = row[key];
@@ -172,9 +114,12 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
             else if (normalizedKey === "check-in" || normalizedKey === "checkin") newRow["CheckIn"] = row[key];
             else if (normalizedKey === "check-out" || normalizedKey === "checkout") newRow["CheckOut"] = row[key];
             else if (normalizedKey === "personas") newRow["GuestPeopleCount"] = row[key];
+            else if (normalizedKey === "camas") newRow["BedsRequired"] = row[key];
+            else if (normalizedKey === "cochera" || normalizedKey === "cocheras") newRow["HasParking"] = row[key];
             else if (normalizedKey === "total") newRow["TotalAmount"] = row[key];
             else if (normalizedKey === "seña" || normalizedKey === "sena") newRow["DepositAmount"] = row[key];
             else if (normalizedKey === "limpieza") newRow["CleaningFee"] = row[key];
+            else if (normalizedKey === "insumos") newRow["AmenitiesFee"] = row[key];
             else if (normalizedKey === "moneda" || normalizedKey === "currency") newRow["Currency"] = row[key];
             else if (normalizedKey === "estado") newRow["Status"] = row[key]; // Optional
             else if (normalizedKey === "pago") newRow["PaymentStatus"] = row[key];
@@ -215,6 +160,13 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
       const dept = departments.find(d => d.name.toLowerCase() === (row.DepartmentName || "").toLowerCase());
       if (!dept && row.DepartmentName) issues.push(`Depto no encontrado: ${row.DepartmentName}`);
 
+      // Enforce Parking Defaults for Preview Interaction
+      if (dept && (dept as any).type === "PARKING") {
+        row.GuestPeopleCount = "0";
+        row.BedsRequired = "0";
+        row.AmenitiesFee = "0";
+      }
+
       // Validate Dates
       if (row.CheckIn && !isValid(parse(row.CheckIn, "yyyy-MM-dd", new Date()))) issues.push("CheckIn inválido");
       if (row.CheckOut && !isValid(parse(row.CheckOut, "yyyy-MM-dd", new Date()))) issues.push("CheckOut inválido");
@@ -229,25 +181,82 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           data: { ...row, _errors: issues }
         });
       } else {
-        // Check for duplicates
-        // Conditions: Same Phone AND Same CheckIn AND Same CheckOut
+        // Check for duplicates/updates
+        // Conditions: Same Phone AND Same Dates AND Same Department
         const normalizedImportPhone = normalizePhone(row.GuestPhone || "");
         const dCheckIn = row.CheckIn;
         const dCheckOut = row.CheckOut;
 
-        const duplicate = data.find(d => {
+        const existingRes = data.find(d => {
           const existingPhone = normalizePhone(d.guestPhone || "");
           const dStart = format(new Date(d.checkIn), "yyyy-MM-dd");
           const dEnd = format(new Date(d.checkOut), "yyyy-MM-dd");
-          return existingPhone === normalizedImportPhone && dStart === dCheckIn && dEnd === dCheckOut;
+
+          // Exact Match: Guest Name + CheckIn + Department (CheckOut can change -> Update)
+          const sameName = d.guestName.toLowerCase().trim() === (row.GuestName || "").toLowerCase().trim();
+          const sameDept = d.department.name.toLowerCase() === (row.DepartmentName || "").trim().toLowerCase();
+
+          return sameName && dStart === dCheckIn && sameDept;
         });
 
-        if (duplicate) {
-          statsParams.same++;
-          preview.push({
-            status: "SAME",
-            data: { ...row, _message: "Ya existe" }
-          });
+        if (existingRes) {
+          // Compare fields and build diffs
+          const diffs: Record<string, { old: any, new: any }> = {};
+
+          if (format(new Date(existingRes.checkOut), "yyyy-MM-dd") !== row.CheckOut) {
+            diffs["CheckOut"] = { old: format(new Date(existingRes.checkOut), "yyyy-MM-dd"), new: row.CheckOut };
+          }
+
+          if (parseFloat(row.TotalAmount) !== existingRes.totalAmount) {
+            diffs["TotalAmount"] = { old: existingRes.totalAmount, new: parseFloat(row.TotalAmount) };
+          }
+          if (parseFloat(row.DepositAmount || "0") !== existingRes.depositAmount) {
+            diffs["DepositAmount"] = { old: existingRes.depositAmount, new: parseFloat(row.DepositAmount || "0") };
+          }
+          if ((row.PaymentStatus || "UNPAID") !== existingRes.paymentStatus) {
+            diffs["PaymentStatus"] = { old: existingRes.paymentStatus, new: row.PaymentStatus || "UNPAID" };
+          }
+          if ((row.Status || "CONFIRMED") !== existingRes.status) {
+            diffs["Status"] = { old: existingRes.status, new: row.Status || "CONFIRMED" };
+          }
+          if ((row.Notes || "") !== (existingRes.notes || "")) {
+            diffs["Notes"] = { old: existingRes.notes || "", new: row.Notes || "" };
+          }
+          if (parseInt(row.GuestPeopleCount || "1") !== existingRes.guestPeopleCount) {
+            diffs["GuestPeopleCount"] = { old: existingRes.guestPeopleCount, new: parseInt(row.GuestPeopleCount || "1") };
+          }
+          if (parseInt(row.BedsRequired || "1") !== existingRes.bedsRequired) {
+            diffs["BedsRequired"] = { old: existingRes.bedsRequired, new: parseInt(row.BedsRequired || "1") };
+          }
+          if ((row.HasParking?.toUpperCase() === "SI") !== existingRes.hasParking) {
+            diffs["HasParking"] = { old: existingRes.hasParking ? "SI" : "NO", new: row.HasParking?.toUpperCase() || "NO" };
+          }
+          if ((row.CleaningFee ? parseFloat(row.CleaningFee) : 0) !== existingRes.cleaningFee) {
+            diffs["CleaningFee"] = { old: existingRes.cleaningFee, new: row.CleaningFee ? parseFloat(row.CleaningFee) : 0 };
+          }
+          if ((row.AmenitiesFee ? parseFloat(row.AmenitiesFee) : 0) !== existingRes.amenitiesFee) {
+            diffs["AmenitiesFee"] = { old: existingRes.amenitiesFee, new: row.AmenitiesFee ? parseFloat(row.AmenitiesFee) : 0 };
+          }
+          if ((row.Source || "DIRECT") !== existingRes.source) {
+            diffs["Source"] = { old: existingRes.source, new: row.Source || "DIRECT" };
+          }
+          if (normalizePhone(row.GuestPhone || "") !== normalizePhone(existingRes.guestPhone || "")) {
+            diffs["GuestPhone"] = { old: existingRes.guestPhone, new: row.GuestPhone };
+          }
+
+          if (Object.keys(diffs).length > 0) {
+            statsParams.updated++;
+            preview.push({
+              status: "UPDATE",
+              data: { ...row, _id: existingRes.id, _departmentId: dept?.id, _diff: diffs }
+            });
+          } else {
+            statsParams.same++;
+            preview.push({
+              status: "SAME",
+              data: { ...row, _message: "Ya existe y es idéntica" }
+            });
+          }
         } else {
           statsParams.new++;
           preview.push({
@@ -262,15 +271,14 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     setStats(statsParams);
   };
 
-  const handleConfirmImport = async () => {
+  const handleConfirmImport = async (rowsToProcess: ImportPreviewRow[]) => {
     setImporting(true);
-    let success = 0;
-    const errors: string[] = [];
+    let successCount = 0;
+    const importErrors: string[] = [];
 
-    // Filter only NEW rows
-    const rowsToImport = previewRows.filter(r => r.status === "NEW");
-
-    for (const rowObj of rowsToImport) {
+    // Use selected rows passed from modal
+    for (const rowObj of rowsToProcess) {
+      if (rowObj.status !== "NEW" && rowObj.status !== "UPDATE") continue;
       const row = rowObj.data;
       try {
         // 1. Check for Blacklist auto-creation
@@ -298,40 +306,57 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           }
         }
 
+        // Check Department Type to enforce Parking defaults
+        const dept = departments.find(d => d.id === row._departmentId);
+        const isParking = dept?.type === "PARKING";
+
         const body = {
           guestName: row.GuestName,
           guestPhone: row.GuestPhone || "",
-          guestPeopleCount: parseInt(row.GuestPeopleCount || "1"),
+          guestPeopleCount: isParking ? 0 : parseInt(row.GuestPeopleCount || "1"),
+          bedsRequired: isParking ? 0 : parseInt(row.BedsRequired || "1"),
+          hasParking: (row.HasParking?.toUpperCase() === "SI"),
           departmentId: row._departmentId,
           checkIn: row.CheckIn,
           checkOut: row.CheckOut,
           totalAmount: parseFloat(row.TotalAmount),
           depositAmount: parseFloat(row.DepositAmount || "0"),
           cleaningFee: row.CleaningFee ? parseFloat(row.CleaningFee) : undefined,
+          amenitiesFee: row.AmenitiesFee ? parseFloat(row.AmenitiesFee) : undefined,
           currency: row.Currency ? row.Currency.toUpperCase() : "ARS",
-          status: "CONFIRMED",
+          status: row.Status || "CONFIRMED",
           paymentStatus: row.PaymentStatus || "UNPAID",
           source: row.Source || "DIRECT",
           notes: row.Notes || row.Notas || "",
           force: true
         };
 
-        const res = await fetch("/api/reservations", {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
+        let res;
+        if (rowObj.status === "UPDATE" && row._id) {
+          // PATCH update
+          res = await fetch(`/api/reservations/${row._id}`, {
+            method: "PATCH",
+            body: JSON.stringify(body),
+          });
+        } else {
+          // POST create
+          res = await fetch("/api/reservations", {
+            method: "POST",
+            body: JSON.stringify(body),
+          });
+        }
 
         if (!res.ok) {
           throw new Error("Failed");
         }
-        success++;
+        successCount++;
       } catch (e: any) {
-        errors.push(`Error importando ${row.GuestName}`);
+        importErrors.push(`Error importando ${row.GuestName}: ${e.message}`);
       }
     }
 
-    if (errors.length > 0) {
-      alert("Algunos errores ocurrieron:\n" + errors.join("\n"));
+    if (importErrors.length > 0) {
+      alert("Algunos errores ocurrieron:\n" + importErrors.join("\n"));
     }
 
     setImporting(false);
@@ -340,19 +365,28 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
   };
 
   // Columns definition for the modal
+  // Columns definition for the modal
   const columns = [
-    { header: "Huésped", accessorKey: "GuestName" },
+    { header: "Huésped", accessorKey: "GuestName", cell: (val: any) => <span className="font-medium whitespace-nowrap">{val}</span> },
+    { header: "Tel", accessorKey: "GuestPhone", cell: (val: any) => <span className="text-xs truncate max-w-[80px] block" title={val}>{val}</span> },
     { header: "CheckIn", accessorKey: "CheckIn" },
-    { header: "Depto", accessorKey: "DepartmentName" },
-    {
-      header: "Total",
-      accessorKey: "TotalAmount",
-      cell: (val: any, row: any) => <span>${val}</span>
-    },
+    { header: "CheckOut", accessorKey: "CheckOut" },
+    { header: "Depto", accessorKey: "DepartmentName", cell: (val: any) => <span className="text-xs truncate max-w-[100px] block" title={val}>{val}</span> },
+    { header: "Personas", accessorKey: "GuestPeopleCount" },
+    { header: "Camas", accessorKey: "BedsRequired" },
+    { header: "Total", accessorKey: "TotalAmount", cell: (val: any) => <span>${val}</span> },
+    { header: "Seña", accessorKey: "DepositAmount", cell: (val: any) => <span>${val}</span> },
+    { header: "Moneda", accessorKey: "Currency", cell: (val: any) => <span className="text-[10px]">{val}</span> },
+    { header: "Fuente", accessorKey: "Source", cell: (val: any) => <span className="text-[10px]">{val}</span> },
+    { header: "Limpieza", accessorKey: "CleaningFee", cell: (val: any) => val ? <span>${val}</span> : "-" },
+    { header: "Insumos", accessorKey: "AmenitiesFee", cell: (val: any) => val ? <span>${val}</span> : "-" },
+    { header: "Pago", accessorKey: "PaymentStatus", cell: (val: any) => <span className="text-[10px]">{val}</span> },
+    { header: "Cochera", accessorKey: "HasParking" },
+    { header: "Notas", accessorKey: "Notes", cell: (val: any) => <span className="truncate max-w-[80px] block text-[10px]" title={val}>{val || "-"}</span> },
     {
       header: "Error",
       accessorKey: "_errors",
-      cell: (val: any) => val ? <span className="text-red-600 text-xs font-bold">{val.join(", ")}</span> : null
+      cell: (val: any) => val ? <span className="text-red-600 text-[10px] font-bold">{val.join(", ")}</span> : null
     }
   ];
 
@@ -367,13 +401,9 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-          <DropdownMenuSeparator />
+
           <DropdownMenuItem onClick={exportToCSV}>
             <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={exportToPDF}>
-            <FileText className="mr-2 h-4 w-4" /> Exportar PDF
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => document.getElementById("reservation-file-upload")?.click()}>

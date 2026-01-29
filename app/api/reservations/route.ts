@@ -120,7 +120,7 @@ export async function POST(req: Request) {
             guestName,
             guestPhone,
             guestPeopleCount: Number(guestPeopleCount),
-            bedsRequired: Number(bedsRequired || 1), // Default to 1 if missing
+            bedsRequired: bedsRequired !== undefined ? Number(bedsRequired) : 1, // Default to 1 if missing (allow 0 for parking)
             checkIn: split.checkIn,
             checkOut: split.checkOut,
             totalAmount: split.totalAmount,

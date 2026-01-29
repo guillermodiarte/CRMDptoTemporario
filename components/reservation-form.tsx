@@ -77,7 +77,8 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const [blacklistWarning, setBlacklistWarning] = useState<{ name: string; reason: string } | null>(null);
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
   const [amenitiesCost, setAmenitiesCost] = useState(initialData?.amenitiesFee || 0);
-  const [isTotalManuallyModified, setIsTotalManuallyModified] = useState(false);
+  // Initialize as modified if we are editing an existing reservation with a price (to prevent auto-recalc on date/dept change)
+  const [isTotalManuallyModified, setIsTotalManuallyModified] = useState(!!(initialData?.totalAmount && initialData.totalAmount > 0));
 
   // Initialize Type
   const initialType = (initialData?.department as any)?.type ||
@@ -162,7 +163,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   // Auto-fill Cleaning Fee from selected Department
   const selectedDepartmentId = form.watch("departmentId");
   useEffect(() => {
-    if (!initialData && selectedDepartmentId) {
+    if (!initialData) {
       const dept = departments.find(d => d.id === selectedDepartmentId);
       if (dept) {
         form.setValue("cleaningFee", dept.cleaningFee || 0);
@@ -295,7 +296,9 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
         method: method,
         body: JSON.stringify({
           ...values,
-          amenitiesFee: amenitiesCost,
+          guestPeopleCount: unitType === 'PARKING' ? 0 : values.guestPeopleCount,
+          bedsRequired: unitType === 'PARKING' ? 0 : values.bedsRequired,
+          amenitiesFee: unitType === 'PARKING' ? 0 : amenitiesCost,
           force: forceOverlap
         }),
       });
