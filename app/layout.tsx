@@ -16,6 +16,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Alojamientos Di'Arte",
   description: "Creado por Guillermo A. Diarte",
+  icons: {
+    icon: "/icon.png?v=3",
+    apple: "/icon.png?v=3",
+  },
 };
 
 export default function RootLayout({
