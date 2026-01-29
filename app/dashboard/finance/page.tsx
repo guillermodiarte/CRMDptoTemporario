@@ -23,6 +23,9 @@ export default async function FinancePage({
   const startDate = new Date(selectedYear, selectedMonth, 1);
   const endDate = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
 
+  // Date for display purposes (set to noon to avoid timezone rollback issues on client)
+  const displayDate = new Date(selectedYear, selectedMonth, 1, 12, 0, 0);
+
   // 1. Obtener la tasa del dólar (necesaria para los cálculos de ingresos)
   const dollarRate = await getDollarRate();
 
@@ -209,7 +212,7 @@ export default async function FinancePage({
       platformStats={platformStats}
       summary={{ totalIncome, totalExpense, netProfit }}
       role={userRole}
-      date={startDate}
+      date={displayDate}
       startYear={configStartYear}
       endYear={configEndYear}
     />

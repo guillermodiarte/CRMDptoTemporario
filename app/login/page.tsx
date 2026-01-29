@@ -26,7 +26,7 @@ export default function LoginPage() {
           <div className="mb-8 text-center">
             <div className="flex justify-center mb-4">
               <Image
-                src="/Logo Di'Arte 2 trasparente.png"
+                src="/logo-diarte-vertical.png"
                 alt="Logo Di'Arte"
                 width={225}
                 height={90}

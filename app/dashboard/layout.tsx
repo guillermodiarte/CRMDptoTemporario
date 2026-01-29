@@ -51,7 +51,7 @@ export default async function DashboardLayout({
           <div className="flex h-14 items-center justify-center border-b px-4 lg:h-[60px] lg:px-6">
             <Link href="/" className="flex items-center">
               <Image
-                src="/Logo Di'Arte horizontal transparente.png"
+                src="/logo-diarte-horizontal.png"
                 alt="Alojamientos Di'Arte"
                 width={250}
                 height={75}
