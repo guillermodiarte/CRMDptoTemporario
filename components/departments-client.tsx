@@ -112,7 +112,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <DepartmentsActions data={visibleData} role={role} />
+            <DepartmentsActions data={visibleData} role={role} defaultType={defaultType} />
             {!isVisualizer && (
               <Button onClick={() => { setEditingDepartment(null); setIsModalOpen(true); }} size="sm">
                 <Plus className="mr-2 h-4 w-4" /> Nuevo

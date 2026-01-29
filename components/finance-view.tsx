@@ -7,9 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExpenseForm } from "./expense-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { useRef } from "react";
+import { toPng } from "html-to-image";
+import jsPDF from "jspdf";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LabelList } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { MonthSelector } from "./month-selector";
 import { FinanceActions } from "./finance-actions";
 import { formatCurrency, formatAxisNumber } from "@/lib/utils";
@@ -61,6 +65,55 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
     setIsMounted(true);
   }, []);
 
+  const [isPdfExporting, setIsPdfExporting] = useState(false);
+  const pdfRef = useRef<HTMLDivElement>(null);
+
+  const handleExportPDF = async () => {
+    if (!pdfRef.current) return;
+    setIsPdfExporting(true);
+    // Wait for render updates (labels, hiding buttons)
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    try {
+      const dataUrl = await toPng(pdfRef.current, {
+        cacheBust: true,
+        pixelRatio: 2, // Improve quality
+        backgroundColor: "#ffffff",
+        // filter out elements if needed, but we handle it via state
+      });
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const imgWidth = pdfWidth;
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      const fileName = `Finanzas_${format(date, "MMMM_yyyy", { locale: es })}.pdf`;
+      pdf.save(fileName);
+
+    } catch (err) {
+      console.error("Error exporting PDF", err);
+      alert("Error al exportar PDF");
+    } finally {
+      setIsPdfExporting(false);
+    }
+  };
+
   const supplyExpenses = expenses.filter(e => e.type === 'SUPPLY');
   const taxExpenses = expenses.filter(e => e.type === 'TAX');
   const commissionExpenses = expenses.filter(e => e.type === 'COMMISSION');
@@ -99,13 +152,13 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg">{title}</CardTitle>
-        {!isVisualizer && defaultType && (
+        {!isVisualizer && defaultType && !isPdfExporting && (
           <Button size="sm" variant="outline" className="h-8 gap-1" onClick={() => onAddWithType(defaultType)}>
             <Plus className="h-3 w-3" /> <span className="sr-only sm:not-sr-only sm:inline-block">Agregar</span>
           </Button>
         )}
       </CardHeader>
-      <CardContent className="p-0 overflow-auto max-h-[400px]">
+      <CardContent className={`p-0 ${isPdfExporting ? '' : 'overflow-auto max-h-[400px]'}`}>
         {/* Desktop Table */}
         <div className="hidden md:block">
           <Table>
@@ -116,7 +169,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                 {showDetails && <TableHead className="text-right text-xs">Cant.</TableHead>}
                 {showDetails && <TableHead className="text-right text-xs">P. Unit</TableHead>}
                 <TableHead className="text-right">Total</TableHead>
-                {!isVisualizer && <TableHead className="w-[90px]"></TableHead>}
+                {!isVisualizer && !isPdfExporting && <TableHead className="w-[90px]"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -130,7 +183,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                   {showDetails && <TableCell className="text-right text-xs">{exp.quantity || 1}</TableCell>}
                   {showDetails && <TableCell className="text-right text-xs">{formatCurrency(exp.unitPrice || 0)}</TableCell>}
                   <TableCell className="text-right text-xs font-medium">{formatCurrency(exp.amount)}</TableCell>
-                  {!isVisualizer && (
+                  {!isVisualizer && !isPdfExporting && (
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(exp)}>
@@ -155,8 +208,8 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
           </Table>
         </div>
 
-        {/* Mobile List View */}
-        <div className="md:hidden">
+        {/* Mobile List View - Hide on PDF */}
+        <div className={`md:hidden ${isPdfExporting ? 'hidden' : ''}`}>
           {list.map((exp) => (
             <div key={exp.id} className="p-3 border-b last:border-0 flex justify-between items-start gap-2">
               <div className="min-w-0 flex-1">
@@ -199,39 +252,46 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
   const formDefaultDate = isCurrentMonth ? today : date;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={pdfRef}>
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="w-full md:w-auto">
-          <h2 className="text-3xl font-bold tracking-tight">Finanzas</h2>
+          {isPdfExporting && (
+            <h1 className="text-2xl font-bold text-center mb-4 uppercase">
+              Finanzas mes de {format(date, "MMMM", { locale: es })} del año {format(date, "yyyy")}
+            </h1>
+          )}
+          {!isPdfExporting && <h2 className="text-3xl font-bold tracking-tight">Finanzas</h2>}
           <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <MonthSelector startYear={startYear} endYear={endYear} />
-            <FinanceActions expenses={expenses} departments={departments} date={date} />
+            {!isPdfExporting && <MonthSelector startYear={startYear} endYear={endYear} />}
+            {!isPdfExporting && <FinanceActions expenses={expenses} departments={departments} date={date} onExportPDF={handleExportPDF} />}
           </div>
         </div>
 
-        {!isVisualizer && isMounted && (
-          <Dialog open={open} onOpenChange={(val) => {
-            setOpen(val);
-            if (!val) setEditingExpense(null);
-          }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setEditingExpense(null)} className="w-full md:w-auto">
-                <Plus className="mr-2 h-4 w-4" /> Agregar Gasto
-              </Button>
-            </DialogTrigger>
-            <DialogContent onCloseAutoFocus={(e) => e.preventDefault()}>
-              <DialogHeader>
-                <DialogTitle>{editingExpense?.id ? "Editar Gasto" : "Agregar Gasto"}</DialogTitle>
-              </DialogHeader>
-              <ExpenseForm
-                departments={departments}
-                setOpen={setOpen}
-                initialData={editingExpense}
-                defaultDate={formDefaultDate}
-              />
-            </DialogContent>
-          </Dialog>
-        )}
+        <div className={isPdfExporting ? "hidden" : "w-full md:w-auto"}>
+          {!isVisualizer && isMounted && (
+            <Dialog open={open} onOpenChange={(val) => {
+              setOpen(val);
+              if (!val) setEditingExpense(null);
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setEditingExpense(null)} className="w-full md:w-auto">
+                  <Plus className="mr-2 h-4 w-4" /> Agregar Gasto
+                </Button>
+              </DialogTrigger>
+              <DialogContent onCloseAutoFocus={(e) => e.preventDefault()}>
+                <DialogHeader>
+                  <DialogTitle>{editingExpense?.id ? "Editar Gasto" : "Agregar Gasto"}</DialogTitle>
+                </DialogHeader>
+                <ExpenseForm
+                  departments={departments}
+                  setOpen={setOpen}
+                  initialData={editingExpense}
+                  defaultDate={formDefaultDate}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
 
         {isMounted && (
           <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
@@ -310,9 +370,15 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatAxisNumber(value)} width={80} />
                 <Tooltip formatter={(value: number | undefined) => formatCurrency(value || 0)} />
                 <Legend />
-                <Bar dataKey="income" name="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="profit" name="Ganancia" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" name="Gastos" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="income" name="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} isAnimationActive={!isPdfExporting}>
+                  {isPdfExporting && <LabelList dataKey="income" position="top" formatter={(val: any) => `$${val}`} fontSize={10} />}
+                </Bar>
+                <Bar dataKey="profit" name="Ganancia" fill="#3b82f6" radius={[4, 4, 0, 0]} isAnimationActive={!isPdfExporting}>
+                  {isPdfExporting && <LabelList dataKey="profit" position="top" formatter={(val: any) => `$${val}`} fontSize={10} />}
+                </Bar>
+                <Bar dataKey="expense" name="Gastos" fill="#ef4444" radius={[4, 4, 0, 0]} isAnimationActive={!isPdfExporting}>
+                  {isPdfExporting && <LabelList dataKey="expense" position="top" formatter={(val: any) => `$${val}`} fontSize={10} />}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -340,12 +406,22 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                   fill="#8884d8"
                   paddingAngle={5}
                   dataKey="value"
+                  label={isPdfExporting ? (props: any) => {
+                    const { name, percent, value, x, y, cx } = props;
+                    return (
+                      <text x={x} y={y} fill="#333" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={10}>
+                        <tspan x={x} dy="-0.5em" fontWeight="bold">{`${name} ${(percent * 100).toFixed(0)}%`}</tspan>
+                        <tspan x={x} dy="1.2em">{formatCurrency(value)}</tspan>
+                      </text>
+                    );
+                  } : undefined}
+                  isAnimationActive={!isPdfExporting}
                 >
                   {distribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Tooltip formatter={(value: any) => formatCurrency(value)} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -363,8 +439,10 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatAxisNumber(value)} width={80} />
                 <Tooltip formatter={(value: number | undefined) => formatCurrency(value || 0)} />
                 <Legend />
-                <Bar dataKey="income" name="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" name="Gastos" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="income" name="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} isAnimationActive={!isPdfExporting}>
+                </Bar>
+                <Bar dataKey="expense" name="Gastos" fill="#ef4444" radius={[4, 4, 0, 0]} isAnimationActive={!isPdfExporting}>
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -390,6 +468,16 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                   fill="#8884d8"
                   paddingAngle={5}
                   dataKey="value"
+                  label={isPdfExporting ? (props: any) => {
+                    const { name, percent, value, x, y, cx } = props;
+                    return (
+                      <text x={x} y={y} fill="#333" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={10}>
+                        <tspan x={x} dy="-0.5em" fontWeight="bold">{`${name} ${(percent * 100).toFixed(0)}%`}</tspan>
+                        <tspan x={x} dy="1.2em">{value} reservas</tspan>
+                      </text>
+                    );
+                  } : undefined}
+                  isAnimationActive={!isPdfExporting}
                 >
                   {platformStats.map((entry, index) => (
                     <Cell
@@ -399,7 +487,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: any, name: string) => [
+                  formatter={(value: any, name: any) => [
                     `${value} reservas`,
                     name === 'AIRBNB' ? 'Airbnb' : name === 'BOOKING' ? 'Booking' : name === 'DIRECT' ? 'Directo' : name
                   ]}

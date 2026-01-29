@@ -3,17 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Papa from "papaparse";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { format, isValid, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { Department, Expense, ExpenseType } from "@prisma/client";
 import {
   Download,
   Upload,
-  FileSpreadsheet,
-  FileText,
-  FileDown
+  FileSpreadsheet
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -32,6 +28,7 @@ interface FinanceActionsProps {
   expenses: (Expense & { department: { name: string } | null })[];
   departments: Department[];
   date?: Date;
+  onExportPDF?: () => void;
 }
 
 // ------------------------------------------------------------------
@@ -66,7 +63,7 @@ const CSV_CONFIG = [
   { label: "Precio Unitario", key: "unitPrice", type: "number" }
 ];
 
-export function FinanceActions({ expenses, departments, date = new Date() }: FinanceActionsProps) {
+export function FinanceActions({ expenses, departments, date = new Date(), onExportPDF }: FinanceActionsProps) {
   const router = useRouter();
 
   const [importOpen, setImportOpen] = useState(false);
@@ -103,30 +100,7 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
     link.click();
   };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.text("Reporte de Finanzas", 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 22);
-    doc.text(`Período: ${format(date, "MMMM yyyy", { locale: es })}`, 14, 28);
 
-    const tableRows = expenses.map(exp => [
-      format(new Date(exp.date), "dd/MM"),
-      TYPE_LABELS[exp.type]?.substring(0, 15) || exp.type,
-      exp.description.substring(0, 20),
-      exp.department?.name.substring(0, 10) || "Global",
-      `$${exp.amount}`
-    ]);
-
-    autoTable(doc, {
-      head: [["Fecha", "Tipo", "Desc.", "Depto", "Total"]],
-      body: tableRows,
-      startY: 35,
-      styles: { fontSize: 8 },
-    });
-
-    doc.save(getExportFileName("pdf"));
-  };
 
   // --- Import Logic ---
 
@@ -152,7 +126,16 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        validateAndSetPreview(result.data);
+        // Normalize keys (strip BOM)
+        const normalizedData = result.data.map((row: any) => {
+          const newRow: any = {};
+          Object.keys(row).forEach(key => {
+            const cleanKey = key.trim().replace(/^\uFEFF/, "");
+            newRow[cleanKey] = row[key];
+          });
+          return newRow;
+        });
+        validateAndSetPreview(normalizedData);
         setImportOpen(true);
       },
       error: (err) => alert("Error leyendo CSV: " + err.message)
@@ -277,13 +260,13 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
     setStats(statsParams);
   };
 
-  const handleConfirmImport = async () => {
+  const handleConfirmImport = async (selectedRows: ImportPreviewRow[]) => {
     setImporting(true);
     let success = 0;
     const errors: string[] = [];
 
-    // Filter NEW rows
-    const rowsToImport = previewRows.filter(r => r.status === "NEW");
+    // Filter NEW rows from selection (and SAME if user explicitly attempts to duplicate)
+    const rowsToImport = selectedRows.filter(r => r.status === "NEW" || r.status === "SAME");
 
     for (const rowObj of rowsToImport) {
       const row = rowObj.data;
@@ -345,14 +328,16 @@ export function FinanceActions({ expenses, departments, date = new Date() }: Fin
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-          <DropdownMenuSeparator />
+          {onExportPDF && (
+            <DropdownMenuItem onClick={onExportPDF}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar PDF (Visual)
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={exportToCSV}>
             <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={exportToPDF}>
-            <FileText className="mr-2 h-4 w-4" /> Exportar PDF
-          </DropdownMenuItem>
+
+
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => document.getElementById("finance-file-upload")?.click()}>
             <Upload className="mr-2 h-4 w-4" /> Importar CSV

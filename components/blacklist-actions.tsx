@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Papa from "papaparse";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { format, isValid, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { BlacklistEntry } from "@prisma/client";
@@ -12,8 +10,6 @@ import {
   Download,
   Upload,
   FileSpreadsheet,
-  FileText,
-  FileDown
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -79,34 +75,7 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
     link.click();
   };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
-    doc.text("Reporte de Lista Negra", 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 22);
 
-    const tableRows = data.map(entry => [
-      entry.guestName,
-      entry.guestPhone || "",
-      entry.reason,
-      entry.reportedBy?.name || "Sistema",
-      format(new Date(entry.createdAt), "dd/MM/yyyy"),
-      entry.checkIn ? format(new Date(entry.checkIn), "dd/MM/yyyy") : "-",
-      entry.checkOut ? format(new Date(entry.checkOut), "dd/MM/yyyy") : "-"
-    ]);
-
-    autoTable(doc, {
-      head: [["Huésped", "Teléfono", "Motivo", "Reportado", "Fecha Rep.", "Check-In", "Check-Out"]],
-      body: tableRows,
-      startY: 30,
-      styles: { fontSize: 8 },
-      columnStyles: {
-        2: { cellWidth: 50 } // Motivo wider
-      }
-    });
-
-    doc.save(getExportFileName("pdf"));
-  };
 
   // --- Import Logic ---
 
@@ -132,7 +101,16 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        validateAndSetPreview(result.data);
+        // Normalize keys (strip BOM)
+        const normalizedData = result.data.map((row: any) => {
+          const newRow: any = {};
+          Object.keys(row).forEach(key => {
+            const cleanKey = key.trim().replace(/^\uFEFF/, "");
+            newRow[cleanKey] = row[key];
+          });
+          return newRow;
+        });
+        validateAndSetPreview(normalizedData);
         setImportOpen(true);
       },
       error: (err) => alert("Error leyendo CSV: " + err.message)
@@ -215,12 +193,12 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
     setStats(statsParams);
   };
 
-  const handleConfirmImport = async () => {
+  const handleConfirmImport = async (selectedRows: ImportPreviewRow[]) => {
     setImporting(true);
     let success = 0;
     const errors: string[] = [];
 
-    const rowsToImport = previewRows.filter(r => r.status === "NEW");
+    const rowsToImport = selectedRows.filter(r => r.status === "NEW" || r.status === "SAME");
 
     for (const rowObj of rowsToImport) {
       const row = rowObj.data;
@@ -271,14 +249,11 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={exportToCSV}>
             <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={exportToPDF}>
-            <FileText className="mr-2 h-4 w-4" /> Exportar PDF
-          </DropdownMenuItem>
+
+
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => document.getElementById("blacklist-file-upload")?.click()}>
             <Upload className="mr-2 h-4 w-4" /> Importar CSV

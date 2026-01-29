@@ -4,15 +4,12 @@ import { useState } from "react";
 import { Department } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import Papa from "papaparse";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   Download,
   Upload,
   FileSpreadsheet,
-  FileText,
   FileDown
 } from "lucide-react";
 
@@ -31,12 +28,15 @@ import { ImportPreviewModal, ImportPreviewRow, ImportStats } from "./import-prev
 interface DepartmentsActionsProps {
   data: Department[];
   role?: string;
+  defaultType?: "APARTMENT" | "PARKING";
 }
 
 const CSV_CONFIG = [
   { label: "Nombre", key: "name", type: "string", required: true },
   { label: "Dirección", key: "address", type: "string" },
-  { label: "Alias", key: "alias", type: "string" },
+  { label: "Alias", key: "alias", type: "string" }, // ... existing
+  { label: "Tipo", key: "type", type: "string" }, // Added Type
+  { label: "Descripción Interna", key: "description", type: "string" }, // Added Description
   { label: "Color", key: "color", type: "string" },
   { label: "Activo", key: "isActive", type: "boolean" },
   { label: "Capacidad", key: "maxPeople", type: "number" },
@@ -58,7 +58,7 @@ const CSV_CONFIG = [
   { label: "Notas Inventario", key: "inventoryNotes", type: "string" }
 ];
 
-export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
+export function DepartmentsActions({ data, role, defaultType = "APARTMENT" }: DepartmentsActionsProps) {
   const router = useRouter();
 
   const [importOpen, setImportOpen] = useState(false);
@@ -66,10 +66,13 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
   const [previewRows, setPreviewRows] = useState<ImportPreviewRow[]>([]);
   const [stats, setStats] = useState<ImportStats>({ total: 0, new: 0, updated: 0, same: 0, errors: 0 });
 
+  const entityName = defaultType === "PARKING" ? "Cocheras" : "Departamentos";
+  const fileNamePrefix = defaultType === "PARKING" ? "cocheras" : "departamentos";
+
   // --- Export Logic ---
 
   const getExportFileName = (ext: string) => {
-    return `departamentos_${format(new Date(), "MMMM_yyyy", { locale: es })}.${ext}`;
+    return `${fileNamePrefix}_${format(new Date(), "MMMM_yyyy", { locale: es })}.${ext}`;
   };
 
   const handleExportCSV = () => {
@@ -79,7 +82,11 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
     const headers = CSV_CONFIG.map(c => c.label).join(",");
     const rows = exportData.map(d => {
       return CSV_CONFIG.map(col => {
-        const val = (d as any)[col.key];
+        let val = (d as any)[col.key];
+
+        // Export Type explicitly if present, else fallback to defaultType of context
+        if (col.key === "type") val = (d as any).type || defaultType;
+
         if (col.type === "boolean") return val ? "Si" : "No";
         if (val === null || val === undefined) return "";
         return `"${String(val).replace(/"/g, '""')}"`;
@@ -94,64 +101,16 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
     link.click();
   };
 
-  const handleExportPDF = () => {
-    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
-    doc.text("Reporte de Departamentos", 14, 10);
-    doc.setFontSize(8);
-    doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 16);
 
-    const exportData = data.filter(d => !(d as any).isArchived);
-
-    const tableRows = exportData.map(d => [
-      d.name,
-      d.description || "",
-      d.address || "",
-      d.maxPeople,
-      d.bedCount,
-      `$${d.basePrice}`,
-      `$${d.cleaningFee || 0}`,
-      (d as any).currency || "ARS",
-      d.alias || "",
-      (d as any).allowPets ? "SI" : "NO",
-      d.hasParking ? "SI" : "NO",
-      d.wifiName || "",
-      d.wifiPass || "",
-      (d as any).managerName || "",
-      (d as any).keyLocation || "",     // Typed as any if property not on type yet
-      (d as any).lockBoxCode || "",
-      (d as any).meterLuz || "",
-      (d as any).meterGas || "",
-      (d as any).meterAgua || "",
-      (d as any).ownerName || "",
-      (d as any).inventoryNotes || ""
-    ]);
-
-    autoTable(doc, {
-      startY: 20,
-      head: [[
-        "Nombre", "Desc.", "Dirección", "Cap.", "Camas",
-        "Precio", "Limp.", "Mon.", "Alias",
-        "Pet", "Park", "Wifi", "Pass", "Encargado",
-        "Llaves", "Locker", "Luz", "Gas", "Agua", "Dueño", "Notas"
-      ]],
-      body: tableRows,
-      styles: { fontSize: 5, cellPadding: 1 }, // Very small font for many columns
-      columnStyles: {
-        0: { cellWidth: 15 }, // Nombre
-        1: { cellWidth: 20 }, // Desc
-        2: { cellWidth: 20 }, // Dirección
-        20: { cellWidth: 20 } // Notas
-      }
-    });
-    doc.save(getExportFileName("pdf"));
-  };
 
   // --- Import Logic ---
 
   const downloadTemplate = () => {
     const headers = CSV_CONFIG.map(c => c.label).join(",");
     const example = CSV_CONFIG.map(c => {
-      if (c.key === "name") return "Depto Ejemplo";
+      if (c.key === "name") return defaultType === "PARKING" ? "Cochera A" : "Depto Ejemplo";
+      if (c.key === "type") return defaultType;
+      if (c.key === "description") return "Descripción interna del departamento o cochera";
       if (c.type === "number") return "4";
       if (c.type === "currency") return "50000";
       if (c.type === "boolean") return "Si";
@@ -161,7 +120,7 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "plantilla_departamentos.csv";
+    link.download = `plantilla_${fileNamePrefix}.csv`;
     link.click();
   };
 
@@ -176,7 +135,16 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        validateAndSetPreview(result.data);
+        // Normalize keys (strip BOM)
+        const normalizedData = result.data.map((row: any) => {
+          const newRow: any = {};
+          Object.keys(row).forEach(key => {
+            const cleanKey = key.trim().replace(/^\uFEFF/, "");
+            newRow[cleanKey] = row[key];
+          });
+          return newRow;
+        });
+        validateAndSetPreview(normalizedData);
         setImportOpen(true);
       },
       error: (err) => alert("Error leyendo CSV: " + err.message)
@@ -194,17 +162,38 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
 
       // 1. Map Columns
       CSV_CONFIG.forEach(config => {
-        // Find matching header key (case-insensitive fuzzy match)
-        const rowKey = Object.keys(row).find(k =>
-          k.toLowerCase().replace(/[^a-z]/g, "") === config.label.toLowerCase().replace(/[^a-z]/g, "")
-        );
+        // Find matching header key (case-insensitive fuzzy match with accent normalization)
+        const normalizeHeader = (h: string) =>
+          h.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
-        let val = row[rowKey || ""]?.trim();
+        const configLabelNorm = normalizeHeader(config.label);
 
-        if (config.type === "number" || config.type === "currency") {
-          val = val ? parseFloat(val) : 0;
-        } else if (config.type === "boolean") {
-          val = ["si", "yes", "true", "1"].includes(val?.toLowerCase());
+        const rowKey = Object.keys(row).find(k => {
+          const keyNorm = normalizeHeader(k);
+          // Exact match on label
+          if (keyNorm === configLabelNorm) return true;
+          // Match on key (e.g. "description" vs "description")
+          if (keyNorm === normalizeHeader(config.key)) return true;
+
+          // Common Aliases
+          if (config.key === "description") {
+            if (keyNorm === "desc" || keyNorm === "descinterna" || keyNorm === "descripcion" || keyNorm === "descripcioninterna") return true;
+            if (keyNorm.includes("interna") || keyNorm.includes("descrip")) return true;
+          }
+          if (config.key === "lockBoxCode" && (keyNorm === "codlocker" || keyNorm === "locker")) return true;
+          return false;
+        });
+
+        // Note: If header not found, val is undefined. If found but empty, it's ""
+        let val: any = undefined;
+        if (rowKey) {
+          val = row[rowKey]?.trim() || "";
+          // Boolean handling
+          if (config.type === "boolean") {
+            val = ["si", "yes", "true", "1"].includes(val.toLowerCase());
+          } else if (config.type === "number" || config.type === "currency") {
+            val = val ? parseFloat(val) : 0;
+          }
         }
 
         dept[config.key] = val;
@@ -213,6 +202,17 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
       // 2. Validate Required
       if (!dept.name) rowErrors.push("Nombre es obligatorio");
 
+      // 3. Strict Type Check
+      // If CSV has a specific type, check compatibility. If column missing (val=undefined), ignore check?
+      // Safest to assume if "Type" column is missing, we default to context.
+      // If "Type" column is present, we validate.
+      if (dept.type !== undefined && dept.type.toUpperCase() !== defaultType) {
+        rowErrors.push(`Tipo incorrecto: se encontró ${dept.type}, se espera ${defaultType}`);
+      } else {
+        // Force context type if missing or valid
+        dept.type = defaultType;
+      }
+
       if (rowErrors.length > 0) {
         statsParams.errors++;
         preview.push({
@@ -220,7 +220,7 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
           data: { ...dept, _errors: rowErrors }
         });
       } else {
-        // 3. Check for duplicates/updates
+        // 4. Check for duplicates/updates
         const existing = data.find(d =>
           !(d as any).isArchived &&
           d.name.trim().toLowerCase() === String(dept.name || "").trim().toLowerCase()
@@ -229,15 +229,31 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
         if (existing) {
           // Check if any field differs
           let hasChanges = false;
+          const diffs: any = {};
+
           CSV_CONFIG.forEach(config => {
-            if (config.key === "name") return; // Key match
+            if (config.key === "name" || config.key === "type") return; // Key match & Type controlled
+
             const newVal = dept[config.key];
+            if (newVal === undefined) return; // Skip if column was missing in CSV
+
             const oldVal = (existing as any)[config.key];
 
-            // Simple comparison
-            if (String(newVal) !== String(oldVal ?? (config.type === "number" ? 0 : ""))) {
-              // Loose equality for numbers/strings
+            // Normalize for comparison
+            const normNew = String(newVal).trim(); // newVal is guaranteed not undefined here
+
+            let normOld = "";
+            if (config.type === "currency" || config.type === "number") {
+              normOld = String(oldVal ?? 0).trim();
+              // Handle 0 vs "0"
+              if (parseFloat(normNew) === parseFloat(normOld)) return;
+            } else {
+              normOld = String(oldVal ?? "").trim();
+            }
+
+            if (normNew !== normOld) {
               hasChanges = true;
+              diffs[config.key] = { old: normOld, new: normNew };
             }
           });
 
@@ -245,7 +261,7 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
             statsParams.updated++;
             preview.push({
               status: "UPDATE",
-              data: { ...dept, _dbId: existing.id }
+              data: { ...dept, _dbId: existing.id, _diff: diffs }
             });
           } else {
             statsParams.same++;
@@ -268,13 +284,13 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
     setStats(statsParams);
   };
 
-  const handleConfirmImport = async () => {
+  const handleConfirmImport = async (selectedRows: ImportPreviewRow[]) => {
     setImporting(true);
     let success = 0;
     const globalErrors: string[] = [];
 
-    // Filter NEW and UPDATE
-    const rowsToProcess = previewRows.filter(r => r.status === "NEW" || r.status === "UPDATE");
+    // Process only selected rows
+    const rowsToProcess = selectedRows;
 
     for (const rowObj of rowsToProcess) {
       const payload = rowObj.data;
@@ -284,11 +300,12 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
         const body = {
           color: "#3b82f6",
           isActive: true,
-          ...dataFields
+          ...dataFields,
+          type: defaultType // Enforce current context type
         };
 
         let res;
-        if (rowObj.status === "UPDATE" && _dbId) {
+        if ((rowObj.status === "UPDATE" || rowObj.status === "SAME") && _dbId) {
           res = await fetch(`/api/departments/${_dbId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -318,15 +335,20 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
     router.refresh();
   };
 
+  // Dynamic columns from CSV_CONFIG to show ALL attributes
   const columns = [
-    { header: "Nombre", accessorKey: "name" },
-    { header: "Dirección", accessorKey: "address" },
-    {
-      header: "Precio",
-      accessorKey: "basePrice",
-      cell: (val: any) => <span>${val}</span>
-    },
-    { header: "WiFi", accessorKey: "wifiName" },
+    ...CSV_CONFIG.map(config => ({
+      header: config.label,
+      accessorKey: config.key,
+      cell: (val: any) => {
+        if (config.type === "boolean") return val ? "Si" : "No";
+        if (config.type === "currency") return <span>${val}</span>;
+        if (typeof val === "string" && val.length > 30) {
+          return <span className="block max-w-[150px] truncate text-xs" title={val}>{val}</span>;
+        }
+        return <span className="text-xs">{val}</span>;
+      }
+    })),
     {
       header: "Error",
       accessorKey: "_errors",
@@ -343,14 +365,10 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleExportCSV}>
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV {entityName}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExportPDF}>
-            <FileText className="mr-2 h-4 w-4" /> Exportar PDF
-          </DropdownMenuItem>
+
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => document.getElementById("dept-file-upload")?.click()}>
             <Upload className="mr-2 h-4 w-4" /> Importar CSV
@@ -371,7 +389,7 @@ export function DepartmentsActions({ data, role }: DepartmentsActionsProps) {
         onClose={() => setImportOpen(false)}
         onConfirm={handleConfirmImport}
         isImporting={importing}
-        title="Importar Departamentos"
+        title={`Importar ${entityName}`}
         rows={previewRows}
         columns={columns}
         stats={stats}

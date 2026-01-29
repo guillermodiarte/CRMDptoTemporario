@@ -130,7 +130,7 @@ export function ImportPreviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[98vw] w-full max-h-[95vh] flex flex-col p-0 gap-0">
+      <DialogContent className="!max-w-4xl w-full max-h-[95vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -190,7 +190,7 @@ export function ImportPreviewModal({
                   {rows.map((row, idx) => (
                     <TableRow key={idx} className={row.status === "SAME" ? "opacity-60 bg-gray-50/30" : ""}>
                       <TableCell className="w-[40px] p-2 text-center">
-                        {(row.status === "NEW" || row.status === "UPDATE") && (
+                        {(row.status === "NEW" || row.status === "UPDATE" || row.status === "SAME") && (
                           <Checkbox
                             checked={selectedIndices.has(idx)}
                             onCheckedChange={() => toggleRow(idx)}

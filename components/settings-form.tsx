@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +23,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, AlertCircle, Plus, Trash2, Pencil, Power, PowerOff } from "lucide-react";
+// removed jsPDF
+import { CheckCircle2, AlertCircle, Plus, Trash2, Pencil, Power, PowerOff, FileSpreadsheet } from "lucide-react";
+import Papa from "papaparse";
+// removed autoTable
+import { ImportPreviewModal, ImportPreviewRow, ImportStats } from "./import-preview-modal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 export function SettingsForm() {
   const { data: session } = useSession();
@@ -48,6 +62,12 @@ export function SettingsForm() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Import/Export State
+  const [importOpen, setImportOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [previewRows, setPreviewRows] = useState<ImportPreviewRow[]>([]);
+  const [stats, setStats] = useState<ImportStats>({ total: 0, new: 0, updated: 0, same: 0, errors: 0 });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -214,6 +234,147 @@ export function SettingsForm() {
     }
   };
 
+
+  // --- Supplies Import/Export Logic ---
+
+  const handleExportSupplies = () => {
+    const headers = "Nombre,Costo,Activo";
+    const rows = supplies.map(s => `"${s.name.replace(/"/g, '""')}",${s.cost},${s.isActive ? "SI" : "NO"}`);
+    const csvContent = "\uFEFF" + [headers, ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `configuracion_insumos_${format(new Date(), "MMMM_yyyy", { locale: es })}.csv`;
+    link.click();
+  };
+
+  const handleSuppliesFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPreviewRows([]);
+    setStats({ total: 0, new: 0, updated: 0, same: 0, errors: 0 });
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        // BOM Fix
+        const normalizedData = result.data.map((row: any) => {
+          const newRow: any = {};
+          Object.keys(row).forEach(key => {
+            const cleanKey = key.trim().replace(/^\uFEFF/, "");
+            newRow[cleanKey] = row[key];
+          });
+          return newRow;
+        });
+        validateAndSetSuppliesPreview(normalizedData);
+        setImportOpen(true);
+      },
+      error: (err) => alert("Error: " + err.message)
+    });
+    e.target.value = "";
+  };
+
+  const validateAndSetSuppliesPreview = (rows: any[]) => {
+    const preview: ImportPreviewRow[] = [];
+    let statsParams = { total: rows.length, new: 0, updated: 0, same: 0, errors: 0 };
+
+    rows.forEach(row => {
+      const entry: any = {};
+      const rowErrors: string[] = [];
+
+      // Map Keys
+      const keys = Object.keys(row);
+      const nameKey = keys.find(k => k.toLowerCase() === "nombre" || k.toLowerCase() === "name");
+      const costKey = keys.find(k => k.toLowerCase() === "costo" || k.toLowerCase() === "cost");
+      const activeKey = keys.find(k => k.toLowerCase() === "activo" || k.toLowerCase().includes("active"));
+
+      entry.name = row[nameKey || ""]?.trim();
+      entry.cost = row[costKey || ""];
+      const activeVal = row[activeKey || ""]?.toString().toLowerCase();
+      entry.isActive = ["si", "yes", "true", "1"].includes(activeVal);
+
+      if (!entry.name) rowErrors.push("Falta Nombre");
+      if (!entry.cost || isNaN(parseFloat(entry.cost))) rowErrors.push("Costo inválido");
+      else entry.cost = parseFloat(entry.cost);
+
+      if (rowErrors.length > 0) {
+        statsParams.errors++;
+        preview.push({ status: "ERROR", data: { ...entry, _errors: rowErrors } });
+      } else {
+        const existing = supplies.find(s => s.name.toLowerCase() === entry.name.toLowerCase());
+        if (existing) {
+          const costChanged = existing.cost !== entry.cost;
+          const activeChanged = existing.isActive !== entry.isActive;
+
+          if (costChanged || activeChanged) {
+            statsParams.updated++;
+            const diffs: any = {};
+            if (costChanged) diffs.cost = { old: existing.cost, new: entry.cost };
+            if (activeChanged) diffs.isActive = { old: existing.isActive, new: entry.isActive };
+
+            preview.push({
+              status: "UPDATE",
+              data: { ...entry, id: existing.id, _diff: diffs }
+            });
+          } else {
+            statsParams.same++;
+            preview.push({ status: "SAME", data: { ...entry, id: existing.id } });
+          }
+        } else {
+          statsParams.new++;
+          preview.push({ status: "NEW", data: entry });
+        }
+      }
+    });
+
+    setPreviewRows(preview);
+    setStats(statsParams);
+  };
+
+  const handleConfirmSuppliesImport = async (selectedRows: ImportPreviewRow[]) => {
+    setImporting(true);
+    let success = 0;
+    const errors: string[] = [];
+
+    const rowsToProcess = selectedRows.filter(r => r.status === "NEW" || r.status === "UPDATE" || r.status === "SAME");
+
+    for (const rowObj of rowsToProcess) {
+      const row = rowObj.data;
+      try {
+        if ((rowObj.status === "UPDATE" || rowObj.status === "SAME") && row.id) {
+          await fetch("/api/supplies", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: row.id, name: row.name, cost: row.cost, isActive: row.isActive })
+          });
+        } else {
+          await fetch("/api/supplies", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: row.name, cost: row.cost })
+          });
+        }
+        success++;
+      } catch (e: any) {
+        errors.push(`Error en ${row.name}: ${e.message}`);
+      }
+    }
+
+    // Refresh
+    const res = await fetch("/api/supplies");
+    if (res.ok) {
+      const data = await res.json();
+      setSupplies(data.supplies || []);
+    }
+
+    setImporting(false);
+    setImportOpen(false);
+    if (errors.length > 0) alert("Errores:\n" + errors.join("\n"));
+  };
+
   // Calculate Total Active Supplies
   const totalSuppliesCost = supplies.filter(s => s.isActive).reduce((acc, curr) => acc + curr.cost, 0);
 
@@ -320,11 +481,54 @@ export function SettingsForm() {
         {/* Main Column: Supplies */}
         <div className="md:col-span-2 space-y-6">
           <Card className="h-full">
-            <CardHeader>
-              <CardTitle>Gastos de Insumos</CardTitle>
-              <CardDescription>Gestión de insumos globales (se suman automáticamente a nuevas reservas).</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle>Gastos de Insumos</CardTitle>
+                <CardDescription>Gestión de insumos globales.</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Download className="h-4 w-4" /> Exportar / Importar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportSupplies}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => document.getElementById("supplies-file-upload")?.click()}>
+                      <Upload className="mr-2 h-4 w-4" /> Importar CSV
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <input
+                  id="supplies-file-upload"
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={handleSuppliesFileUpload}
+                />
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
+
+              <ImportPreviewModal
+                isOpen={importOpen}
+                onClose={() => setImportOpen(false)}
+                onConfirm={handleConfirmSuppliesImport}
+                isImporting={importing}
+                title="Importar Insumos"
+                rows={previewRows}
+                columns={[
+                  { header: "Nombre", accessorKey: "name" },
+                  { header: "Costo", accessorKey: "cost", cell: (val: any) => <span>${val}</span> },
+                  { header: "Activo", accessorKey: "isActive", cell: (val: any) => val ? "SI" : "NO" },
+                  { header: "Error", accessorKey: "_errors", cell: (val: any) => val ? <span className="text-red-600 font-bold text-xs">{val.join(", ")}</span> : null }
+                ]}
+                stats={stats}
+              />
 
               <div className="flex flex-col md:flex-row gap-4 items-end bg-slate-50 p-4 rounded-md border">
                 <div className="grid gap-1.5 w-full md:flex-1">

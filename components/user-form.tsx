@@ -27,7 +27,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { User, Role } from "@prisma/client";
 import Resizer from "react-image-file-resizer";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Trash2 } from "lucide-react";
 
 
 const formSchema = z.object({
@@ -218,7 +218,19 @@ export function UserForm({ initialData, setOpen, currentUserId }: UserFormProps)
               <FormControl>
                 <div className="flex items-center gap-4">
                   {field.value ? (
-                    <img src={field.value} alt="Preview" className="w-12 h-12 rounded-full object-cover border" />
+                    <div className="relative">
+                      <img src={field.value} alt="Preview" className="w-12 h-12 rounded-full object-cover border" />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                        onClick={() => field.onChange("")}
+                        title="Eliminar imagen"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-gray-200 border flex items-center justify-center text-gray-400">?</div>
                   )}
@@ -227,6 +239,7 @@ export function UserForm({ initialData, setOpen, currentUserId }: UserFormProps)
                     accept="image/*"
                     onChange={onFileChange}
                     className="w-full"
+                    value={""} // Always clear input to allow re-selecting same file or clearing it
                   />
                 </div>
               </FormControl>
