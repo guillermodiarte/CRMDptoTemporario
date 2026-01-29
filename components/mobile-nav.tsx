@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,25 @@ interface MobileNavProps {
 
 export function MobileNav({ role, user }: MobileNavProps) {
   const [open, setOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Prevent hydration mismatch for Radix UI primitives
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <Button
+        variant="outline"
+        size="icon"
+        className="shrink-0 md:hidden"
+      >
+        <Menu className="h-5 w-5" />
+        <span className="sr-only">Toggle navigation menu</span>
+      </Button>
+    );
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

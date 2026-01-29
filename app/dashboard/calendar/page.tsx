@@ -6,15 +6,24 @@ export default async function CalendarPage({ searchParams }: { searchParams: { d
   // Default to current month window
   const departments = await prisma.department.findMany({
     where: { isActive: true },
-    orderBy: { name: 'asc' }
+    orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      images: true,
+      address: true,
+      bedCount: true,
+      isActive: true,
+      color: true
+    }
   });
 
   // Fetch reservations server-side or let client fetch?
   // Server fetching is better.
-  // Window: Start of current month -> End of next month (2 month view)
+  // Window: Fetch enough for Month view navigation buffering
   const today = new Date();
-  const start = startOfMonth(today);
-  const end = endOfMonth(addMonths(today, 1));
+  const start = startOfMonth(subMonths(today, 1));
+  const end = endOfMonth(addMonths(today, 2));
 
   const reservations = await prisma.reservation.findMany({
     where: {
@@ -34,7 +43,15 @@ export default async function CalendarPage({ searchParams }: { searchParams: { d
       guestName: true,
       guestPhone: true,
       status: true,
-      paymentStatus: true
+      paymentStatus: true,
+      totalAmount: true,
+      depositAmount: true,
+      currency: true,
+      department: {
+        select: {
+          name: true
+        }
+      }
     }
   });
 
@@ -53,11 +70,11 @@ export default async function CalendarPage({ searchParams }: { searchParams: { d
       return resName === entryName || (entry.guestPhone && res.guestPhone === entry.guestPhone); // Phone is usually safer
     });
 
-    return { ...res, isBlacklisted };
+    return { ...res, isBlacklisted, departmentName: res.department.name };
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] space-y-4">
+    <div className="flex flex-col h-[calc(100vh-80px)] space-y-2">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Calendario</h2>
       </div>
