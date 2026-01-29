@@ -519,13 +519,17 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             });
                           }
 
-                          actions.push({
-                            label: "Editar",
-                            icon: <Pencil className="h-4 w-4" />,
-                            onClick: () => handleEdit(res),
-                            className: "hover:bg-slate-100",
-                            title: "Editar"
-                          });
+                          const canEdit = res.department.isActive && !res.department.isArchived;
+
+                          if (canEdit) {
+                            actions.push({
+                              label: "Editar",
+                              icon: <Pencil className="h-4 w-4" />,
+                              onClick: () => handleEdit(res),
+                              className: "hover:bg-slate-100",
+                              title: "Editar"
+                            });
+                          }
 
                           actions.push({
                             label: "Eliminar",
@@ -722,9 +726,11 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(res)} className="h-10 px-3 text-gray-600 bg-white border-gray-300">
-                            <Pencil className="h-4 w-4 mr-2" /> Editar
-                          </Button>
+                          {res.department.isActive && !res.department.isArchived && (
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(res)} className="h-10 px-3 text-gray-600 bg-white border-gray-300">
+                              <Pencil className="h-4 w-4 mr-2" /> Editar
+                            </Button>
+                          )}
                           <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(res.id)} className="h-10 px-3">
                             <Trash className="h-4 w-4 mr-2" /> Eliminar
                           </Button>
