@@ -15,7 +15,8 @@ export default async function FinancePage({
   if (!session) redirect("/login");
   const userRole = (session?.user as any)?.role;
 
-  const today = new Date();
+  // Adjust for Argentina Time (UTC-3)
+  const today = new Date(Date.now() - 3 * 60 * 60 * 1000);
   const params = await searchParams;
   const selectedYear = params?.year ? parseInt(params.year) : today.getFullYear();
   const selectedMonth = params?.month ? parseInt(params.month) : today.getMonth();

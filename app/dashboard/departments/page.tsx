@@ -20,7 +20,7 @@ export default async function DepartmentsPage() {
     <div className="flex-1 space-y-4">
       <DepartmentsClient
         initialDepartments={departments}
-        role={session?.user?.role}
+        role={userRole}
         totalSuppliesCost={totalSuppliesCost}
         defaultType="APARTMENT"
         title="Departamentos"

@@ -190,7 +190,11 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   // "Strictly Date-Based... 1. Reserva del día de hoy... 2. Próxima reserva futura"
   // Past start dates are excluded.
   const nextReservation = sortedData.find(r => {
-    const checkInDate = new Date(r.checkIn);
+    // Handle UTC to Local conversion robustly
+    // We want "2026-02-01" stored in DB to technically be "2026-02-01" Local, not Jan 31st 21:00
+    const dateVal = new Date(r.checkIn);
+    // Use getUTCDate to ensure we get the 'stored' day
+    const checkInDate = new Date(dateVal.getUTCFullYear(), dateVal.getUTCMonth(), dateVal.getUTCDate());
     checkInDate.setHours(0, 0, 0, 0);
     return checkInDate >= today;
   });

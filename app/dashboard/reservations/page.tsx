@@ -11,7 +11,8 @@ export default async function ReservationsPage({
   const session = await auth();
   const userRole = (session?.user as any)?.role;
   const params = await searchParams;
-  const now = new Date();
+  // Adjust for Argentina Time (UTC-3) to prevent "next day" issues at night
+  const now = new Date(Date.now() - 3 * 60 * 60 * 1000);
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 

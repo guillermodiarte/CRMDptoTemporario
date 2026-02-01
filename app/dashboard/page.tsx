@@ -11,7 +11,8 @@ import { WeatherWidget } from "@/components/weather-widget";
 import { NotesWidget } from "@/components/notes-widget";
 
 export default async function DashboardPage() {
-  const today = new Date();
+  // Adjust for Argentina Time (UTC-3)
+  const today = new Date(Date.now() - 3 * 60 * 60 * 1000);
   const dollarData = await getFullDollarData();
   const weatherData = await getWeatherData();
   const dollarRate = await getDollarRate();

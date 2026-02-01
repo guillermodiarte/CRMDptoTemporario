@@ -99,7 +99,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
   };
 
   // Filter out archived departments
-  const visibleData = departments.filter(d => !(d as any).isArchived);
+  const visibleData = departments.filter(d => !d.isArchived);
 
   return (
     <>
@@ -183,7 +183,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                       <div className="min-w-0">
                         <div className="truncate font-semibold">
                           {dept.name}
-                          {(dept as any).alias && <span className="text-muted-foreground font-normal ml-1">({(dept as any).alias})</span>}
+                          {dept.alias && <span className="text-muted-foreground font-normal ml-1">({dept.alias})</span>}
                         </div>
                         <div className="text-xs text-muted-foreground truncate">{dept.address}</div>
                       </div>
@@ -191,7 +191,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                   </TableCell>
                   {defaultType !== 'PARKING' && (
                     <TableCell>
-                      {(dept as any).type === 'PARKING' ? (
+                      {dept.type === 'PARKING' ? (
                         <Badge variant="outline" className="text-xs bg-slate-50">Cochera</Badge>
                       ) : (
                         <>{dept.maxPeople}p / {dept.bedCount}c</>
@@ -209,18 +209,18 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                     </TableCell>
                   )}
                   <TableCell className="text-xs">
-                    {(dept as any).lockBoxCode ? (
+                    {dept.lockBoxCode ? (
                       <div className="flex items-center gap-1" title="Código Locker">
                         <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="font-mono select-all">{(dept as any).lockBoxCode}</span>
+                        <span className="font-mono select-all">{dept.lockBoxCode}</span>
                       </div>
                     ) : "-"}
                   </TableCell>
                   <TableCell className="text-xs">
                     <div className="flex gap-1 items-center">
-                      {(dept as any).googleMapsLink && (
+                      {dept.googleMapsLink && (
                         <a
-                          href={(dept as any).googleMapsLink}
+                          href={dept.googleMapsLink}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Google Maps"
@@ -229,9 +229,9 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                           <img src="/icons/maps.png" alt="Maps" className="w-6 h-6 object-contain" />
                         </a>
                       )}
-                      {(dept as any).airbnbLink && (
+                      {dept.airbnbLink && (
                         <a
-                          href={(dept as any).airbnbLink}
+                          href={dept.airbnbLink}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Airbnb"
@@ -240,9 +240,9 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                           <img src="/icons/airbnb.png" alt="Airbnb" className="w-6 h-6 object-contain" />
                         </a>
                       )}
-                      {(dept as any).bookingLink && (
+                      {dept.bookingLink && (
                         <a
-                          href={(dept as any).bookingLink}
+                          href={dept.bookingLink}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Booking.com"
@@ -251,7 +251,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                           <img src="/icons/booking.png" alt="Booking" className="w-6 h-6 object-contain" />
                         </a>
                       )}
-                      {!((dept as any).googleMapsLink || (dept as any).airbnbLink || (dept as any).bookingLink) && <span className="text-muted-foreground ml-2">-</span>}
+                      {!(dept.googleMapsLink || dept.airbnbLink || dept.bookingLink) && <span className="text-muted-foreground ml-2">-</span>}
                     </div>
                   </TableCell>
                   {defaultType === 'PARKING' ? (
@@ -330,7 +330,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                       <div className="min-w-0 flex-1">
                         <div className="font-bold text-base whitespace-normal break-words leading-tight">
                           {dept.name}
-                          {(dept as any).alias && <span className="text-muted-foreground font-normal ml-1">({(dept as any).alias})</span>}
+                          {dept.alias && <span className="text-muted-foreground font-normal ml-1">({dept.alias})</span>}
                         </div>
                         <div className="text-xs text-muted-foreground whitespace-normal break-words mt-0.5">{dept.address}</div>
                       </div>
@@ -393,11 +393,11 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                   )}
 
                   {/* Keys/Locker */}
-                  {(dept as any).lockBoxCode && (
+                  {dept.lockBoxCode && (
                     <div className="col-span-2 flex items-center gap-2 border px-3 py-2 rounded bg-background text-sm">
                       <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="text-muted-foreground">Locker:</span>
-                      <span className="font-mono font-medium select-all">{(dept as any).lockBoxCode}</span>
+                      <span className="font-mono font-medium select-all">{dept.lockBoxCode}</span>
                     </div>
                   )}
                 </div>
@@ -406,18 +406,18 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-1 pl-3">
                   {/* Links Row */}
                   <div className="flex gap-3">
-                    {(dept as any).googleMapsLink && (
-                      <a href={(dept as any).googleMapsLink} target="_blank" rel="noopener noreferrer">
+                    {dept.googleMapsLink && (
+                      <a href={dept.googleMapsLink} target="_blank" rel="noopener noreferrer">
                         <img src="/icons/maps.png" alt="Maps" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
                       </a>
                     )}
-                    {(dept as any).airbnbLink && (
-                      <a href={(dept as any).airbnbLink} target="_blank" rel="noopener noreferrer">
+                    {dept.airbnbLink && (
+                      <a href={dept.airbnbLink} target="_blank" rel="noopener noreferrer">
                         <img src="/icons/airbnb.png" alt="Airbnb" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
                       </a>
                     )}
-                    {(dept as any).bookingLink && (
-                      <a href={(dept as any).bookingLink} target="_blank" rel="noopener noreferrer">
+                    {dept.bookingLink && (
+                      <a href={dept.bookingLink} target="_blank" rel="noopener noreferrer">
                         <img src="/icons/booking.png" alt="Booking" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
                       </a>
                     )}
