@@ -5,16 +5,21 @@ import { NextResponse } from 'next/server';
 const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
-  // CORS Handling
-  const origin = req.headers.get('origin') || '*';
+  const origin = req.headers.get('origin');
 
   // Handle OPTIONS request (Preflight)
   if (req.method === 'OPTIONS') {
     const response = new NextResponse(null, { status: 200 });
-    response.headers.set('Access-Control-Allow-Origin', origin);
+    if (origin) {
+      response.headers.set('Access-Control-Allow-Origin', origin);
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
+    } else {
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      // Do NOT set Access-Control-Allow-Credentials if origin is '*'
+    }
+
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version');
-    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version, Cookie');
     return response;
   }
 
@@ -32,10 +37,16 @@ export default auth((req) => {
   // In Middleware, we can return NextResponse.next() and add headers.
 
   const response = NextResponse.next();
-  response.headers.set('Access-Control-Allow-Origin', origin);
-  response.headers.set('Access-Control-Allow-Credentials', 'true');
+
+  if (origin) {
+    response.headers.set('Access-Control-Allow-Origin', origin);
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+  } else {
+    response.headers.set('Access-Control-Allow-Origin', '*');
+  }
+
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version, Cookie');
 
   return response;
 });
