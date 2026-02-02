@@ -28,6 +28,8 @@ import { Logo } from "@/components/logo";
 import { MobileNav } from "@/components/mobile-nav";
 import Image from "next/image";
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -43,6 +45,13 @@ export default async function DashboardLayout({
 
   const role = user?.role;
   const userImage = user?.image;
+
+  // Fetch System Settings for Menu Visibility
+  const showParkingSetting = await prisma.systemSettings.findUnique({
+    where: { key: "SHOW_PARKING_MENU" }
+  });
+  const showParking = showParkingSetting?.value !== "false"; // Default true
+
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[240px_1fr] lg:grid-cols-[280px_1fr]">
@@ -89,13 +98,15 @@ export default async function DashboardLayout({
                 <Building className="h-5 w-5 text-blue-500" />
                 Departamentos
               </Link>
-              <Link
-                href="/dashboard/parking"
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-              >
-                <Car className="h-5 w-5 text-orange-500" />
-                Cocheras
-              </Link>
+              {showParking && (
+                <Link
+                  href="/dashboard/parking"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                >
+                  <Car className="h-5 w-5 text-orange-500" />
+                  Cocheras
+                </Link>
+              )}
               <Link
                 href="/dashboard/finance"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
@@ -134,7 +145,7 @@ export default async function DashboardLayout({
       </div>
       <div className="flex flex-col">
         <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-muted/40 px-4 backdrop-blur-md lg:h-[60px] lg:px-6">
-          <MobileNav role={role} user={user} />
+          <MobileNav role={role} user={user} showParking={showParking} />
           <div className="w-full flex-1">
             <form action="/dashboard/search">
               <div className="relative">

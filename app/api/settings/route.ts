@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
+import { revalidatePath } from "next/cache";
 
 export async function GET() {
   const session = await auth();
@@ -9,18 +10,20 @@ export async function GET() {
   try {
     const settings = await prisma.systemSettings.findMany({
       where: {
-        key: { in: ["DEFAULT_CLEANING_FEE", "RESERVATION_YEAR_START", "RESERVATION_YEAR_END"] }
+        key: { in: ["DEFAULT_CLEANING_FEE", "RESERVATION_YEAR_START", "RESERVATION_YEAR_END", "SHOW_PARKING_MENU"] }
       },
     });
 
     const cleaningFee = settings.find(s => s.key === "DEFAULT_CLEANING_FEE")?.value || "5000";
     const startYear = settings.find(s => s.key === "RESERVATION_YEAR_START")?.value || "2026";
     const endYear = settings.find(s => s.key === "RESERVATION_YEAR_END")?.value || "2036";
+    const showParking = settings.find(s => s.key === "SHOW_PARKING_MENU")?.value !== "false"; // Default true
 
     return NextResponse.json({
       cleaningFee: parseFloat(cleaningFee),
       startYear: parseInt(startYear),
-      endYear: parseInt(endYear)
+      endYear: parseInt(endYear),
+      showParking
     });
   } catch (error) {
     console.error(error);
@@ -67,7 +70,17 @@ export async function PUT(req: Request) {
       }));
     }
 
+    if (body.showParking !== undefined) {
+      updates.push(prisma.systemSettings.upsert({
+        where: { key: "SHOW_PARKING_MENU" },
+        update: { value: String(body.showParking), updatedBy: session.user?.email || "unknown" },
+        create: { key: "SHOW_PARKING_MENU", value: String(body.showParking), updatedBy: session.user?.email || "unknown" },
+      }));
+    }
+
     await prisma.$transaction(updates);
+
+    revalidatePath("/dashboard", "layout"); // Force layout refresh to update menu
 
     return NextResponse.json({ success: true });
   } catch (error) {

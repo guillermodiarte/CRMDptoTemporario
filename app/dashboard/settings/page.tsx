@@ -20,5 +20,9 @@ export default async function SettingsPage() {
     redirect("/dashboard");
   }
 
-  return <SettingsForm />;
+  const activeParkingCount = await prisma.department.count({
+    where: { type: "PARKING", isActive: true }
+  });
+
+  return <SettingsForm activeParkingCount={activeParkingCount} />;
 }

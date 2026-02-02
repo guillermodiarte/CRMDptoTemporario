@@ -37,7 +37,13 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-export function SettingsForm() {
+import { Switch } from "@/components/ui/switch";
+
+interface SettingsFormProps {
+  activeParkingCount?: number;
+}
+
+export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,6 +51,7 @@ export function SettingsForm() {
   // Settings State
   const [startYear, setStartYear] = useState<string>("2026");
   const [endYear, setEndYear] = useState<string>("2036");
+  const [showParking, setShowParking] = useState<boolean>(true);
 
   // Supplies State
   const [supplies, setSupplies] = useState<any[]>([]);
@@ -81,6 +88,7 @@ export function SettingsForm() {
           const data = await settingsRes.json();
           setStartYear(String(data.startYear || 2026));
           setEndYear(String(data.endYear || 2036));
+          setShowParking(data.showParking !== false);
         }
 
         if (suppliesRes.ok) {
@@ -116,7 +124,8 @@ export function SettingsForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           startYear,
-          endYear
+          endYear,
+          showParking
         }),
       });
 
@@ -126,6 +135,40 @@ export function SettingsForm() {
       setTimeout(() => setSuccess(null), 3000);
     } catch {
       setError("Error al guardar.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleParkingToggle = async (val: boolean) => {
+    setShowParking(val);
+    setSaving(true);
+
+    // Optimistic UI update already happened via setShowParking
+    // Now trigger background save
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startYear,
+          endYear,
+          showParking: val
+        }),
+      });
+
+      if (!res.ok) {
+        // Revert on failure
+        setShowParking(!val);
+        throw new Error("Failed");
+      }
+
+      router.refresh();
+      setSuccess("Visibilidad de cocheras actualizada.");
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (e) {
+      console.error(e);
+      setError("Error al guardar preferencia.");
     } finally {
       setSaving(false);
     }
@@ -681,6 +724,31 @@ export function SettingsForm() {
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                   Guardar
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Menu Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Menú del Sistema</CardTitle>
+              <CardDescription>Opciones de visibilidad del menú lateral.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between space-x-2 border p-3 rounded-md">
+                <div className="flex flex-col space-y-1">
+                  <span className="font-medium">Menú Cocheras</span>
+                  <span className="text-xs text-muted-foreground">
+                    {activeParkingCount > 0
+                      ? `Hay ${activeParkingCount} cocheras activas. No se puede ocultar.`
+                      : "Mostrar u ocultar 'Cocheras' en el menú."}
+                  </span>
+                </div>
+                <Switch
+                  checked={showParking}
+                  onCheckedChange={handleParkingToggle}
+                  disabled={activeParkingCount > 0 && showParking}
+                />
               </div>
             </CardContent>
           </Card>

@@ -24,10 +24,11 @@ import { UserMenu } from "@/components/user-menu";
 
 interface MobileNavProps {
   role: string | undefined;
-  user: any; // Using any to match existing prop usage if strictly typed elsewhere, but User type is better
+  user: any;
+  showParking: boolean;
 }
 
-export function MobileNav({ role, user }: MobileNavProps) {
+export function MobileNav({ role, user, showParking }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -110,14 +111,16 @@ export function MobileNav({ role, user }: MobileNavProps) {
             <Building className="h-5 w-5 text-blue-500" />
             Departamentos
           </Link>
-          <Link
-            href="/dashboard/parking"
-            className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-            onClick={() => setOpen(false)}
-          >
-            <Car className="h-5 w-5 text-orange-500" />
-            Cocheras
-          </Link>
+          {showParking && (
+            <Link
+              href="/dashboard/parking"
+              className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+              onClick={() => setOpen(false)}
+            >
+              <Car className="h-5 w-5 text-orange-500" />
+              Cocheras
+            </Link>
+          )}
           <Link
             href="/dashboard/finance"
             className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
