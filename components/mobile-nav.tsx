@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,18 +67,23 @@ export function MobileNav({ role, user }: MobileNavProps) {
         <nav className="grid gap-2 text-lg font-medium">
           <Link
             href="#"
-            className="flex items-center gap-2 text-lg font-semibold mb-4"
+            className="flex items-center gap-2 mb-4 px-2"
             onClick={() => setOpen(false)}
           >
-            <Logo className="h-6 w-6" />
-            <span className="sr-only">Alojamientos Di'Arte</span>
+            <Image
+              src="/logo-diarte-horizontal.png"
+              alt="Alojamientos Di'Arte"
+              width={180}
+              height={50}
+              className="h-[40px] w-auto object-contain"
+            />
           </Link>
           <Link
             href="/dashboard"
             className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => setOpen(false)}
           >
-            <Home className="h-5 w-5" />
+            <Home className="h-5 w-5 text-sky-500" />
             Panel General
           </Link>
           <Link
@@ -85,7 +91,7 @@ export function MobileNav({ role, user }: MobileNavProps) {
             className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => setOpen(false)}
           >
-            <CalendarDays className="h-5 w-5" />
+            <CalendarDays className="h-5 w-5 text-purple-500" />
             Calendario
           </Link>
           <Link
@@ -93,7 +99,7 @@ export function MobileNav({ role, user }: MobileNavProps) {
             className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => setOpen(false)}
           >
-            <CreditCard className="h-5 w-5" />
+            <CreditCard className="h-5 w-5 text-emerald-500" />
             Reservas
           </Link>
           <Link
@@ -101,7 +107,7 @@ export function MobileNav({ role, user }: MobileNavProps) {
             className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => setOpen(false)}
           >
-            <Building className="h-5 w-5" />
+            <Building className="h-5 w-5 text-blue-500" />
             Departamentos
           </Link>
           <Link
@@ -109,7 +115,7 @@ export function MobileNav({ role, user }: MobileNavProps) {
             className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => setOpen(false)}
           >
-            <Car className="h-5 w-5" />
+            <Car className="h-5 w-5 text-orange-500" />
             Cocheras
           </Link>
           <Link
@@ -117,7 +123,7 @@ export function MobileNav({ role, user }: MobileNavProps) {
             className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => setOpen(false)}
           >
-            <LineChart className="h-5 w-5" />
+            <LineChart className="h-5 w-5 text-green-500" />
             Finanzas
           </Link>
           {role === 'ADMIN' && (
@@ -126,7 +132,7 @@ export function MobileNav({ role, user }: MobileNavProps) {
               className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
               onClick={() => setOpen(false)}
             >
-              <UserCog className="h-5 w-5" />
+              <UserCog className="h-5 w-5 text-pink-500" />
               Usuarios
             </Link>
           )}
@@ -136,7 +142,7 @@ export function MobileNav({ role, user }: MobileNavProps) {
               className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
               onClick={() => setOpen(false)}
             >
-              <Settings className="h-5 w-5" />
+              <Settings className="h-5 w-5 text-slate-500" />
               Configuración
             </Link>
           )}
@@ -145,7 +151,7 @@ export function MobileNav({ role, user }: MobileNavProps) {
             className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => setOpen(false)}
           >
-            <ShieldAlert className="h-5 w-5" />
+            <ShieldAlert className="h-5 w-5 text-red-500" />
             Lista Negra
           </Link>
         </nav>

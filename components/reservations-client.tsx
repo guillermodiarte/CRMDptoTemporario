@@ -189,14 +189,18 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   // Logic: Find first reservation starting TODAY or LATER.
   // "Strictly Date-Based... 1. Reserva del día de hoy... 2. Próxima reserva futura"
   // Past start dates are excluded.
+  /* 
+    Logic: Find first reservation starting TODAY or LATER.
+    We comparison using strict "YYYY-MM-DD" strings to avoid ANY timezone madness.
+    If the DB says "2026-02-01...", that is Feb 1st. Period.
+  */
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+
   const nextReservation = sortedData.find(r => {
-    // Handle UTC to Local conversion robustly
-    // We want "2026-02-01" stored in DB to technically be "2026-02-01" Local, not Jan 31st 21:00
-    const dateVal = new Date(r.checkIn);
-    // Use getUTCDate to ensure we get the 'stored' day
-    const checkInDate = new Date(dateVal.getUTCFullYear(), dateVal.getUTCMonth(), dateVal.getUTCDate());
-    checkInDate.setHours(0, 0, 0, 0);
-    return checkInDate >= today;
+    // Take the raw ISO string (e.g. "2026-02-01T00..."), split at T, get YYYY-MM-DD
+    // This assumes DB stores valid dates.
+    const checkInStr = (r.checkIn as any).toString().split('T')[0];
+    return checkInStr >= todayStr;
   });
 
   return (
@@ -369,7 +373,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 }
 
                 if (isNext) {
-                  rowClass += " border-2 border-blue-500";
+                  // Use ring (shadow) instead of border to avoid table collapse issues
+                  rowClass += " ring-2 ring-inset ring-blue-500 z-10 relative shadow-md";
                 }
 
                 const debt = res.totalAmount - (res.depositAmount || 0);
