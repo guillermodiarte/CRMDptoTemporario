@@ -19,6 +19,24 @@ Un sistema de Gestión de Relaciones con Clientes (CRM) integral diseñado para 
 | **Blacklist** | Security feature to track and flag problematic guests. | Función de seguridad para rastrear y marcar huéspedes problemáticos. |
 | **User Mgmt** | Role-based access control (Admin/Visualizer) with strict security policies. | Control de acceso basado en roles (Admin/Visualizador) con políticas de seguridad estrictas. |
 
+## 📸 Screenshots / Capturas de Pantalla
+
+### Dashboard / Panel General
+![Dashboard](public/screenshots/dashboard.png)
+
+### Calendar / Calendario
+![Calendar](public/screenshots/calendar.png)
+
+### Reservations / Reservas
+![Reservations](public/screenshots/reservations.png)
+
+### Departments / Departamentos
+![Departments](public/screenshots/departments.png)
+
+### Settings / Configuración
+![Settings](public/screenshots/settings.png)
+
+
 ## 🛠️ Tech Stack / Tecnologías
 
 - **Framework:** [Next.js 15+ (App Router)](https://nextjs.org/)
