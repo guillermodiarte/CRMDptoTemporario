@@ -92,6 +92,9 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
   const filteredDepartments = departments.filter(d => ((d as any).type || "APARTMENT") === unitType);
 
+  // Check if there are any active parking units
+  const hasActiveParking = departments.some((d: any) => d.type === "PARKING");
+
   // Determine if we should fetch current global cost.
   // Rule: Fetch if NEW reservation OR if checkIn date is Today or Future.
   // If it's a past reservation, keep the snapshot (initialData.amenitiesFee).
@@ -186,7 +189,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     }
   }, [source, form, initialData]);
 
-  // Default Deposit for Partial Payment
+  // Default Deposit for Partial Payment & Reset for Unpaid
   const paymentStatus = form.watch("paymentStatus");
   useEffect(() => {
     if (paymentStatus === "PARTIAL") {
@@ -195,6 +198,8 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       if (currentDeposit === 0) {
         form.setValue("depositAmount", 10000);
       }
+    } else if (paymentStatus === "UNPAID") {
+      form.setValue("depositAmount", 0);
     }
   }, [paymentStatus, form]);
 
@@ -343,7 +348,13 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
           }} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="APARTMENT">Departamento</TabsTrigger>
-              <TabsTrigger value="PARKING">Cochera</TabsTrigger>
+              <TabsTrigger
+                value="PARKING"
+                disabled={!hasActiveParking}
+                className={!hasActiveParking ? "line-through opacity-50 cursor-not-allowed" : ""}
+              >
+                Cochera
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         )}

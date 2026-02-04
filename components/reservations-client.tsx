@@ -197,11 +197,14 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
   const nextReservation = sortedData.find(r => {
-    // Take the raw ISO string (e.g. "2026-02-01T00..."), split at T, get YYYY-MM-DD
-    // This assumes DB stores valid dates.
-    const checkInStr = (r.checkIn as any).toString().split('T')[0];
+    // Ensure we are comparing properly formatted ISO dates
+    const checkInDate = new Date(r.checkIn);
+    const checkInStr = format(checkInDate, "yyyy-MM-dd");
     return checkInStr >= todayStr;
   });
+
+  // Calculate the target date for highlighting (all reservations on this date will be blue)
+  const nextReservationDate = nextReservation ? format(new Date(nextReservation.checkIn), "yyyy-MM-dd") : null;
 
   return (
     <>
@@ -356,7 +359,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
               {[...sortedData].reverse().map((res) => {
                 const isPaid = res.paymentStatus === 'PAID';
                 const isPartial = res.paymentStatus === 'PARTIAL';
-                const isNext = nextReservation?.id === res.id;
+                // Highlight ALL reservations that match the target date
+                const isNext = nextReservationDate && format(new Date(res.checkIn), "yyyy-MM-dd") === nextReservationDate;
                 const isNoShow = (res.status as any) === 'NO_SHOW';
                 const isParkingUnit = (res.department as any).type === 'PARKING';
 
@@ -610,7 +614,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
           {[...sortedData].reverse().map((res) => {
             const isPaid = res.paymentStatus === 'PAID';
             const isPartial = res.paymentStatus === 'PARTIAL';
-            const isNext = nextReservation?.id === res.id;
+            // Highlight ALL reservations that match the target date
+            const isNext = nextReservationDate && format(new Date(res.checkIn), "yyyy-MM-dd") === nextReservationDate;
             const isNoShow = (res.status as any) === 'NO_SHOW';
             const isParkingUnit = (res.department as any).type === 'PARKING';
             const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
