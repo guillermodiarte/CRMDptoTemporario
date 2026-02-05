@@ -83,6 +83,7 @@ export async function POST(req: Request) {
       where: {
         departmentId,
         status: { not: "CANCELLED" },
+        paymentStatus: { not: "CANCELLED" },
         OR: [
           {
             checkIn: { lt: end },

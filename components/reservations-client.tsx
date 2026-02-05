@@ -200,7 +200,9 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
     // Ensure we are comparing properly formatted ISO dates
     const checkInDate = new Date(r.checkIn);
     const checkInStr = format(checkInDate, "yyyy-MM-dd");
-    return checkInStr >= todayStr;
+    // Exclude cancelled payments from highlighting
+    const isCancelled = (r.paymentStatus as any) === 'CANCELLED';
+    return checkInStr >= todayStr && !isCancelled;
   });
 
   // Calculate the target date for highlighting (all reservations on this date will be blue)
@@ -374,6 +376,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   rowClass = "bg-red-50 hover:bg-red-100 border-l-4 border-red-500";
                 } else if (isPaid) {
                   rowClass = "bg-green-50 hover:bg-green-100";
+                } else if ((res.paymentStatus as any) === 'CANCELLED') {
+                  rowClass = "bg-red-50/50 hover:bg-red-50 text-muted-foreground";
                 }
 
                 if (isNext) {
@@ -446,8 +450,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={isPaid ? 'default' : isPartial ? 'secondary' : 'destructive'}>
-                        {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : 'PENDIENTE'}
+                      <Badge variant={isPaid ? 'default' : isPartial ? 'secondary' : (res.paymentStatus as any) === 'CANCELLED' ? 'outline' : 'destructive'}>
+                        {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PENDIENTE'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -630,6 +634,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
               cardClass += " bg-red-50 border-l-4 border-red-500";
             } else if (isPaid) {
               cardClass += " bg-green-50";
+            } else if ((res.paymentStatus as any) === 'CANCELLED') {
+              cardClass += " bg-red-50/50";
             }
 
             if (isNext) cardClass += " border-2 border-blue-500";
@@ -669,8 +675,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
 
                       <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isPaid ? "bg-green-100 text-green-700 border-green-200" : isPartial ? "bg-orange-100 text-orange-700 border-orange-200" : "bg-red-100 text-red-700 border-red-200"}`}>
-                          {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : 'PEND.'}
+                        <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isPaid ? "bg-green-100 text-green-700 border-green-200" : isPartial ? "bg-orange-100 text-orange-700 border-orange-200" : (res.paymentStatus as any) === 'CANCELLED' ? "bg-red-50 text-red-700 border-red-100" : "bg-red-100 text-red-700 border-red-200"}`}>
+                          {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PEND.'}
                         </span>
                         {/* Status Badge Update for Mobile */}
                         <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isNoShow ? "bg-gray-100 text-gray-600" : "bg-white text-gray-600"}`}>

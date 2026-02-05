@@ -48,7 +48,7 @@ const formSchema = z.object({
   cleaningFee: z.coerce.number().default(0),
   amenitiesFee: z.coerce.number().default(0),
   currency: z.enum(["ARS", "USD"]).default("ARS"),
-  paymentStatus: z.enum(["PAID", "PARTIAL", "UNPAID"]).default("UNPAID"),
+  paymentStatus: z.enum(["PAID", "PARTIAL", "UNPAID", "CANCELLED"]).default("UNPAID"),
   source: z.enum(["AIRBNB", "BOOKING", "DIRECT"]).default("DIRECT"),
   notes: z.string().optional(),
 }).refine((data) => {
@@ -157,7 +157,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       cleaningFee: initialData?.cleaningFee || 0,
       amenitiesFee: initialData?.amenitiesFee || 0,
       currency: initialData?.source === "AIRBNB" ? "USD" : ((initialData?.currency as "ARS" | "USD") || "ARS"),
-      paymentStatus: (initialData?.paymentStatus as "PAID" | "PARTIAL" | "UNPAID") || "UNPAID",
+      paymentStatus: (initialData?.paymentStatus as "PAID" | "PARTIAL" | "UNPAID" | "CANCELLED") || "UNPAID",
       source: (initialData?.source as "AIRBNB" | "BOOKING" | "DIRECT") || "DIRECT",
       notes: initialData?.notes || ""
     },
@@ -497,16 +497,16 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
 
 
-        {/* Partial Payment Logic */}
+        {/* Partial Payment or Cancelled Logic */}
         {
-          form.watch("paymentStatus") === "PARTIAL" && (
-            <div className="p-4 border rounded-md bg-muted/50 space-y-4">
+          (form.watch("paymentStatus") === "PARTIAL" || form.watch("paymentStatus") === "CANCELLED") && (
+            <div className={`p-4 border rounded-md space-y-4 ${form.watch("paymentStatus") === "CANCELLED" ? "bg-red-50 border-red-100" : "bg-muted/50"}`}>
               <FormField
                 control={form.control}
                 name="depositAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Monto Abonado (Seña)</FormLabel>
+                    <FormLabel>{form.watch("paymentStatus") === "CANCELLED" ? "Ganancia Seña (Retenido)" : "Monto Abonado (Seña)"}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -525,10 +525,12 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                 <span>Monto Total:</span>
                 <span>${form.watch("totalAmount")}</span>
               </div>
-              <div className="flex justify-between items-center text-sm font-medium text-red-600">
-                <span>Restante a Pagar:</span>
-                <span>${(form.watch("totalAmount") || 0) - (form.watch("depositAmount") || 0)}</span>
-              </div>
+              {form.watch("paymentStatus") !== "CANCELLED" && (
+                <div className="flex justify-between items-center text-sm font-medium text-red-600">
+                  <span>Restante a Pagar:</span>
+                  <span>${(form.watch("totalAmount") || 0) - (form.watch("depositAmount") || 0)}</span>
+                </div>
+              )}
             </div>
           )
         }
@@ -644,6 +646,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                     <SelectItem value="UNPAID">Pendiente</SelectItem>
                     <SelectItem value="PARTIAL" disabled={form.watch("source") === "AIRBNB"}>Parcial</SelectItem>
                     <SelectItem value="PAID">Pagado</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelado</SelectItem>
                   </SelectContent>
                 </Select>
                 {form.watch("source") === "AIRBNB" && <p className="text-[10px] text-muted-foreground mt-1">Airbnb es siempre Pagado</p>}

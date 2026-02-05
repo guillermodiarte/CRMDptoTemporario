@@ -66,7 +66,7 @@ export default async function FinancePage({
   const totalIncomeRaw = reservations.reduce((acc: number, curr: any) => {
     let amount = 0;
     if (curr.paymentStatus === 'PAID') amount = curr.totalAmount;
-    if (curr.paymentStatus === 'PARTIAL') amount = curr.depositAmount || 0;
+    if (curr.paymentStatus === 'PARTIAL' || (curr.paymentStatus as any) === 'CANCELLED') amount = curr.depositAmount || 0;
     if (curr.currency === 'USD') amount = amount * dollarRate;
     return acc + amount;
   }, 0);
@@ -96,7 +96,7 @@ export default async function FinancePage({
     if (monthlyStats[month]) {
       let amount = 0;
       if (r.paymentStatus === 'PAID') amount = r.totalAmount;
-      else if (r.paymentStatus === 'PARTIAL') amount = r.depositAmount || 0;
+      else if (r.paymentStatus === 'PARTIAL' || (r.paymentStatus as any) === 'CANCELLED') amount = r.depositAmount || 0;
       if (r.currency === 'USD') amount = amount * dollarRate;
       monthlyStats[month].income += amount;
     }
@@ -147,7 +147,7 @@ export default async function FinancePage({
     if (departmentStatsMap[r.departmentId]) {
       let amount = 0;
       if (r.paymentStatus === 'PAID') amount = r.totalAmount;
-      else if (r.paymentStatus === 'PARTIAL') amount = r.depositAmount || 0;
+      else if (r.paymentStatus === 'PARTIAL' || (r.paymentStatus as any) === 'CANCELLED') amount = r.depositAmount || 0;
       if (r.currency === 'USD') amount = amount * dollarRate;
       departmentStatsMap[r.departmentId].income += amount;
     }

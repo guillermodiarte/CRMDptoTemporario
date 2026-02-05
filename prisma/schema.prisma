@@ -17,6 +17,7 @@ enum PaymentStatus {
   PAID
   PARTIAL
   UNPAID
+  CANCELLED
 }
 
 enum ReservationStatus {

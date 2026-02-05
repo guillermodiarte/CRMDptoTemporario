@@ -156,6 +156,7 @@ export async function PATCH(
             departmentId: targetDept,
             id: { not: id }, // Exclude self
             status: { not: "CANCELLED" },
+            paymentStatus: { not: "CANCELLED" },
             OR: [
               {
                 checkIn: { lt: effectiveEnd },
