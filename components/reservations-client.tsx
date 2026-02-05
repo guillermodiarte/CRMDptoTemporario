@@ -801,14 +801,14 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
                       {/* Bottom Row: Status Actions */}
                       <div className="flex flex-wrap gap-2 w-full justify-end">
-                        {!isPaid && !isNoShow && (
+                        {!isPaid && !isNoShow && (res.paymentStatus as any) !== 'CANCELLED' && (
                           <Button variant="outline" size="sm" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)} className="h-10 px-3 text-green-600 bg-green-50/50 border-green-200">
                             <DollarSign className="h-4 w-4 mr-2" /> Pagado
                           </Button>
                         )}
-                        {canMarkNoShow && (
+                        {canMarkNoShow && (res.paymentStatus as any) !== 'CANCELLED' && (
                           <Button variant="outline" size="sm" onClick={() => handleNoShowClick(res.id)} className="h-10 px-3 text-orange-500 bg-orange-50/50 border-orange-200">
-                            <UserX className="h-4 w-4 mr-2" /> No Show
+                            <UserX className="h-4 w-4 mr-2" /> No Presentado
                           </Button>
                         )}
                         {!isBlacklisted && (
