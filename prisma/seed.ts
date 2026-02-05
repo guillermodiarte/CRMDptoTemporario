@@ -23,7 +23,7 @@ async function main() {
   console.log('Database cleaned.')
   console.log('Creating default user (creando usuario por defecto)...')
 
-  const password = await hash('Diarte1035', 12)
+  const password = await hash('Gad33224122', 12)
 
   const admin = await prisma.user.create({
     data: {
