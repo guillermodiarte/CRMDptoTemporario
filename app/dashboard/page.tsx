@@ -11,6 +11,8 @@ import { DollarWidget } from "@/components/dollar-widget";
 import { WeatherWidget } from "@/components/weather-widget";
 import { NotesWidget } from "@/components/notes-widget";
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   // Adjust for Argentina Time (UTC-3)
   const today = new Date(Date.now() - 3 * 60 * 60 * 1000);

@@ -2,6 +2,8 @@ import prisma from "@/lib/prisma";
 import { GlobalCalendar } from "@/components/global-calendar";
 import { addMonths, startOfMonth, endOfMonth, subMonths } from "date-fns";
 
+export const dynamic = 'force-dynamic';
+
 export default async function CalendarPage({ searchParams }: { searchParams: { date?: string } }) {
   // Default to current month window
   const departments = await prisma.department.findMany({
