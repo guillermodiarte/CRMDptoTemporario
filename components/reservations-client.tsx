@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, cloneElement, isValidElement, useEffect } from "react";
 import { Department, Reservation } from "@prisma/client";
-import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble, X, Home, MoreHorizontal } from "lucide-react";
+import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble, X, Home, MoreHorizontal, ShieldAlert, DollarSign, Ban, UserX, XCircle, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +42,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -60,7 +65,6 @@ interface ReservationsClientProps {
 }
 
 import { MonthSelector } from "./month-selector";
-import { Check, DollarSign, ShieldAlert, Ban, UserX } from "lucide-react";
 import { ReservationsActions } from "./reservations-actions";
 import { BlacklistForm } from "./blacklist-form";
 import { normalizePhone } from "@/lib/phone-utils";
@@ -113,6 +117,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   const [payConfirmationData, setPayConfirmationData] = useState<{ id: string, total: number } | null>(null);
   const [reportBlacklistData, setReportBlacklistData] = useState<ReservationWithDept | null>(null);
   const [noShowConfirmationId, setNoShowConfirmationId] = useState<string | null>(null);
+  const [cancelConfirmationId, setCancelConfirmationId] = useState<string | null>(null); // New state for cancel confirmation
   const [viewNotesRes, setViewNotesRes] = useState<ReservationWithDept | null>(null);
   const [search, setSearch] = useState("");
 
@@ -135,6 +140,15 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
       setDeleteConfirmationId(null);
     }
   };
+
+  // Auto-open "New Reservation" if query param exists
+  useEffect(() => {
+    if (searchParams.get("new") === "true") {
+      setOpen(true);
+      // Optional: Clean URL
+      // router.replace("/dashboard/reservations");
+    }
+  }, [searchParams]);
 
   const confirmNoShow = async () => {
     if (!noShowConfirmationId) return;
@@ -169,6 +183,25 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
       setPayConfirmationData(null);
     }
   }
+
+  const handleCancelReservationClick = (id: string) => {
+    setCancelConfirmationId(id);
+  };
+
+  const confirmCancelReservation = async () => {
+    if (!cancelConfirmationId) return;
+    try {
+      await fetch(`/api/reservations/${cancelConfirmationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ paymentStatus: 'CANCELLED', status: 'CANCELLED' })
+      });
+      router.refresh();
+    } catch (e) {
+      console.error("Error cancelling reservation", e);
+    } finally {
+      setCancelConfirmationId(null);
+    }
+  };
 
   const handleCreate = () => {
     setEditingRes(null);
@@ -353,8 +386,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 <TableHead className="text-center">Dpto / Cochera</TableHead>
                 <TableHead className="text-center">Fechas</TableHead>
                 <TableHead className="text-center">Noches</TableHead>
-                <TableHead className="text-center">Personas</TableHead>
-                <TableHead className="text-center">Camas</TableHead>
+                <TableHead className="text-center">Ocupación</TableHead>
                 <TableHead className="text-center">Cochera</TableHead>
                 {/* Merged Status Column */}
                 <TableHead className="text-center">Estado</TableHead>
@@ -445,15 +477,16 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className={`flex items-center justify-center gap-1 ${isCancelled ? "line-through text-muted-foreground" : ""}`}>
-                        {isParkingUnit ? <X className="h-4 w-4 text-red-500" /> : <span>{res.guestPeopleCount}</span>}
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center font-bold">
-                      <div className={`flex items-center justify-center gap-1 ${isCancelled ? "line-through text-muted-foreground" : ""}`}>
-                        {isParkingUnit ? <X className="h-4 w-4 text-red-500" /> : <span>{res.bedsRequired || 1}</span>}
-                        <BedDouble className="h-4 w-4 text-muted-foreground" />
+                      <div className={`flex flex-row items-center justify-center gap-3 ${isCancelled ? "line-through text-muted-foreground" : ""}`}>
+                        <div className="flex items-center gap-1">
+                          {isParkingUnit ? <X className="h-4 w-4 text-red-500" /> : <span>{res.guestPeopleCount}</span>}
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                        <div className="flex items-center gap-1 font-bold">
+                          {isParkingUnit ? <X className="h-4 w-4 text-red-500" /> : <span>{res.bedsRequired || 1}</span>}
+                          <BedDouble className="h-4 w-4 text-muted-foreground" />
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
@@ -523,9 +556,9 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           if (res.notes) {
                             actions.push({
                               label: "Ver Nota",
-                              icon: <NotepadText className="h-4 w-4 text-blue-500" />,
+                              icon: <NotepadText className="h-4 w-4" />,
                               onClick: () => setViewNotesRes(res),
-                              className: "text-blue-500 hover:text-blue-600 hover:bg-blue-50",
+                              className: "text-blue-500 hover:text-blue-600 hover:bg-blue-50 shadow-sm border border-blue-100 rounded-full",
                               title: "Ver nota"
                             });
                           }
@@ -535,17 +568,17 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                               label: "Marcar Pagado",
                               icon: <DollarSign className="h-4 w-4" />,
                               onClick: () => handleMarkPaidClick(res.id, res.totalAmount),
-                              className: "text-green-600 hover:text-green-700 hover:bg-green-100",
+                              className: "text-green-600 hover:text-green-700 hover:bg-green-50 shadow-sm border border-green-100 rounded-full",
                               title: "Marcar Pagado"
                             });
                           }
 
                           if (canMarkNoShow) {
                             actions.push({
-                              label: "Marcar No Show",
+                              label: "Marcar No Presentado",
                               icon: <UserX className="h-4 w-4" />,
                               onClick: () => handleNoShowClick(res.id),
-                              className: "text-orange-500 hover:text-orange-600 hover:bg-orange-50",
+                              className: "text-orange-500 hover:text-orange-600 hover:bg-orange-50 shadow-sm border border-orange-100 rounded-full",
                               title: "Marcar No Presentado"
                             });
                           }
@@ -556,7 +589,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                               icon: <Ban className="h-4 w-4" />,
                               onClick: () => { },
                               disabled: true,
-                              className: "text-red-500 opacity-70 cursor-not-allowed",
+                              className: "text-red-500 opacity-70 cursor-not-allowed shadow-sm border border-red-100 rounded-full",
                               title: "Huésped ya en lista negra"
                             });
                           } else {
@@ -564,7 +597,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                               label: "Reportar",
                               icon: <ShieldAlert className="h-4 w-4" />,
                               onClick: () => setReportBlacklistData(res),
-                              className: "text-orange-500 hover:text-orange-600",
+                              className: "text-red-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-red-100 rounded-full",
                               title: "Reportar a Lista Negra"
                             });
                           }
@@ -576,8 +609,20 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                               label: "Editar",
                               icon: <Pencil className="h-4 w-4" />,
                               onClick: () => handleEdit(res),
-                              className: "hover:bg-slate-100",
+                              className: "text-blue-600 hover:text-blue-700 hover:bg-blue-50 shadow-sm border border-blue-100 rounded-full", // Blue for clean consistency
                               title: "Editar"
+                            });
+                          }
+
+                          const canCancel = (res.paymentStatus as any) !== 'CANCELLED' && new Date(res.checkIn) >= today && !isNoShow;
+
+                          if (canCancel) {
+                            actions.push({
+                              label: "Cancelar Reserva",
+                              icon: <XCircle className="h-4 w-4" />,
+                              onClick: () => handleCancelReservationClick(res.id),
+                              className: "text-red-600 hover:text-red-700 hover:bg-red-50 shadow-sm border border-red-100 rounded-full",
+                              title: "Cancelar Reserva"
                             });
                           }
 
@@ -585,50 +630,81 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             label: "Eliminar",
                             icon: <Trash className="h-4 w-4" />,
                             onClick: () => handleDeleteClick(res.id),
-                            className: "text-red-500 hover:text-red-600 hover:bg-red-50",
+                            className: "text-red-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-red-100 rounded-full",
                             title: "Eliminar"
                           });
 
-                          if (actions.length > 4) {
-                            return (
+                          // --- SPLIT BUTTON LOGIC ---
+                          // Priority for Primary Action:
+                          // 1. Marcar Pagado (If available)
+                          // 2. Editar (Default)
+
+                          let primaryAction = actions.find(a => a.label === "Marcar Pagado");
+                          if (!primaryAction) {
+                            primaryAction = actions.find(a => a.label === "Editar");
+                          }
+                          // Fallback if neither exists (unlikely given permissions, but safe)
+                          if (!primaryAction && actions.length > 0) {
+                            primaryAction = actions[0];
+                          }
+
+                          if (!primaryAction) return null; // No actions available
+
+                          const secondaryActions = actions.filter(a => a !== primaryAction);
+
+                          return (
+                            <div className="flex items-center justify-end">
+                              {/* Primary Action Button */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={primaryAction.onClick}
+                                disabled={primaryAction.disabled}
+                                className={`h-8 rounded-r-none border-r-0 px-3 ${primaryAction.className ? primaryAction.className.replace('rounded-full', '') : ''}`}
+                                title={primaryAction.title}
+                              >
+                                {primaryAction.icon}
+                                <span className="ml-2 hidden lg:inline">{primaryAction.label}</span>
+                              </Button>
+
+                              {/* Dropdown for Secondary Actions */}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm" className="h-8 px-2 text-xs">
-                                    Acciones
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-8 px-0 rounded-l-none border-l-0"
+                                  >
+                                    <ChevronDown className="h-4 w-4" />
+                                    <span className="sr-only">Más opciones</span>
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {actions.map((action, idx) => (
-                                    <DropdownMenuItem
-                                      key={idx}
-                                      onClick={action.onClick}
-                                      disabled={action.disabled}
-                                      className={action.className ? action.className.replace("hover:bg-", "") : ""} // Remove specific hover bgs for menu items if needed, or keep for colored text
-                                    >
-                                      <span className="flex items-center gap-2 w-full">
-                                        {action.icon}
-                                        {action.label}
-                                      </span>
-                                    </DropdownMenuItem>
-                                  ))}
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {secondaryActions.map((action, idx) => {
+                                    const colorClass = action.className?.includes('text-green') ? 'text-green-600' :
+                                      action.className?.includes('text-blue') ? 'text-blue-600' :
+                                        action.className?.includes('text-orange') ? 'text-orange-500' :
+                                          action.className?.includes('text-red') ? 'text-red-500' : '';
+
+                                    return (
+                                      <DropdownMenuItem
+                                        key={idx}
+                                        onClick={action.onClick}
+                                        disabled={action.disabled}
+                                      >
+                                        <span className={`flex items-center gap-2 w-full ${colorClass}`}>
+                                          {isValidElement(action.icon) ? cloneElement(action.icon as any, { className: `h-4 w-4 ${colorClass}` }) : action.icon}
+                                          {action.label}
+                                        </span>
+                                      </DropdownMenuItem>
+                                    );
+                                  })}
                                 </DropdownMenuContent>
                               </DropdownMenu>
-                            );
-                          } else {
-                            return actions.map((action, idx) => (
-                              <Button
-                                key={idx}
-                                variant="ghost"
-                                size="icon"
-                                onClick={action.onClick}
-                                disabled={action.disabled}
-                                title={action.title}
-                                className={action.className}
-                              >
-                                {action.icon}
-                              </Button>
-                            ));
-                          }
+                            </div>
+                          );
                         })()}
                       </TableCell>
                     )}
@@ -659,6 +735,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
             const debt = res.totalAmount - (res.depositAmount || 0);
             const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
+            const isCancelled = (res.paymentStatus as any) === 'CANCELLED';
 
             let cardClass = "text-sm";
             if (isNoShow) {
@@ -720,10 +797,12 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           }`}>
                           {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PEND.'}
                         </span>
-                        {/* Status Badge Update for Mobile */}
-                        <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isNoShow ? "bg-gray-100 text-gray-600" : "bg-white text-gray-600"}`}>
-                          {isNoShow ? "NO PRESENTADO" : (new Date(res.checkOut) < today ? "FINALIZADO" : "CONFIRMADO")}
-                        </span>
+                        {/* Status Badge Update for Mobile - Hide if Cancelled */}
+                        {(res.paymentStatus as any) !== 'CANCELLED' && (
+                          <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isNoShow ? "bg-gray-100 text-gray-600" : "bg-white text-gray-600"}`}>
+                            {isNoShow ? "NO PRESENTADO" : (new Date(res.checkOut) < today ? "FINALIZADO" : "CONFIRMADO")}
+                          </span>
+                        )}
                         {isBlacklisted && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap">BLACKLIST</span>}
                       </div>
                     </div>
@@ -816,6 +895,11 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             <ShieldAlert className="h-4 w-4 mr-2" /> Reportar a Lista Negra
                           </Button>
                         )}
+                        {!isCancelled && new Date(res.checkIn) >= today && !isNoShow && (
+                          <Button variant="outline" size="sm" onClick={() => handleCancelReservationClick(res.id)} className="h-10 px-3 text-red-600 bg-red-50/50 border-red-200">
+                            <XCircle className="h-4 w-4 mr-2" /> Cancelar
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -882,6 +966,21 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             <AlertDialogAction className="bg-orange-600 hover:bg-orange-700" onClick={confirmNoShow}>
               Sí, marcar No Presentado
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!cancelConfirmationId} onOpenChange={(val) => !val && setCancelConfirmationId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cancelar Reserva?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción cancelará la reserva y cambiará su estado a "Cancelado".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={confirmCancelReservation}>Confirmar Cancelación</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -1,7 +1,8 @@
 import prisma from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, CreditCard, CalendarDays, Activity, Car } from "lucide-react";
+import { Users, CreditCard, CalendarDays, Activity, Car, Plus, List } from "lucide-react";
+import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { getFullDollarData, getDollarRate } from "@/lib/dollar";
@@ -134,6 +135,39 @@ export default async function DashboardPage() {
         <h2 className="text-3xl font-bold tracking-tight">Panel General</h2>
       </div>
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        {/* MOBILE QUICK ACTIONS (Option 2) */}
+        <div className="col-span-2 md:hidden">
+          <Card className="bg-white shadow-sm border-slate-200">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-3 gap-3">
+                {/* Create Reservation */}
+                <Link href="/dashboard/reservations?new=true" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-blue-50 text-blue-700 active:scale-95 transition-transform">
+                  <div className="h-10 w-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md">
+                    <Plus className="h-6 w-6" />
+                  </div>
+                  <span className="text-[10px] font-bold text-center leading-tight">Crear<br />Reserva</span>
+                </Link>
+
+                {/* View Reservations */}
+                <Link href="/dashboard/reservations" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-emerald-50 text-emerald-700 active:scale-95 transition-transform">
+                  <div className="h-10 w-10 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center border border-emerald-200 shadow-sm">
+                    <List className="h-6 w-6" />
+                  </div>
+                  <span className="text-[10px] font-bold text-center leading-tight">Ver<br />Reservas</span>
+                </Link>
+
+                {/* Calendar */}
+                <Link href="/dashboard/calendar" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-purple-50 text-purple-700 active:scale-95 transition-transform">
+                  <div className="h-10 w-10 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center border border-purple-200 shadow-sm">
+                    <CalendarDays className="h-6 w-6" />
+                  </div>
+                  <span className="text-[10px] font-bold text-center leading-tight">Calendario</span>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* WIDGET 1: INGRESOS TOTALES */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

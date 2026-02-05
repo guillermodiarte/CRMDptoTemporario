@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,6 +52,7 @@ const formSchema = z.object({
   currency: z.enum(["ARS", "USD"]).default("ARS"),
   paymentStatus: z.enum(["PAID", "PARTIAL", "UNPAID", "CANCELLED"]).default("UNPAID"),
   source: z.enum(["AIRBNB", "BOOKING", "DIRECT"]).default("DIRECT"),
+  hasParking: z.boolean().default(false),
   notes: z.string().optional(),
 }).refine((data) => {
   const start = new Date(data.checkIn);
@@ -159,6 +162,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       currency: initialData?.source === "AIRBNB" ? "USD" : ((initialData?.currency as "ARS" | "USD") || "ARS"),
       paymentStatus: (initialData?.paymentStatus as "PAID" | "PARTIAL" | "UNPAID" | "CANCELLED") || "UNPAID",
       source: (initialData?.source as "AIRBNB" | "BOOKING" | "DIRECT") || "DIRECT",
+      hasParking: initialData?.hasParking || false,
       notes: initialData?.notes || ""
     },
   });
@@ -450,6 +454,31 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
             )}
           />
         </div>
+
+        {unitType !== "PARKING" && (
+          <FormField
+            control={form.control}
+            name="hasParking"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm bg-blue-50/50 border-blue-100">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>
+                    ¿Requiere Cochera?
+                  </FormLabel>
+                  <FormDescription>
+                    Marcar si el huésped solicita lugar en la cochera.
+                  </FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+        )}
 
         {unitType !== "PARKING" && (
           <div className="grid grid-cols-2 gap-4">

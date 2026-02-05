@@ -350,7 +350,8 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
 
               const deptReservations = reservations.filter(
                 (r) => r.departmentId === dept.id &&
-                  (new Date(r.checkIn) <= intervalEnd && new Date(r.checkOut) >= intervalStart)
+                  (new Date(r.checkIn) <= intervalEnd && new Date(r.checkOut) >= intervalStart) &&
+                  r.paymentStatus !== 'CANCELLED'
               );
 
               if (!dept.isActive && deptReservations.length === 0) return null;
