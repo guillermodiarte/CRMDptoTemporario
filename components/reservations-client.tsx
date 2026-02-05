@@ -837,12 +837,21 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
                     <div className="col-span-2 flex justify-between items-center sm:hidden mt-2">
                       {/* Mobile Row for Financials */}
-                      <div className="font-bold text-base text-black">
-                        Total: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
+                      <div className="flex flex-col">
+                        <div className={`font-bold text-base ${(res.paymentStatus as any) === 'CANCELLED' || isNoShow ? "text-muted-foreground line-through text-xs" : "text-black"}`}>
+                          Total: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
+                        </div>
+                        {((res.paymentStatus as any) === 'CANCELLED' || isNoShow) && (
+                          <div className="text-orange-600 font-bold text-sm">
+                            Seña: {res.currency === 'USD' ? `US$ ${res.depositAmount}` : formatCurrency(res.depositAmount)}
+                          </div>
+                        )}
                       </div>
-                      <div className={`font-bold text-base ${!isPaid && !isNoShow ? "text-red-600" : ""}`}>
-                        Deuda: {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)) : '-'}
-                      </div>
+                      {((res.paymentStatus as any) !== 'CANCELLED' && !isNoShow) && (
+                        <div className={`font-bold text-base ${!isPaid ? "text-red-600" : ""}`}>
+                          Deuda: {!isPaid ? (res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)) : '-'}
+                        </div>
+                      )}
                     </div>
                   </div>
 
