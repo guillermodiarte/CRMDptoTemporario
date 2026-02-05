@@ -320,12 +320,20 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
         <div className="flex flex-wrap gap-4 mb-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-white border border-gray-300 rounded"></div>
+            <div className="w-4 h-4 bg-yellow-50 border border-yellow-200 rounded"></div>
             <span>Pendiente</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-green-50 border border-green-200 rounded"></div>
             <span>Pagado</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-blue-50 border border-blue-200 rounded"></div>
+            <span>Parcial</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
+            <span>Cancelado</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-orange-50 border border-orange-200 rounded"></div>
@@ -348,8 +356,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 <TableHead className="text-center">Personas</TableHead>
                 <TableHead className="text-center">Camas</TableHead>
                 <TableHead className="text-center">Cochera</TableHead>
+                {/* Merged Status Column */}
                 <TableHead className="text-center">Estado</TableHead>
-                <TableHead className="text-center">Pago</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Gastos (Limp+Ins)</TableHead>
                 <TableHead className="text-right">Deuda</TableHead>
@@ -362,9 +370,11 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 const isPaid = res.paymentStatus === 'PAID';
                 const isPartial = res.paymentStatus === 'PARTIAL';
                 // Highlight ALL reservations that match the target date
-                const isNext = nextReservationDate && format(new Date(res.checkIn), "yyyy-MM-dd") === nextReservationDate;
+                // Highlight ALL reservations that match the target date, strictly excluding CANCELLED
+                const isNext = nextReservationDate && format(new Date(res.checkIn), "yyyy-MM-dd") === nextReservationDate && (res.paymentStatus as any) !== 'CANCELLED';
                 const isNoShow = (res.status as any) === 'NO_SHOW';
                 const isParkingUnit = (res.department as any).type === 'PARKING';
+                const isCancelled = (res.paymentStatus as any) === 'CANCELLED';
 
                 const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
                 const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
@@ -376,8 +386,13 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   rowClass = "bg-red-50 hover:bg-red-100 border-l-4 border-red-500";
                 } else if (isPaid) {
                   rowClass = "bg-green-50 hover:bg-green-100";
+                } else if (isPartial) {
+                  rowClass = "bg-blue-50 hover:bg-blue-100";
                 } else if ((res.paymentStatus as any) === 'CANCELLED') {
-                  rowClass = "bg-red-50/50 hover:bg-red-50 text-muted-foreground";
+                  rowClass = "bg-red-50 hover:bg-red-100 text-muted-foreground";
+                } else {
+                  // Pending is default
+                  rowClass = "bg-yellow-50 hover:bg-yellow-100";
                 }
 
                 if (isNext) {
@@ -386,7 +401,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 }
 
                 const debt = res.totalAmount - (res.depositAmount || 0);
-                const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
+                const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid && (res.paymentStatus as any) !== 'CANCELLED';
 
                 return (
                   <TableRow key={res.id} className={rowClass}>
@@ -402,20 +417,20 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
                         {/* Info Derecha */}
                         <div className="flex flex-col text-left">
-                          <div className={isNoShow ? "line-through" : ""}>{res.guestName}</div>
-                          <div className="text-xs text-muted-foreground">{res.guestPhone}</div>
-                          <div className="text-xs text-muted-foreground font-semibold">{res.source === 'DIRECT' ? 'DIRECTO' : res.source}</div>
+                          <div className={isNoShow || isCancelled ? "line-through text-muted-foreground" : ""}>{res.guestName}</div>
+                          <div className={`text-xs text-muted-foreground ${isCancelled ? "line-through" : ""}`}>{res.guestPhone}</div>
+                          <div className={`text-xs text-muted-foreground font-semibold ${isCancelled ? "line-through" : ""}`}>{res.source === 'DIRECT' ? 'DIRECTO' : res.source}</div>
                           {isBlacklisted && <Badge variant="destructive" className="mt-1 text-[10px] w-fit">Lista Negra</Badge>}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className={`flex items-center justify-center gap-2 ${isCancelled ? "line-through text-muted-foreground" : ""}`}>
                         {isParkingUnit ? <Car className="h-4 w-4 text-muted-foreground" /> : <Home className="h-4 w-4 text-muted-foreground" />}
                         {res.department.name}
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className={`text-center ${isCancelled ? "line-through text-muted-foreground" : ""}`}>
                       {format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}
                       {res.groupId && (
                         <span title="Parte de una reserva dividida" className="ml-2 inline-block">
@@ -424,45 +439,58 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
+                      <div className={`flex items-center justify-center gap-1 ${isCancelled ? "line-through text-muted-foreground" : ""}`}>
                         <span>{Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))}</span>
                         <Moon className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
+                      <div className={`flex items-center justify-center gap-1 ${isCancelled ? "line-through text-muted-foreground" : ""}`}>
                         {isParkingUnit ? <X className="h-4 w-4 text-red-500" /> : <span>{res.guestPeopleCount}</span>}
                         <Users className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </TableCell>
                     <TableCell className="text-center font-bold">
-                      <div className="flex items-center justify-center gap-1">
+                      <div className={`flex items-center justify-center gap-1 ${isCancelled ? "line-through text-muted-foreground" : ""}`}>
                         {isParkingUnit ? <X className="h-4 w-4 text-red-500" /> : <span>{res.bedsRequired || 1}</span>}
                         <BedDouble className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      {res.hasParking || isParkingUnit ? <Car className="h-5 w-5 mx-auto text-blue-600" /> : "-"}
+                      <div className={isCancelled ? "opacity-50" : ""}>
+                        {res.hasParking || isParkingUnit ? <Car className="h-5 w-5 mx-auto text-blue-600" /> : <span className={isCancelled ? "line-through" : ""}>-</span>}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={isNoShow ? "secondary" : "outline"}>
-                        {isNoShow ? "NO PRESENTADO" : (new Date(res.checkOut) < today ? "FINALIZADO" : "CONFIRMADO")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={isPaid ? 'default' : isPartial ? 'secondary' : (res.paymentStatus as any) === 'CANCELLED' ? 'outline' : 'destructive'}>
-                        {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PENDIENTE'}
-                      </Badge>
+                      <div className="flex flex-col items-center gap-1">
+                        <Badge
+                          variant={isPaid ? "default" : "secondary"} // Default is black for Paid
+                          className={
+                            (res.paymentStatus as any) === 'CANCELLED' ? "bg-red-500 hover:bg-red-600 text-white" :
+                              isPaid ? "" : // Let variant="default" handle it (Black)
+                                isPartial ? "bg-blue-500 hover:bg-blue-600 text-white" :
+                                  "bg-yellow-500 hover:bg-yellow-600 text-white"
+                          }
+                        >
+                          {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PENDIENTE'}
+                        </Badge>
+
+                        {(isPaid || isPartial) && (
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                            {isNoShow ? "NO PRESENTADO" : (new Date(res.checkOut) < today ? "FINALIZADO" : "CONFIRMADO")}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex flex-col items-end">
-                        <span className={isNoShow ? "line-through text-muted-foreground" : ""}>
+                        <span className={isNoShow || (res.paymentStatus as any) === 'CANCELLED' ? "line-through text-muted-foreground" : ""}>
                           {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
                         </span>
-                        {res.currency === 'USD' && !isNoShow && (
+                        {res.currency === 'USD' && !isNoShow && (res.paymentStatus as any) !== 'CANCELLED' && (
                           <span className="text-xs text-muted-foreground">≈ {formatCurrency(Math.round(res.totalAmount * dollarRate))}</span>
                         )}
-                        {isNoShow && (
+                        {(isNoShow || (res.paymentStatus as any) === 'CANCELLED') && (
                           <span className="text-xs text-orange-600 font-semibold">Seña: {formatCurrency(res.depositAmount || 0)}</span>
                         )}
                       </div>
@@ -470,9 +498,11 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     <TableCell className="text-right">
                       <div className="flex flex-col items-end">
                         <span className="text-muted-foreground">
-                          {res.cleaningFee ? formatCurrency(res.cleaningFee) : '-'}
+                          {(res.paymentStatus as any) === 'CANCELLED'
+                            ? '-'
+                            : (res.cleaningFee ? formatCurrency(res.cleaningFee) : '-')}
                         </span>
-                        {(res.amenitiesFee || 0) > 0 && !isParkingUnit && (
+                        {(res.paymentStatus as any) !== 'CANCELLED' && (res.amenitiesFee || 0) > 0 && !isParkingUnit && (
                           <span className="text-xs text-red-600" title="Insumos (Informativo)">
                             +{formatCurrency(res.amenitiesFee || 0)}
                           </span>
@@ -480,7 +510,10 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
                     </TableCell>
                     <TableCell className="text-right text-red-600 font-medium">
-                      {!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)) : '-'}
+                      {(res.paymentStatus as any) === 'CANCELLED'
+                        ? '-'
+                        : (!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)) : '-')
+                      }
                     </TableCell>
                     {!isVisualizer && (
                       <TableCell className="text-right flex justify-end gap-1">
@@ -497,7 +530,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             });
                           }
 
-                          if (!isPaid && !isNoShow) {
+                          if (!isPaid && !isNoShow && (res.paymentStatus as any) !== 'CANCELLED') {
                             actions.push({
                               label: "Marcar Pagado",
                               icon: <DollarSign className="h-4 w-4" />,
@@ -634,8 +667,12 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
               cardClass += " bg-red-50 border-l-4 border-red-500";
             } else if (isPaid) {
               cardClass += " bg-green-50";
+            } else if (isPartial) {
+              cardClass += " bg-blue-50";
             } else if ((res.paymentStatus as any) === 'CANCELLED') {
               cardClass += " bg-red-50/50";
+            } else {
+              cardClass += " bg-yellow-50";
             }
 
             if (isNext) cardClass += " border-2 border-blue-500";
@@ -675,7 +712,12 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
 
                       <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isPaid ? "bg-green-100 text-green-700 border-green-200" : isPartial ? "bg-orange-100 text-orange-700 border-orange-200" : (res.paymentStatus as any) === 'CANCELLED' ? "bg-red-50 text-red-700 border-red-100" : "bg-red-100 text-red-700 border-red-200"}`}>
+                        <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap 
+                          ${(res.paymentStatus as any) === 'CANCELLED' ? "bg-red-100 text-red-700 border-red-200" :
+                            isPaid ? "bg-gray-900 text-white border-gray-900" : // Black for paid
+                              isPartial ? "bg-blue-100 text-blue-700 border-blue-200" :
+                                "bg-yellow-100 text-yellow-700 border-yellow-200"
+                          }`}>
                           {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PEND.'}
                         </span>
                         {/* Status Badge Update for Mobile */}
