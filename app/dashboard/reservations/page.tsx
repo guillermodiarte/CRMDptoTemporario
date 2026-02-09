@@ -24,7 +24,7 @@ export default async function ReservationsPage({
 
   const reservations = await prisma.reservation.findMany({
     where: {
-      status: { not: "CANCELLED" },
+      // status: { not: "CANCELLED" },
       checkIn: {
         gte: startDate,
         lte: endDate,
