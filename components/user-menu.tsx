@@ -37,7 +37,7 @@ export function UserMenu({ user }: UserMenuProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+        <DropdownMenuLabel>{user?.name || user?.email || "Mi Cuenta"}</DropdownMenuLabel>
         <DropdownMenuSeparator />
 
         {user?.sessionId && (
