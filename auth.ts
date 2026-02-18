@@ -37,12 +37,14 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           const passwordsMatch = await bcrypt.compare(password, user.password);
           if (passwordsMatch) {
             console.log('>>> Password matched. Login successful.');
-            // Return user with minimal info needed for JWT
+            // isSuperAdmin is ALWAYS derived from email, never from DB
+            // This ensures only guillermo.diarte@gmail.com can ever be superadmin
+            const isSuperAdmin = user.email?.toLowerCase().trim() === 'guillermo.diarte@gmail.com';
             return {
               id: user.id,
               name: user.name,
               email: user.email,
-              isSuperAdmin: user.isSuperAdmin,
+              isSuperAdmin,
               sessionId: parsedCredentials.data.sessionId // Pass through if present
               // image: user.image 
             };
@@ -64,7 +66,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
       if (user) {
         // Initial sign in
         token.sub = user.id;
-        token.isSuperAdmin = user.isSuperAdmin;
+        // Always derive isSuperAdmin from email — never trust DB value
+        token.isSuperAdmin = user.email?.toLowerCase().trim() === 'guillermo.diarte@gmail.com';
 
         // Fetch memberships to decide default session
         const memberships = await prisma.userSession.findMany({

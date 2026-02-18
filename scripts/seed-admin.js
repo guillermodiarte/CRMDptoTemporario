@@ -5,12 +5,12 @@ const prisma = new PrismaClient();
 
 async function main() {
   const admins = [
-    { email: 'guillermo.diarte@gmail.com', password: 'Gad33224122' },
-    { email: 'gadiarte@gmail.com', password: 'Diarte1035' }
+    { email: 'guillermo.diarte@gmail.com', password: 'Gad33224122', isSuperAdmin: true },
+    { email: 'gadiarte@gmail.com', password: 'Diarte1035', isSuperAdmin: false }
   ];
 
   for (const admin of admins) {
-    const { email, password } = admin;
+    const { email, password, isSuperAdmin } = admin;
     console.log(`>>> Processing admin: ${email}`);
 
     try {
@@ -23,24 +23,24 @@ async function main() {
           data: {
             email,
             password: hashedPassword,
-            name: 'Admin',
-            isSuperAdmin: true,
+            name: isSuperAdmin ? 'Guillermo' : 'Gustavo',
+            isSuperAdmin,
             isActive: true,
           },
         });
-        console.log(`>>> ${email} created.`);
+        console.log(`>>> ${email} created (isSuperAdmin: ${isSuperAdmin}).`);
       } else {
-        console.log(`>>> ${email} exists. Updating credentials and isSuperAdmin...`);
+        console.log(`>>> ${email} exists. Updating credentials and isSuperAdmin=${isSuperAdmin}...`);
         const hashedPassword = await bcrypt.hash(password, 10);
         await prisma.user.update({
           where: { email },
           data: {
-            isSuperAdmin: true,
+            isSuperAdmin,
             isActive: true,
             password: hashedPassword,
           },
         });
-        console.log(`>>> ${email} updated.`);
+        console.log(`>>> ${email} updated (isSuperAdmin: ${isSuperAdmin}).`);
       }
     } catch (error) {
       console.error(`>>> Error processing ${email}:`, error);
