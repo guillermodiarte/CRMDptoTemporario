@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireSessionId } from "@/lib/auth-helper";
 
 export async function PATCH(
   req: Request,
@@ -14,6 +15,12 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
     const { type, description, amount, departmentId, date, quantity, unitPrice } = body;
+
+    const sessionId = await requireSessionId();
+    const existing = await prisma.expense.findUnique({ where: { id } });
+    if (!existing || existing.sessionId !== sessionId) {
+      return new NextResponse("Not Found or Access Denied", { status: 404 });
+    }
 
     const expense = await prisma.expense.update({
       where: { id },
@@ -45,6 +52,12 @@ export async function DELETE(
     if (session?.user?.role !== "ADMIN") return new NextResponse("Forbidden", { status: 403 });
 
     const { id } = await params;
+
+    const sessionId = await requireSessionId();
+    const existing = await prisma.expense.findUnique({ where: { id } });
+    if (!existing || existing.sessionId !== sessionId) {
+      return new NextResponse("Not Found or Access Denied", { status: 404 });
+    }
 
     // Hard delete
     const expense = await prisma.expense.delete({

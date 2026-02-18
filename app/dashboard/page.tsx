@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { auth } from "@/auth";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, CreditCard, CalendarDays, Activity, Car, Plus, List } from "lucide-react";
@@ -20,11 +21,22 @@ export default async function DashboardPage() {
   const weatherData = await getWeatherData();
   const dollarRate = await getDollarRate();
 
+  const session = await auth();
+  const sessionId = session?.user?.sessionId;
+
+  if (!sessionId) {
+    // User has no session? Should be redirected by middleware/auth.config.
+    // But just in case, return empty state or redirect.
+    // return <div>Select a session</div>; 
+    // For now, let's assume valid session or empty data
+  }
+
   // 1. Check upcoming reservations
   const nextReservation = await prisma.reservation.findFirst({
     where: {
       checkIn: { gte: today },
-      status: { not: "CANCELLED" }
+      status: { not: "CANCELLED" },
+      sessionId: sessionId // Filter by session
     },
     orderBy: { checkIn: "asc" },
     include: { department: true }
@@ -35,7 +47,8 @@ export default async function DashboardPage() {
     where: {
       checkIn: { lte: today },
       checkOut: { gte: today },
-      status: { not: "CANCELLED" }
+      status: { not: "CANCELLED" },
+      sessionId: sessionId // Filter by session
     },
     select: {
       id: true,
@@ -70,7 +83,8 @@ export default async function DashboardPage() {
     where: {
       paymentStatus: { not: "PAID" },
       status: { notIn: ["CANCELLED", "NO_SHOW"] },
-      checkOut: { gte: startOfToday }
+      checkOut: { gte: startOfToday },
+      sessionId: sessionId // Filter by session
     }
   });
 
@@ -78,7 +92,8 @@ export default async function DashboardPage() {
   const futureReservationsCount = await prisma.reservation.count({
     where: {
       checkIn: { gte: startOfToday },
-      status: { not: "CANCELLED" }
+      status: { not: "CANCELLED" },
+      sessionId: sessionId // Filter by session
     }
   });
 
@@ -89,7 +104,8 @@ export default async function DashboardPage() {
   const monthlyReservations = await prisma.reservation.findMany({
     where: {
       checkIn: { gte: startOfMonth, lte: endOfMonth },
-      status: { not: "CANCELLED" }
+      status: { not: "CANCELLED" },
+      sessionId: sessionId // Filter by session
     }
   });
 
@@ -109,7 +125,8 @@ export default async function DashboardPage() {
   const monthlyExpensesList = await prisma.expense.findMany({
     where: {
       isDeleted: false,
-      date: { gte: startOfMonth, lte: endOfMonth }
+      date: { gte: startOfMonth, lte: endOfMonth },
+      sessionId: sessionId // Filter by session
     }
   });
 

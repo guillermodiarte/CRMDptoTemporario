@@ -98,18 +98,39 @@ export async function POST(req: Request) {
       return new NextResponse("El email ya está registrado", { status: 409 });
     }
 
+    const sessionId = (session?.user as any)?.sessionId;
+
+    if (!sessionId && !isSuperAdmin) {
+      return new NextResponse("Session ID required", { status: 400 });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: role as Role,
-        image,
-        phone,
-        isActive: isActive ?? true,
-      },
+    const user = await prisma.$transaction(async (tx) => {
+      // 1. Create User
+      const newUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          image,
+          phone,
+          isActive: isActive ?? true,
+        },
+      });
+
+      // 2. Create UserSession if sessionId exists
+      if (sessionId) {
+        await tx.userSession.create({
+          data: {
+            userId: newUser.id,
+            sessionId,
+            role: role as Role,
+          }
+        });
+      }
+
+      return newUser;
     });
 
     const { password: _, ...userWithoutPassword } = user;

@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { calculateReservationSplits } from "@/lib/reservation-logic";
 import { revalidatePath } from "next/cache";
+import { requireSessionId } from "@/lib/auth-helper";
 
 // Using native crypto for UUID
 const generateUUID = () => crypto.randomUUID();
@@ -10,15 +11,11 @@ const generateUUID = () => crypto.randomUUID();
 export async function GET(req: Request) {
   try {
     const session = await auth();
-    if (!session) return new NextResponse("Unauthorized", { status: 401 });
-
-    const { searchParams } = new URL(req.url);
-    const fromStr = searchParams.get("from");
-    const toStr = searchParams.get("to");
-    const departmentId = searchParams.get("departmentId");
+    const sessionId = await requireSessionId();
 
     const whereClause: any = {
-      status: { not: "CANCELLED" }
+      status: { not: "CANCELLED" },
+      sessionId
     };
 
     if (departmentId) {
@@ -59,6 +56,7 @@ export async function POST(req: Request) {
   try {
     const session = await auth();
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
+    const sessionId = await requireSessionId();
 
     const body = await req.json();
     const {
@@ -82,6 +80,7 @@ export async function POST(req: Request) {
     const overlaps = await prisma.reservation.findMany({
       where: {
         departmentId,
+        sessionId,
         status: { not: "CANCELLED" },
         paymentStatus: { not: "CANCELLED" },
         OR: [
@@ -98,7 +97,7 @@ export async function POST(req: Request) {
     }
 
     // Fetch active supplies for snapshot
-    const supplies = await prisma.supply.findMany({ where: { isActive: true } });
+    const supplies = await prisma.supply.findMany({ where: { isActive: true, sessionId } });
     const amenitiesFee = supplies.reduce((acc, curr) => acc + curr.cost, 0);
 
     // SPLITTING LOGIC
@@ -134,7 +133,8 @@ export async function POST(req: Request) {
             notes,
             hasParking: !!hasParking,
             status: "CONFIRMED",
-            groupId: groupId
+            groupId: groupId,
+            sessionId
           }
         }))
       );

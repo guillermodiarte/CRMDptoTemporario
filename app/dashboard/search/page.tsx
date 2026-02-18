@@ -11,13 +11,16 @@ export default async function SearchPage({
 }) {
   const session = await auth();
   const user = session?.user;
+  const sessionId = user?.sessionId;
 
   if (!user) {
     redirect("/dashboard");
   }
 
   // Fetch config for currency rates
-  const settings = await prisma.systemSettings.findMany();
+  const settings = await prisma.systemSettings.findMany({
+    where: { sessionId }
+  });
   const dollarRate = Number(settings.find((s) => s.key === "DOLLAR_RATE")?.value || 1200);
 
   const { q } = await searchParams;
@@ -34,6 +37,7 @@ export default async function SearchPage({
 
   const reservations = await prisma.reservation.findMany({
     where: {
+      sessionId,
       OR: [
         { guestName: { contains: query } }, // Case insensitive usually depends on DB collation
         { guestPhone: { contains: query } }
@@ -48,12 +52,12 @@ export default async function SearchPage({
   });
 
   const departments = await prisma.department.findMany({
-    where: { isActive: true },
+    where: { isActive: true, sessionId },
   });
 
   // Fetch blacklist for client-side checking
   const blacklist = await prisma.blacklistEntry.findMany({
-    where: { isActive: true },
+    where: { isActive: true, sessionId },
     select: { guestPhone: true }
   });
   const blacklistedPhones = blacklist.map(b => b.guestPhone);

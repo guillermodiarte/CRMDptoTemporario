@@ -5,10 +5,12 @@ import { auth } from "@/auth";
 export default async function DepartmentsPage() {
   const session = await auth();
   const userRole = (session?.user as any)?.role;
+  const sessionId = session?.user?.sessionId;
 
   const departments = await prisma.department.findMany({
     where: {
-      type: 'APARTMENT'
+      type: 'APARTMENT',
+      sessionId
     },
     orderBy: { createdAt: "desc" },
   });

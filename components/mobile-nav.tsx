@@ -26,9 +26,10 @@ interface MobileNavProps {
   role: string | undefined;
   user: any;
   showParking: boolean;
+  isSuperAdmin?: boolean;
 }
 
-export function MobileNav({ role, user, showParking }: MobileNavProps) {
+export function MobileNav({ role, user, showParking, isSuperAdmin }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -157,6 +158,16 @@ export function MobileNav({ role, user, showParking }: MobileNavProps) {
             <ShieldAlert className="h-5 w-5 text-red-500" />
             Lista Negra
           </Link>
+          {isSuperAdmin && (
+            <Link
+              href="/dashboard/admin/sessions"
+              className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+              onClick={() => setOpen(false)}
+            >
+              <ShieldAlert className="h-5 w-5 text-indigo-500" />
+              Gestión de Sesiones
+            </Link>
+          )}
         </nav>
         {/* We can reproduce the search bar here if desired, or leave it in the header. 
             The original design had it in the content but the header search was outside the sheet.

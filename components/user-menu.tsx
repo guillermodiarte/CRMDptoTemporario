@@ -17,6 +17,7 @@ interface UserMenuProps {
     image?: string | null;
     name?: string | null;
     email?: string | null;
+    sessionId?: string | null;
   } | null;
 }
 
@@ -38,7 +39,14 @@ export function UserMenu({ user }: UserMenuProps) {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {/* Settings and Support removed as requested */}
+
+        {user?.sessionId && (
+          <DropdownMenuItem onClick={() => window.location.href = "/select-session"}>
+            Cambiar de Sesión
+          </DropdownMenuItem>
+        )}
+
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={async () => {
           await signOut({ redirect: false });
           window.location.href = "/login";

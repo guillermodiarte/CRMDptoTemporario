@@ -13,10 +13,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash, Search, Ban } from "lucide-react";
+import { Plus, Pencil, Trash, Search, Ban, UserPlus, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { UserForm } from "./user-form";
 import { UsersActions } from "./users-actions";
+import { AddExistingUserDialog } from "./add-existing-user-dialog";
 import {
   Select,
   SelectContent,
@@ -24,6 +25,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -47,6 +55,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [open, setOpen] = useState(false);
+  const [addExistingOpen, setAddExistingOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<{ id: string; action: "DEACTIVATE" | "DELETE" } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -107,15 +116,18 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
         {isMounted && (
           <div className="flex gap-2">
             <UsersActions data={data} />
+
+            {/* Add Existing User Dialog */}
+            <AddExistingUserDialog
+              open={addExistingOpen}
+              onClose={() => setAddExistingOpen(false)}
+            />
+
+            {/* Create New User Dialog */}
             <Dialog open={open} onOpenChange={(val) => {
               setOpen(val);
               if (!val) setEditingUser(null);
             }}>
-              <DialogTrigger asChild>
-                <Button onClick={handleCreate} className="w-full md:w-auto">
-                  <Plus className="mr-2 h-4 w-4" /> Nuevo Usuario
-                </Button>
-              </DialogTrigger>
               <DialogContent className="sm:max-w-md" onCloseAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                   <DialogTitle>{editingUser ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
@@ -127,6 +139,26 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
                 />
               </DialogContent>
             </Dialog>
+
+            {/* Split Button Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-full md:w-auto gap-1">
+                  <Plus className="h-4 w-4" /> Agregar Usuario <ChevronDown className="h-3 w-3 ml-1 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => setAddExistingOpen(true)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Agregar existente
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Crear nuevo usuario
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </div>
@@ -179,7 +211,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
                   </TableCell>
                   <TableCell>
                     <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>
-                      {user.role}
+                      {user.role === 'ADMIN' ? 'Administrador' : user.role === 'VISUALIZER' ? 'Visualizador' : user.role}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -196,7 +228,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    {!isCurrentUser && (
+                    {!isCurrentUser && user.email !== "guillermo.diarte@gmail.com" && (
                       <>
                         {user.isActive ? (
                           <Button variant="ghost" size="icon" className="text-orange-500 hover:text-orange-600" onClick={() => setDeleteId({ id: user.id, action: "DEACTIVATE" })}>
@@ -237,7 +269,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
                   {user.phone && <div className="text-xs text-muted-foreground mt-1">{user.phone}</div>}
                 </div>
                 <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'} className="shrink-0">
-                  {user.role}
+                  {user.role === 'ADMIN' ? 'Administrador' : user.role === 'VISUALIZER' ? 'Visualizador' : user.role}
                 </Badge>
               </div>
 
@@ -252,7 +284,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
                   <Button variant="outline" size="sm" onClick={() => handleEdit(user)} className="h-8 px-3 text-xs">
                     Editar
                   </Button>
-                  {!isCurrentUser && (
+                  {!isCurrentUser && user.email !== "guillermo.diarte@gmail.com" && (
                     <>
                       {user.isActive ? (
                         <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-orange-500 bg-orange-50/50 border-orange-200" onClick={() => setDeleteId({ id: user.id, action: "DEACTIVATE" })}>

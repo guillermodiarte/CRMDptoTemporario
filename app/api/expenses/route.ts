@@ -1,13 +1,16 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireSessionId } from "@/lib/auth-helper";
 
 export async function GET(req: Request) {
   try {
     const session = await auth();
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
+    const sessionId = await requireSessionId();
     const expenses = await prisma.expense.findMany({
+      where: { sessionId },
 
       orderBy: { date: 'desc' },
       include: { department: { select: { name: true } } }
@@ -26,6 +29,7 @@ export async function POST(req: Request) {
     if (session?.user?.role !== "ADMIN") return new NextResponse("Forbidden", { status: 403 });
 
     const body = await req.json();
+    const sessionId = await requireSessionId();
     const { type, description, amount, departmentId, date, quantity, unitPrice } = body;
 
     const expense = await prisma.expense.create({
@@ -37,6 +41,7 @@ export async function POST(req: Request) {
         unitPrice: unitPrice ? Number(unitPrice) : null,
         departmentId: departmentId || null,
         date: date ? new Date(`${date}T12:00:00`) : new Date(),
+        sessionId
       }
     });
 

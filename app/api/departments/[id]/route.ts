@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireSessionId } from "@/lib/auth-helper";
 
 export async function PATCH(
   req: Request,
@@ -10,6 +11,7 @@ export async function PATCH(
     const session = await auth();
     // @ts-ignore
     if (session?.user?.role !== "ADMIN") return new NextResponse("Forbidden", { status: 403 });
+    const sessionId = await requireSessionId();
 
     const { id } = await params;
     const body = await req.json();
@@ -19,6 +21,11 @@ export async function PATCH(
       wifiName, wifiPass, basePrice, cleaningFee, alias, color, isActive,
       googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink
     } = body;
+
+    const existing = await prisma.department.findUnique({ where: { id } });
+    if (!existing || existing.sessionId !== sessionId) {
+      return new NextResponse("Not Found or Access Denied", { status: 404 });
+    }
 
     const department = await prisma.department.update({
       where: { id },
@@ -57,8 +64,14 @@ export async function DELETE(
     const session = await auth();
     // @ts-ignore
     if (session?.user?.role !== "ADMIN") return new NextResponse("Forbidden", { status: 403 });
+    const sessionId = await requireSessionId();
 
     const { id } = await params;
+
+    const existing = await prisma.department.findUnique({ where: { id } });
+    if (!existing || existing.sessionId !== sessionId) {
+      return new NextResponse("Not Found or Access Denied", { status: 404 });
+    }
 
     // Soft delete (Archive)
     const department = await prisma.department.update({

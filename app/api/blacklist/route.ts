@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { normalizePhone } from "@/lib/phone-utils";
+import { requireSessionId } from "@/lib/auth-helper";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -15,9 +16,11 @@ export async function GET(req: Request) {
   // For phone, exact matching on normalized is usually best, but partial on raw string is okay for UI search.
 
   try {
+    const sessionId = await requireSessionId();
     const entries = await prisma.blacklistEntry.findMany({
       where: {
         isActive: true,
+        sessionId,
         OR: q ? [
           { guestName: { contains: q } }, // Case insensitive usually in SQLite/Postgres depends
           { guestPhone: { contains: normalizePhone(q) } },
@@ -42,6 +45,7 @@ export async function POST(req: Request) {
   if (!session || userRole !== "ADMIN") {
     return new NextResponse("Unauthorized", { status: 401 });
   }
+  const sessionId = await requireSessionId();
 
   try {
     const body = await req.json();
@@ -66,7 +70,8 @@ export async function POST(req: Request) {
     const existing = await prisma.blacklistEntry.findFirst({
       where: {
         guestPhone: normalized,
-        isActive: true
+        isActive: true,
+        sessionId
       }
     });
 
@@ -83,7 +88,10 @@ export async function POST(req: Request) {
         departmentName,
         checkIn: checkIn ? new Date(checkIn) : null,
         checkOut: checkOut ? new Date(checkOut) : null,
+        checkIn: checkIn ? new Date(checkIn) : null,
+        checkOut: checkOut ? new Date(checkOut) : null,
         totalAmount: totalAmount ? Number(totalAmount) : null,
+        sessionId
       }
     });
 

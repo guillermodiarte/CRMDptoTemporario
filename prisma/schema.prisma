@@ -51,12 +51,45 @@ model User {
   name      String?
   phone     String?
   image     String?
-  role      Role     @default(VISUALIZER)
+  // role      Role     @default(VISUALIZER) // Role is now handled in UserSession per session
   isActive  Boolean  @default(true)
+  isSuperAdmin Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   notes     Note[]
   reportedBlacklistEntries BlacklistEntry[]
+  sessions  UserSession[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         UserSession[]
+  departments   Department[]
+  reservations  Reservation[]
+  expenses      Expense[]
+  supplies      Supply[]
+  blacklist     BlacklistEntry[]
+  settings      SystemSettings[]
+  notes         Note[]
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  sessionId String
+  role      Role     @default(VISUALIZER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId])
 }
 
 
@@ -103,6 +136,9 @@ model Department {
 
   reservations Reservation[]
   expenses     Expense[]
+
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id])
 }
 
 model Reservation {
@@ -142,6 +178,8 @@ model Reservation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id])
 }
 model Supply {
   id        String   @id @default(cuid())
@@ -150,6 +188,9 @@ model Supply {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id])
 }
 
 model Expense {
@@ -167,6 +208,9 @@ model Expense {
   isDeleted Boolean  @default(false) // Soft delete
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id])
 }
 
 model Note {
@@ -177,6 +221,9 @@ model Note {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   type      NoteType @default(PERSONAL)
+
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id])
 }
 
 model BlacklistEntry {
@@ -199,12 +246,21 @@ model BlacklistEntry {
   isActive    Boolean  @default(true) // Soft delete
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id])
 }
 model SystemSettings {
-  key       String   @id
+  id        String   @id @default(cuid())
+  key       String
   value     String
   updatedAt DateTime @updatedAt
   updatedBy String?
+
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id])
+
+  @@unique([sessionId, key])
 }
 
 

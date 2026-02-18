@@ -10,6 +10,8 @@ export default async function ReservationsPage({
 }) {
   const session = await auth();
   const userRole = (session?.user as any)?.role;
+  const sessionId = session?.user?.sessionId;
+
   const params = await searchParams;
   // Adjust for Argentina Time (UTC-3) to prevent "next day" issues at night
   const now = new Date(Date.now() - 3 * 60 * 60 * 1000);
@@ -25,6 +27,7 @@ export default async function ReservationsPage({
   const reservations = await prisma.reservation.findMany({
     where: {
       // status: { not: "CANCELLED" },
+      sessionId,
       checkIn: {
         gte: startDate,
         lte: endDate,
@@ -35,12 +38,12 @@ export default async function ReservationsPage({
   });
 
   const departments = await prisma.department.findMany({
-    where: { isActive: true },
+    where: { isActive: true, sessionId },
     orderBy: { name: "asc" }
   });
 
   const blacklistEntries = await prisma.blacklistEntry.findMany({
-    where: { isActive: true },
+    where: { isActive: true, sessionId },
     select: { guestPhone: true, reason: true, guestName: true }
   });
 
@@ -51,7 +54,8 @@ export default async function ReservationsPage({
   // Fetch customizable year range
   const yearSettings = await prisma.systemSettings.findMany({
     where: {
-      key: { in: ["RESERVATION_YEAR_START", "RESERVATION_YEAR_END"] }
+      key: { in: ["RESERVATION_YEAR_START", "RESERVATION_YEAR_END"] },
+      sessionId
     }
   });
 

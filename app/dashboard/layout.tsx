@@ -40,17 +40,45 @@ export default async function DashboardLayout({
   // Optimización: Fetch user data server-side to avoid huge cookies
   const user = session?.user?.id ? await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { image: true, role: true, name: true, email: true }
+    select: { image: true, name: true, email: true, isSuperAdmin: true }
   }) : null;
 
-  const role = user?.role;
+  const role = session?.user?.role || undefined;
   const userImage = user?.image;
 
+  const userForMenu = user ? {
+    ...user,
+    sessionId: session?.user?.sessionId
+  } : null;
+
+  const sessionId = session?.user?.sessionId;
+
+  // Fetch current session name
+  let currentSessionName: string | null = null;
+  if (sessionId) {
+    const currentSession = await (prisma as any).session.findUnique({
+      where: { id: sessionId },
+      select: { name: true },
+    });
+    currentSessionName = currentSession?.name || null;
+  }
+
   // Fetch System Settings for Menu Visibility
-  const showParkingSetting = await prisma.systemSettings.findUnique({
-    where: { key: "SHOW_PARKING_MENU" }
-  });
-  const showParking = showParkingSetting?.value !== "false"; // Default true
+  let showParking = true; // Default
+
+  if (sessionId) {
+    const showParkingSetting = await prisma.systemSettings.findUnique({
+      where: {
+        sessionId_key: {
+          sessionId,
+          key: "SHOW_PARKING_MENU"
+        }
+      }
+    });
+    if (showParkingSetting) {
+      showParking = showParkingSetting.value !== "false";
+    }
+  }
 
 
   return (
@@ -139,13 +167,22 @@ export default async function DashboardLayout({
                 <ShieldAlert className="h-5 w-5 text-red-500" />
                 Lista Negra
               </Link>
+              {user?.isSuperAdmin && (
+                <Link
+                  href="/dashboard/admin/sessions"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                >
+                  <ShieldAlert className="h-5 w-5 text-indigo-500" />
+                  Gestión de Sesiones
+                </Link>
+              )}
             </nav>
           </div>
         </div>
       </div>
       <div className="flex flex-col">
         <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-muted/40 px-4 backdrop-blur-md lg:h-[60px] lg:px-6">
-          <MobileNav role={role} user={user} showParking={showParking} />
+          <MobileNav role={role} user={userForMenu} showParking={showParking} isSuperAdmin={user?.isSuperAdmin} />
           <div className="w-full flex-1">
             <form action="/dashboard/search">
               <div className="relative">
@@ -159,7 +196,15 @@ export default async function DashboardLayout({
               </div>
             </form>
           </div>
-          <UserMenu user={user} />
+          <div className="flex items-center gap-3">
+            {currentSessionName && (
+              <div className="hidden sm:flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Sesión:</span>
+                <span className="text-sm font-bold tracking-tight">{currentSessionName}</span>
+              </div>
+            )}
+            <UserMenu user={userForMenu} />
+          </div>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
           {children}

@@ -23,7 +23,7 @@ export async function PATCH(
     const updateData: any = {};
     if (name) updateData.name = name;
     if (email) updateData.email = email;
-    if (role) updateData.role = role as Role;
+    // role is handled separately via UserSession
     if (phone !== undefined) updateData.phone = phone;
     if (isActive !== undefined) updateData.isActive = isActive;
     if (image !== undefined) updateData.image = image;
@@ -48,16 +48,63 @@ export async function PATCH(
     }
 
     // Protection: Ensure Super Admin cannot be downgraded or deactivated
-    const targetUser = await prisma.user.findUnique({ where: { id }, select: { email: true } });
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+
     if (targetUser && targetUser.email.toLowerCase().trim() === "guillermo.diarte@gmail.com") {
-      updateData.role = "ADMIN";
-      updateData.isActive = true;
+      // If trying to deactivate
+      if (isActive === false) {
+        return new NextResponse("No puedes bloquear al Super Admin", { status: 403 });
+      }
+      // If trying to change role to anything other than ADMIN
+      if (role && role !== "ADMIN") {
+        return new NextResponse("No puedes cambiar el rol del Super Admin", { status: 403 });
+      }
     }
 
-    const user = await prisma.user.update({
-      where: { id },
-      data: updateData,
-    });
+    const maxRetries = 3;
+    let retries = 0;
+    let user;
+
+    while (retries < maxRetries) {
+      try {
+        user = await prisma.user.update({
+          where: { id },
+          data: updateData,
+        });
+        break;
+      } catch (error: any) {
+        if (error.code === 'P2002') {
+          throw error; // Email collision handled above, but just in case
+        }
+        retries++;
+        if (retries === maxRetries) throw error;
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    if (!user) throw new Error("Failed to update user");
+
+    // Handle Role Update (UserSession)
+    // We assume the admin is updating the role within the CONTEXT of their current session.
+    const currentSessionId = (session.user as any).sessionId;
+
+    if (role && currentSessionId) {
+      // Update or Create the UserSession for this user and this session
+      await prisma.userSession.upsert({
+        where: {
+          userId_sessionId: {
+            userId: id,
+            sessionId: currentSessionId
+          }
+        },
+        update: { role: role as Role },
+        create: {
+          userId: id,
+          sessionId: currentSessionId,
+          role: role as Role
+        }
+      });
+    }
 
     const { password: _, ...cleaned } = user;
     return NextResponse.json(cleaned);
@@ -80,6 +127,12 @@ export async function DELETE(
 
   try {
     const { id } = await params;
+
+    // Check if target is Super Admin
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (targetUser?.email.toLowerCase().trim() === "guillermo.diarte@gmail.com") {
+      return new NextResponse("No puedes eliminar al Super Admin", { status: 403 });
+    }
 
     // Prevent deleting self (extra safety)
     if (session.user?.id === id) {

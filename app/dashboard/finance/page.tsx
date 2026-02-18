@@ -14,6 +14,7 @@ export default async function FinancePage({
   const session = await auth();
   if (!session) redirect("/login");
   const userRole = (session?.user as any)?.role;
+  const sessionId = session?.user?.sessionId;
 
   // Adjust for Argentina Time (UTC-3)
   const today = new Date(Date.now() - 3 * 60 * 60 * 1000);
@@ -34,6 +35,7 @@ export default async function FinancePage({
   const expenses = await prisma.expense.findMany({
     where: {
       date: { gte: startDate, lte: endDate },
+      sessionId
     },
     include: { department: true },
     orderBy: { date: "desc" },
@@ -43,11 +45,12 @@ export default async function FinancePage({
     where: {
       status: { not: "CANCELLED" },
       checkIn: { gte: startDate, lte: endDate },
+      sessionId
     },
   });
 
   const departments = await prisma.department.findMany({
-    where: { isActive: true },
+    where: { isActive: true, sessionId },
     orderBy: { name: 'asc' }
   });
 
@@ -79,10 +82,10 @@ export default async function FinancePage({
   const yearEnd = new Date(selectedYear, 11, 31);
 
   const allYearExpenses = await prisma.expense.findMany({
-    where: { date: { gte: yearStart, lte: yearEnd } }
+    where: { date: { gte: yearStart, lte: yearEnd }, sessionId }
   });
   const allYearReservations = await prisma.reservation.findMany({
-    where: { status: { not: "CANCELLED" }, checkIn: { gte: yearStart, lte: yearEnd } }
+    where: { status: { not: "CANCELLED" }, checkIn: { gte: yearStart, lte: yearEnd }, sessionId }
   });
 
   const monthlyStats = Array.from({ length: 12 }).map((_, i) => ({
@@ -179,7 +182,8 @@ export default async function FinancePage({
   // 7. Configuración de Años
   const yearSettings = await prisma.systemSettings.findMany({
     where: {
-      key: { in: ["RESERVATION_YEAR_START", "RESERVATION_YEAR_END"] }
+      key: { in: ["RESERVATION_YEAR_START", "RESERVATION_YEAR_END"] },
+      sessionId
     }
   });
 

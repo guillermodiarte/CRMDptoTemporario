@@ -25,20 +25,16 @@ export const authConfig = {
         session.user.id = token.sub;
         // @ts-ignore
         session.user.role = token.role;
+        // @ts-ignore
+        session.user.sessionId = token.sessionId;
+        // @ts-ignore
+        session.user.isSuperAdmin = token.isSuperAdmin;
+
         // Image removed from session cookie to prevent header overflow
       }
       return session;
     },
-    jwt({ token, user }) {
-      if (user) {
-        // @ts-ignore
-        token.role = user.role
-        // Explicitly remove image from token to prevent header overflow (HTTP 431)
-        token.picture = null;
-        token.image = null;
-      }
-      return token
-    }
+    // jwt callback removed - role is handled in auth.ts from UserSession
   },
   providers: [], // Add providers with an empty array for now
 } satisfies NextAuthConfig;

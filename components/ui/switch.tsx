@@ -22,10 +22,7 @@ function Switch({
       {...props}
     >
       {/* Absolute positioned icons inside the track */}
-      <div className="absolute inset-0 flex items-center justify-between px-2 pointer-events-none">
-        <Check className="h-4 w-4 text-green-700 font-bold opacity-0 transition-opacity duration-200 group-data-[state=checked]:opacity-100" />
-        <X className="h-4 w-4 text-rose-700 font-bold opacity-100 transition-opacity duration-200 group-data-[state=checked]:opacity-0" />
-      </div>
+
 
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"

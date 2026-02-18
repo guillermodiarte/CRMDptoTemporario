@@ -2,15 +2,19 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { requireSessionId } from "@/lib/auth-helper";
 
 export async function GET() {
   const session = await auth();
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
   try {
+    const sessionId = await requireSessionId();
+
     const settings = await prisma.systemSettings.findMany({
       where: {
-        key: { in: ["DEFAULT_CLEANING_FEE", "RESERVATION_YEAR_START", "RESERVATION_YEAR_END", "SHOW_PARKING_MENU"] }
+        key: { in: ["DEFAULT_CLEANING_FEE", "RESERVATION_YEAR_START", "RESERVATION_YEAR_END", "SHOW_PARKING_MENU"] },
+        sessionId
       },
     });
 
@@ -41,6 +45,7 @@ export async function PUT(req: Request) {
   if (role !== "ADMIN") {
     return new NextResponse("Forbidden", { status: 403 });
   }
+  const sessionId = await requireSessionId();
 
   try {
     const body = await req.json();
@@ -48,33 +53,33 @@ export async function PUT(req: Request) {
 
     if (body.cleaningFee !== undefined) {
       updates.push(prisma.systemSettings.upsert({
-        where: { key: "DEFAULT_CLEANING_FEE" },
+        where: { sessionId_key: { sessionId, key: "DEFAULT_CLEANING_FEE" } },
         update: { value: String(body.cleaningFee), updatedBy: session.user?.email || "unknown" },
-        create: { key: "DEFAULT_CLEANING_FEE", value: String(body.cleaningFee), updatedBy: session.user?.email || "unknown" },
+        create: { key: "DEFAULT_CLEANING_FEE", value: String(body.cleaningFee), updatedBy: session.user?.email || "unknown", sessionId },
       }));
     }
 
     if (body.startYear !== undefined) {
       updates.push(prisma.systemSettings.upsert({
-        where: { key: "RESERVATION_YEAR_START" },
+        where: { sessionId_key: { sessionId, key: "RESERVATION_YEAR_START" } },
         update: { value: String(body.startYear), updatedBy: session.user?.email || "unknown" },
-        create: { key: "RESERVATION_YEAR_START", value: String(body.startYear), updatedBy: session.user?.email || "unknown" },
+        create: { key: "RESERVATION_YEAR_START", value: String(body.startYear), updatedBy: session.user?.email || "unknown", sessionId },
       }));
     }
 
     if (body.endYear !== undefined) {
       updates.push(prisma.systemSettings.upsert({
-        where: { key: "RESERVATION_YEAR_END" },
+        where: { sessionId_key: { sessionId, key: "RESERVATION_YEAR_END" } },
         update: { value: String(body.endYear), updatedBy: session.user?.email || "unknown" },
-        create: { key: "RESERVATION_YEAR_END", value: String(body.endYear), updatedBy: session.user?.email || "unknown" },
+        create: { key: "RESERVATION_YEAR_END", value: String(body.endYear), updatedBy: session.user?.email || "unknown", sessionId },
       }));
     }
 
     if (body.showParking !== undefined) {
       updates.push(prisma.systemSettings.upsert({
-        where: { key: "SHOW_PARKING_MENU" },
+        where: { sessionId_key: { sessionId, key: "SHOW_PARKING_MENU" } },
         update: { value: String(body.showParking), updatedBy: session.user?.email || "unknown" },
-        create: { key: "SHOW_PARKING_MENU", value: String(body.showParking), updatedBy: session.user?.email || "unknown" },
+        create: { key: "SHOW_PARKING_MENU", value: String(body.showParking), updatedBy: session.user?.email || "unknown", sessionId },
       }));
     }
 

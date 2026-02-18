@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requireSessionId } from "@/lib/auth-helper";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -9,14 +10,16 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type") || "PERSONAL";
 
+  const sessionId = await requireSessionId();
+
   if (type === "GLOBAL") {
     const note = await prisma.note.findFirst({
-      where: { type: "GLOBAL" },
+      where: { type: "GLOBAL", sessionId },
     });
     return NextResponse.json(note || { content: "" });
   } else {
     const note = await prisma.note.findFirst({
-      where: { userId: session.user.id, type: "PERSONAL" },
+      where: { userId: session.user.id, type: "PERSONAL", sessionId },
     });
     return NextResponse.json(note || { content: "" });
   }
@@ -28,11 +31,13 @@ export async function POST(req: Request) {
 
   const { content, type = "PERSONAL" } = await req.json();
 
+  const sessionId = await requireSessionId();
+
   if (type === "GLOBAL") {
     // For Global notes, we act on the single global note or create one
     // We don't really care who created it, just that it exists
     const existing = await prisma.note.findFirst({
-      where: { type: "GLOBAL" },
+      where: { type: "GLOBAL", sessionId },
     });
 
     if (existing) {
@@ -47,13 +52,14 @@ export async function POST(req: Request) {
           content,
           userId: session.user.id!,
           type: "GLOBAL",
+          sessionId
         },
       });
       return NextResponse.json(created);
     }
   } else {
     const existing = await prisma.note.findFirst({
-      where: { userId: session.user.id, type: "PERSONAL" },
+      where: { userId: session.user.id, type: "PERSONAL", sessionId },
     });
 
     if (existing) {
@@ -68,6 +74,7 @@ export async function POST(req: Request) {
           content,
           userId: session.user.id!,
           type: "PERSONAL",
+          sessionId
         },
       });
       return NextResponse.json(created);

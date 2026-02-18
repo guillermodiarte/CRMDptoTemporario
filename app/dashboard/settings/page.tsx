@@ -10,18 +10,30 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  // Fetch fresh role from DB to avoid stale session issues
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+  const sessionId = session?.user?.sessionId;
+  if (!sessionId) redirect("/select-session");
+
+  // Fetch fresh role from DB (UserSession now) to avoid stale session issues
+  const userSession = await prisma.userSession.findUnique({
+    where: {
+      userId_sessionId: {
+        userId: session.user.id,
+        sessionId
+      }
+    },
     select: { role: true }
   });
 
-  if (user?.role !== "ADMIN") {
+  if (!userSession) {
+    redirect("/select-session");
+  }
+
+  if (userSession.role !== "ADMIN") {
     redirect("/dashboard");
   }
 
   const activeParkingCount = await prisma.department.count({
-    where: { type: "PARKING", isActive: true }
+    where: { type: "PARKING", isActive: true, sessionId }
   });
 
   return <SettingsForm activeParkingCount={activeParkingCount} />;

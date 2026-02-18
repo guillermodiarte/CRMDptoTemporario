@@ -4,10 +4,15 @@ import { addMonths, startOfMonth, endOfMonth, subMonths } from "date-fns";
 
 export const dynamic = 'force-dynamic';
 
+import { auth } from "@/auth";
+
 export default async function CalendarPage({ searchParams }: { searchParams: { date?: string } }) {
+  const session = await auth();
+  const sessionId = session?.user?.sessionId;
+
   // Default to current month window
   const departments = await prisma.department.findMany({
-    where: { isActive: true },
+    where: { isActive: true, sessionId },
     orderBy: { name: 'asc' },
     select: {
       id: true,
@@ -32,6 +37,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: { d
   const reservations = await prisma.reservation.findMany({
     where: {
       status: { not: "CANCELLED" },
+      sessionId,
       OR: [
         {
           checkIn: { lte: end },
@@ -60,7 +66,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: { d
   });
 
   const blacklistEntries = await prisma.blacklistEntry.findMany({
-    where: { isActive: true },
+    where: { isActive: true, sessionId },
     select: { guestName: true, guestPhone: true }
   });
 

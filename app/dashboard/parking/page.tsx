@@ -6,11 +6,13 @@ import { DepartmentsClient } from "@/components/departments-client";
 export default async function ParkingPage() {
   const session = await auth();
   const userRole = (session?.user as any)?.role;
+  const sessionId = session?.user?.sessionId;
 
   const departments = await prisma.department.findMany({
     where: {
       // @ts-ignore
-      type: 'PARKING'
+      type: 'PARKING',
+      sessionId
     },
     orderBy: { createdAt: "desc" },
   });

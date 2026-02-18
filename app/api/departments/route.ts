@@ -1,14 +1,14 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireSessionId } from "@/lib/auth-helper";
 
 export async function GET(req: Request) {
   try {
-    const session = await auth();
-    if (!session) return new NextResponse("Unauthorized", { status: 401 });
+    const sessionId = await requireSessionId();
 
     const departments = await prisma.department.findMany({
-      where: { isActive: true },
+      where: { isActive: true, sessionId },
       orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json(departments);
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     if (!session || session.user?.role !== "ADMIN") {
       return new NextResponse("Forbidden", { status: 403 });
     }
+    const sessionId = await requireSessionId();
 
     const body = await req.json();
     const {
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     // ...
 
     const existingDept = await prisma.department.findFirst({
-      where: { name }
+      where: { name, sessionId }
     });
 
     let department;
@@ -87,6 +88,7 @@ export async function POST(req: Request) {
           hasParking: !!hasParking,
           googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink,
           images: JSON.stringify(images || []),
+          sessionId,
         },
       });
     }

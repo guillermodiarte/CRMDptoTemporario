@@ -10,9 +10,11 @@ export default async function BlacklistPage() {
     redirect("/login");
   }
 
+  const sessionId = session?.user?.sessionId;
+
   // Fetch active blacklist entries
   const entries = await prisma.blacklistEntry.findMany({
-    where: { isActive: true },
+    where: { isActive: true, sessionId },
     orderBy: { createdAt: "desc" },
     include: {
       reportedBy: { select: { name: true, email: true } }

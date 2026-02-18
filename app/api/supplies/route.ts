@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requireSessionId } from "@/lib/auth-helper";
 
 export async function GET(req: Request) {
   const session = await auth();
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
   try {
+    const sessionId = await requireSessionId();
     const supplies = await prisma.supply.findMany({
+      where: { sessionId },
       orderBy: { createdAt: 'desc' },
       // Return ALL supplies so admin can reactivate them
     });
@@ -34,7 +37,9 @@ export async function POST(req: Request) {
       data: {
         name,
         cost: parseFloat(cost),
-        isActive: true
+        cost: parseFloat(cost),
+        isActive: true,
+        sessionId
       }
     });
 
@@ -50,6 +55,12 @@ export async function PUT(req: Request) {
 
   try {
     const { id, name, cost, isActive } = await req.json();
+
+    const sessionId = await requireSessionId();
+    const existing = await prisma.supply.findUnique({ where: { id } });
+    if (!existing || existing.sessionId !== sessionId) {
+      return new NextResponse("Not Found or Access Denied", { status: 404 });
+    }
 
     const supply = await prisma.supply.update({
       where: { id },
@@ -79,6 +90,12 @@ export async function DELETE(req: Request) {
     // Hard delete or Soft delete? Plan said soft/hard. User said "eliminar". 
     // Safest is soft delete (isActive=false) but user might want to remove mistakes.
     // Let's do HARD delete for now as it's separate from historical costs (snapshots).
+
+    const sessionId = await requireSessionId();
+    const existing = await prisma.supply.findUnique({ where: { id } });
+    if (!existing || existing.sessionId !== sessionId) {
+      return new NextResponse("Not Found or Access Denied", { status: 404 });
+    }
 
     await prisma.supply.delete({
       where: { id }
