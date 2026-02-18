@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   const admins = [
-    { email: 'guillermo.diarte@gmail.com', password: 'Admin1234' },
+    { email: 'guillermo.diarte@gmail.com', password: 'Gad33224122' },
     { email: 'gadiarte@gmail.com', password: 'Diarte1035' }
   ];
 
@@ -24,18 +24,20 @@ async function main() {
             email,
             password: hashedPassword,
             name: 'Admin',
-            role: 'ADMIN',
+            isSuperAdmin: true,
+            isActive: true,
           },
         });
         console.log(`>>> ${email} created.`);
       } else {
-        console.log(`>>> ${email} exists. Updating credentials...`);
+        console.log(`>>> ${email} exists. Updating credentials and isSuperAdmin...`);
         const hashedPassword = await bcrypt.hash(password, 10);
         await prisma.user.update({
           where: { email },
           data: {
-            role: 'ADMIN',
-            password: hashedPassword
+            isSuperAdmin: true,
+            isActive: true,
+            password: hashedPassword,
           },
         });
         console.log(`>>> ${email} updated.`);
