@@ -143,13 +143,17 @@ if [ -f ".next/standalone/server.js" ]; then
     # npx prisma generate || log "WARNING: Prisma generate failed. specific binaries might be missing."
 
     log "Applying Database Migrations..."
-    # Capture db push output and log it. Do not exit on fail, but verify.
     if npx prisma db push --accept-data-loss; then
         log "Migrations successful."
     else
-        log "ERROR: Prisma db push failed. Likely permission issues."
-        log "Sleeping 60s to allow log inspection..."
-        sleep 60
+        log "WARNING: Normal db push failed. Attempting --force-reset to recreate DB with new schema..."
+        if npx prisma db push --force-reset --accept-data-loss; then
+            log "Force-reset migration successful. DB recreated with new schema."
+        else
+            log "ERROR: Prisma db push --force-reset also failed."
+            log "Sleeping 60s to allow log inspection..."
+            sleep 60
+        fi
     fi
     
     log "Seeding Admin User..."
