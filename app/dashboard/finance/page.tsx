@@ -43,7 +43,6 @@ export default async function FinancePage({
 
   const reservations = await prisma.reservation.findMany({
     where: {
-      status: { not: "CANCELLED" },
       checkIn: { gte: startDate, lte: endDate },
       sessionId
     },
@@ -85,7 +84,7 @@ export default async function FinancePage({
     where: { date: { gte: yearStart, lte: yearEnd }, sessionId }
   });
   const allYearReservations = await prisma.reservation.findMany({
-    where: { status: { not: "CANCELLED" }, checkIn: { gte: yearStart, lte: yearEnd }, sessionId }
+    where: { checkIn: { gte: yearStart, lte: yearEnd }, sessionId }
   });
 
   const monthlyStats = Array.from({ length: 12 }).map((_, i) => ({
