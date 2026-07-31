@@ -99,12 +99,11 @@ export default async function DashboardPage() {
 
   // Calculate Monthly Revenue (Finance Page Logic)
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
 
   const monthlyReservations = await prisma.reservation.findMany({
     where: {
       checkIn: { gte: startOfMonth, lte: endOfMonth },
-      status: { not: "CANCELLED" },
       sessionId: sessionId // Filter by session
     }
   });
@@ -112,7 +111,7 @@ export default async function DashboardPage() {
   const monthlyRevenueRaw = monthlyReservations.reduce((acc, curr) => {
     let amount = 0;
     if (curr.paymentStatus === 'PAID') amount = curr.totalAmount;
-    else if (curr.paymentStatus === 'PARTIAL') amount = curr.depositAmount || 0;
+    else if (curr.paymentStatus === 'PARTIAL' || (curr.paymentStatus as any) === 'CANCELLED') amount = curr.depositAmount || 0;
 
     if (curr.currency === 'USD') amount = amount * dollarRate;
 
