@@ -35,7 +35,8 @@ const CSV_CONFIG = [
   { label: "DepartmentName", key: "departmentName", type: "string" }, // Optional
   { label: "CheckIn", key: "checkIn", type: "date" },
   { label: "CheckOut", key: "checkOut", type: "date" },
-  { label: "TotalAmount", key: "totalAmount", type: "number" }
+  { label: "TotalAmount", key: "totalAmount", type: "number" },
+  { label: "Activo", key: "isActive", type: "boolean" }
 ];
 
 export function BlacklistActions({ data }: BlacklistActionsProps) {
@@ -53,7 +54,7 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
   };
 
   const exportToCSV = () => {
-    const headers = ["Huésped", "Teléfono", "Motivo", "Reportado Por", "Fecha", "Check-In", "Check-Out"];
+    const headers = ["Huésped", "Teléfono", "Motivo", "Reportado Por", "Fecha", "Check-In", "Check-Out", "Activo"];
 
     const rows = data.map(entry => {
       return [
@@ -64,6 +65,7 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
         format(new Date(entry.createdAt), "yyyy-MM-dd"),
         entry.checkIn ? format(new Date(entry.checkIn), "yyyy-MM-dd") : "",
         entry.checkOut ? format(new Date(entry.checkOut), "yyyy-MM-dd") : "",
+        entry.isActive ? "SI" : "NO"
       ].join(",");
     });
 
@@ -146,7 +148,11 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
           if (foundKey) val = row[foundKey];
         }
 
-        entry[config.key] = val?.trim();
+        if (config.key === "isActive") {
+          val = ["si", "yes", "true", "1"].includes(val?.toLowerCase());
+        }
+
+        entry[config.key] = typeof val === "boolean" ? val : val?.trim();
       });
 
       // 2. Validate Required
@@ -174,11 +180,26 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
           existing.guestPhone?.trim() === entry.guestPhone?.trim()
         );
         if (exists) {
-          statsParams.same++;
-          preview.push({
-            status: "SAME",
-            data: { ...entry, _message: "Ya existe" }
-          });
+          // If it exists, it's an update (SAME or UPDATE)
+          // Compare fields including isActive
+          const existingRow = data.find(existing => existing.guestPhone?.trim() === entry.guestPhone?.trim());
+          let hasChanges = false;
+          if (existingRow && entry.isActive !== undefined && existingRow.isActive !== entry.isActive) {
+            hasChanges = true;
+          }
+          if (hasChanges) {
+            statsParams.updated++;
+            preview.push({
+              status: "UPDATE",
+              data: { ...entry, _dbId: existingRow?.id }
+            });
+          } else {
+            statsParams.same++;
+            preview.push({
+              status: "SAME",
+              data: { ...entry, _dbId: existingRow?.id }
+            });
+          }
         } else {
           statsParams.new++;
           preview.push({
@@ -198,18 +219,27 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
     let success = 0;
     const errors: string[] = [];
 
-    const rowsToImport = selectedRows.filter(r => r.status === "NEW" || r.status === "SAME");
+    const rowsToImport = selectedRows.filter(r => r.status === "NEW" || r.status === "UPDATE" || r.status === "SAME");
 
     for (const rowObj of rowsToImport) {
       const row = rowObj.data;
       try {
-        const { _errors, _id, _valid, _duplicate, ...payload } = row;
+        const { _errors, _id, _valid, _duplicate, _dbId, ...payload } = row;
 
-        const res = await fetch("/api/blacklist", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
+        let res;
+        if ((rowObj.status === "UPDATE" || rowObj.status === "SAME") && _dbId) {
+           res = await fetch(`/api/blacklist/${_dbId}`, {
+             method: "PATCH",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify(payload)
+           });
+        } else {
+           res = await fetch("/api/blacklist", {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify(payload)
+           });
+        }
 
         if (!res.ok) {
           throw new Error(await res.text());
@@ -233,6 +263,7 @@ export function BlacklistActions({ data }: BlacklistActionsProps) {
     { header: "Huésped", accessorKey: "guestName" },
     { header: "Teléfono", accessorKey: "guestPhone" },
     { header: "Motivo", accessorKey: "reason" },
+    { header: "Activo", accessorKey: "isActive", cell: (val: any) => val ? <span className="text-green-600">SI</span> : <span className="text-gray-400">NO</span> },
     {
       header: "Error",
       accessorKey: "_errors",

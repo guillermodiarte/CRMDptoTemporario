@@ -26,6 +26,7 @@ import { ImportPreviewModal, ImportPreviewRow, ImportStats } from "./import-prev
 
 interface UsersActionsProps {
   data: User[];
+  availableSessions?: { id: string; name: string }[];
 }
 
 const CSV_CONFIG = [
@@ -36,9 +37,10 @@ const CSV_CONFIG = [
   { label: "Password", key: "password", type: "string" }, // Required for creation
   { label: "IsActive", key: "isActive", type: "boolean" },
   { label: "Image", key: "image", type: "string" },
+  { label: "Sesiones", key: "sessionIds", type: "string" },
 ];
 
-export function UsersActions({ data }: UsersActionsProps) {
+export function UsersActions({ data, availableSessions = [] }: UsersActionsProps) {
   const router = useRouter();
 
   const [importOpen, setImportOpen] = useState(false);
@@ -53,9 +55,13 @@ export function UsersActions({ data }: UsersActionsProps) {
   };
 
   const exportToCSV = () => {
-    const headers = ["Nombre", "Email", "Contraseña", "Rol", "Teléfono", "Activo", "Imagen", "Creado"];
+    const headers = ["Nombre", "Email", "Contraseña", "Rol", "Teléfono", "Activo", "Imagen", "Sesiones", "Creado"];
 
-    const rows = data.map(user => {
+    const rows = data.map((user: any) => {
+      let sessionsStr = "";
+      if (user.allSessions && user.allSessions.length > 0) {
+        sessionsStr = user.allSessions.map((s: any) => `${s.session.name} (${s.role})`).join(" | ");
+      }
       return [
         `"${user.name?.replace(/"/g, '""') || ""}"`,
         `"${user.email.replace(/"/g, '""')}"`,
@@ -64,6 +70,7 @@ export function UsersActions({ data }: UsersActionsProps) {
         `"${(user.phone || "").replace(/"/g, '""')}"`,
         user.isActive ? "SI" : "NO",
         `"${(user.image || "").replace(/"/g, '""')}"`,
+        `"${sessionsStr}"`,
         format(new Date(user.createdAt), "yyyy-MM-dd"),
       ].join(",");
     });
@@ -142,6 +149,7 @@ export function UsersActions({ data }: UsersActionsProps) {
             if (config.key === "password" && (kLow === "contraseña" || kLow === "contrasena" || kLow === "password")) return true;
             if (config.key === "isActive" && (kLow === "activo" || kLow === "active")) return true;
             if (config.key === "image" && kLow === "imagen") return true;
+            if (config.key === "sessionIds" && (kLow === "sesiones" || kLow === "sesion")) return true;
             return false;
           });
           if (foundKey) val = row[foundKey];
@@ -149,6 +157,18 @@ export function UsersActions({ data }: UsersActionsProps) {
 
         if (config.key === "isActive") {
           val = ["si", "yes", "true", "1"].includes(val?.toLowerCase());
+        } else if (config.key === "sessionIds" && typeof val === "string") {
+          const mappedIds: string[] = [];
+          if (val) {
+            const parts = val.split("|").map(p => p.trim()).filter(Boolean);
+            parts.forEach(part => {
+               const namePart = part.replace(/\(.*?\)/g, "").trim();
+               const match = availableSessions.find(s => s.name.toLowerCase() === namePart.toLowerCase());
+               if (match) mappedIds.push(match.id);
+            });
+          }
+          entry.sessionIds = mappedIds;
+          return; // Skip normal trim assignment
         }
 
         entry[config.key] = typeof val === "boolean" ? val : val?.trim();
@@ -184,11 +204,13 @@ export function UsersActions({ data }: UsersActionsProps) {
         let hasChanges = false;
         const diffs: any = {};
 
-        // Compare fields including PASSWORD
-        const fields = ["name", "role", "phone", "isActive", "password", "image"];
+        // Compare fields including PASSWORD and sessionIds
+        const fields = ["name", "role", "phone", "isActive", "password", "image", "sessionIds"];
         fields.forEach(f => {
-          const newVal = String(entry[f] ?? "").trim();
-          const oldVal = String((existing as any)[f] ?? "").trim();
+          const newVal = f === "sessionIds" ? JSON.stringify(entry[f] || []) : String(entry[f] ?? "").trim();
+          const oldVal = f === "sessionIds" 
+            ? JSON.stringify((existing as any).allSessions?.map((s:any) => s.sessionId) || [])
+            : String((existing as any)[f] ?? "").trim();
 
           // Special password handling
           if (f === "password") {
@@ -257,7 +279,8 @@ export function UsersActions({ data }: UsersActionsProps) {
           role: row.role,
           phone: row.phone,
           isActive: row.isActive !== undefined ? row.isActive : true,
-          image: row.image || "" // Use the image from CSV
+          image: row.image || "",
+          sessionIds: row.sessionIds || []
         };
 
         let res;

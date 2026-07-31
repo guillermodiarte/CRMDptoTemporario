@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const sessionId = await requireSessionId();
-    const { type, description, amount, departmentId, date, quantity, unitPrice } = body;
+    const { type, description, amount, departmentId, date, quantity, unitPrice, isDeleted } = body;
 
     const expense = await prisma.expense.create({
       data: {
@@ -41,6 +41,7 @@ export async function POST(req: Request) {
         unitPrice: unitPrice ? Number(unitPrice) : null,
         departmentId: departmentId || null,
         date: date ? new Date(`${date}T12:00:00`) : new Date(),
+        isDeleted: isDeleted !== undefined ? isDeleted : false,
         sessionId
       }
     });

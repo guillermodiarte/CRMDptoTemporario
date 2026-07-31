@@ -55,7 +55,8 @@ const CSV_CONFIG = [
   { label: "Medidor Gas", key: "meterGas", type: "string" },
   { label: "Medidor Agua", key: "meterAgua", type: "string" },
   { label: "Medidor WiFi", key: "meterWifi", type: "string" },
-  { label: "Notas Inventario", key: "inventoryNotes", type: "string" }
+  { label: "Notas Inventario", key: "inventoryNotes", type: "string" },
+  { label: "Archivado", key: "isArchived", type: "boolean" }
 ];
 
 export function DepartmentsActions({ data, role, defaultType = "APARTMENT" }: DepartmentsActionsProps) {
@@ -76,7 +77,7 @@ export function DepartmentsActions({ data, role, defaultType = "APARTMENT" }: De
   };
 
   const handleExportCSV = () => {
-    const exportData = data.filter(d => !(d as any).isArchived); // Only active
+    const exportData = data; // Export all including archived
     if (!exportData.length) return alert("No hay datos para exportar.");
 
     const headers = CSV_CONFIG.map(c => c.label).join(",");

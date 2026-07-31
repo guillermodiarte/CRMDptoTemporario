@@ -61,8 +61,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       departmentId, guestName, guestPhone, guestPeopleCount, bedsRequired,
-      checkIn, checkOut, totalAmount, depositAmount, cleaningFee,
-      currency, paymentStatus, source, notes, force, hasParking
+      checkIn, checkOut, totalAmount, depositAmount, cleaningFee, amenitiesFee,
+      currency, paymentStatus, source, notes, force, hasParking, groupId, exchangeRate
     } = body;
 
     if (!departmentId || !guestName || !checkIn || !checkOut || totalAmount === undefined) {
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
       amenitiesFee
     );
 
-    const groupId = splits.length > 1 ? generateUUID() : null;
+    const generatedGroupId = groupId || (splits.length > 1 ? generateUUID() : null);
 
     // Transaction to create all parts
     const reservations = await prisma.$transaction(async (prisma) => {
@@ -124,16 +124,17 @@ export async function POST(req: Request) {
             checkIn: split.checkIn,
             checkOut: split.checkOut,
             totalAmount: split.totalAmount,
-            depositAmount: split.depositAmount, // Logic handled in utility
-            cleaningFee: split.cleaningFee,     // Logic handled in utility
-            amenitiesFee: split.amenitiesFee,   // Logic handled in utility
+            depositAmount: split.depositAmount,
+            cleaningFee: split.cleaningFee,
+            amenitiesFee: split.amenitiesFee,
             currency: currency || "ARS",
             paymentStatus: paymentStatus || "UNPAID",
             source: source || "DIRECT",
             notes,
             hasParking: !!hasParking,
             status: "CONFIRMED",
-            groupId: groupId,
+            groupId: generatedGroupId,
+            exchangeRate: exchangeRate ? parseFloat(exchangeRate) : 1,
             sessionId
           }
         }))

@@ -26,7 +26,6 @@ export default async function ReservationsPage({
 
   const reservations = await prisma.reservation.findMany({
     where: {
-      // status: { not: "CANCELLED" },
       sessionId,
       checkIn: {
         gte: startDate,
@@ -35,6 +34,36 @@ export default async function ReservationsPage({
     },
     include: { department: true },
     orderBy: { checkIn: "asc" },
+  });
+
+  const groupIds = Array.from(new Set(reservations.filter(r => r.groupId).map(r => r.groupId as string)));
+  
+  let groupTotals: Record<string, { totalAmount: number, depositAmount: number }> = {};
+  if (groupIds.length > 0) {
+    const groupParts = await prisma.reservation.findMany({
+      where: { groupId: { in: groupIds } },
+      select: { groupId: true, totalAmount: true, depositAmount: true }
+    });
+    
+    groupTotals = groupParts.reduce((acc, curr) => {
+      if (!acc[curr.groupId!]) {
+        acc[curr.groupId!] = { totalAmount: 0, depositAmount: 0 };
+      }
+      acc[curr.groupId!].totalAmount += curr.totalAmount;
+      acc[curr.groupId!].depositAmount += curr.depositAmount;
+      return acc;
+    }, {} as Record<string, { totalAmount: number, depositAmount: number }>);
+  }
+
+  const enhancedReservations = reservations.map(r => {
+    if (r.groupId && groupTotals[r.groupId]) {
+      return {
+        ...r,
+        groupTotalAmount: groupTotals[r.groupId].totalAmount,
+        groupDepositAmount: groupTotals[r.groupId].depositAmount,
+      };
+    }
+    return r;
   });
 
   const departments = await prisma.department.findMany({
@@ -68,7 +97,7 @@ export default async function ReservationsPage({
   return (
     <div className="flex-1 space-y-4">
       <ReservationsClient
-        data={reservations as any}
+        data={enhancedReservations as any}
         departments={departments}
         dollarRate={dollarRate}
         role={userRole}

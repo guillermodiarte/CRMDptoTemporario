@@ -17,12 +17,13 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { guestName, guestPhone, reason } = body;
+    const { guestName, guestPhone, reason, isActive } = body;
 
     const data: any = {};
     if (guestName) data.guestName = guestName;
     if (reason) data.reason = reason;
     if (guestPhone) data.guestPhone = normalizePhone(guestPhone);
+    if (isActive !== undefined) data.isActive = isActive;
 
     const entry = await prisma.blacklistEntry.update({
       where: { id },

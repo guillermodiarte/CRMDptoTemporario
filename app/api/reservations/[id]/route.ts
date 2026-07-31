@@ -80,7 +80,8 @@ export async function PATCH(
             notes: body.notes || firstPart.notes,
             hasParking: body.hasParking !== undefined ? !!body.hasParking : firstPart.hasParking,
             status: (body.status || firstPart.status) as any,
-            groupId: groupId
+            groupId: groupId,
+            sessionId: currentRes.sessionId
           }
         })));
       });
@@ -134,7 +135,9 @@ export async function PATCH(
         hasParking,
         notes,
         status,
-        force
+        force,
+        exchangeRate,
+        groupId
       } = body;
 
       const start = checkIn ? new Date(`${checkIn}T12:00:00Z`) : undefined;
@@ -190,7 +193,9 @@ export async function PATCH(
           source,
           notes,
           hasParking,
-          status: status as any
+          status: status as any,
+          exchangeRate: exchangeRate !== undefined ? parseFloat(exchangeRate) : undefined,
+          groupId: groupId !== undefined ? groupId : undefined
         },
       });
 

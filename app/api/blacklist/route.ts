@@ -57,7 +57,8 @@ export async function POST(req: Request) {
       departmentName,
       checkIn,
       checkOut,
-      totalAmount
+      totalAmount,
+      isActive
     } = body;
 
     if (!guestName || !guestPhone || !reason) {
@@ -88,9 +89,9 @@ export async function POST(req: Request) {
         departmentName,
         checkIn: checkIn ? new Date(checkIn) : null,
         checkOut: checkOut ? new Date(checkOut) : null,
-        checkIn: checkIn ? new Date(checkIn) : null,
         checkOut: checkOut ? new Date(checkOut) : null,
         totalAmount: totalAmount ? Number(totalAmount) : null,
+        isActive: isActive !== undefined ? isActive : true,
         sessionId
       }
     });

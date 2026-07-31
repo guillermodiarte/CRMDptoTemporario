@@ -60,7 +60,8 @@ const CSV_CONFIG = [
   { label: "Total", key: "amount", type: "number", required: true },
   { label: "Departamento", key: "departmentName", type: "string" },
   { label: "Cantidad", key: "quantity", type: "number" },
-  { label: "Precio Unitario", key: "unitPrice", type: "number" }
+  { label: "Precio Unitario", key: "unitPrice", type: "number" },
+  { label: "Eliminado", key: "isDeleted", type: "boolean" }
 ];
 
 export function FinanceActions({ expenses, departments, date = new Date(), onExportPDF }: FinanceActionsProps) {
@@ -88,7 +89,8 @@ export function FinanceActions({ expenses, departments, date = new Date(), onExp
         exp.amount,
         `"${(exp.department?.name || "Global").replace(/"/g, '""')}"`,
         exp.quantity || 1,
-        exp.unitPrice || 0
+        exp.unitPrice || 0,
+        exp.isDeleted ? "SI" : "NO"
       ].join(",");
     });
 
@@ -277,8 +279,9 @@ export function FinanceActions({ expenses, departments, date = new Date(), onExp
           amount: row.amount,
           departmentId: row._departmentId,
           date: row.date,
-          quantity: row.quantity,
-          unitPrice: row.unitPrice
+          quantity: row.quantity || 1,
+          unitPrice: row.unitPrice || row.amount,
+          isDeleted: row.isDeleted !== undefined ? row.isDeleted : false
         };
 
         const res = await fetch("/api/expenses", {
@@ -307,11 +310,9 @@ export function FinanceActions({ expenses, departments, date = new Date(), onExp
     { header: "Fecha", accessorKey: "date" },
     { header: "Tipo", accessorKey: "type", cell: (val: string) => <span className="capitalize">{(val || "").toLowerCase()}</span> },
     { header: "Desc.", accessorKey: "description" },
-    {
-      header: "Monto",
-      accessorKey: "amount",
-      cell: (val: any) => <span>${val}</span>
-    },
+    { header: "Total", accessorKey: "amount", cell: (val: any) => <span>${val}</span> },
+    { header: "Depto", accessorKey: "departmentName", cell: (val: any) => <span className="truncate max-w-[100px] block" title={val}>{val || "Global"}</span> },
+    { header: "Eliminado", accessorKey: "isDeleted", cell: (val: any) => val ? <span className="text-red-500">SI</span> : "NO" },
     {
       header: "Error",
       accessorKey: "_errors",

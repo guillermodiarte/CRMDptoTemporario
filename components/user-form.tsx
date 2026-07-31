@@ -38,16 +38,18 @@ const formSchema = z.object({
   phone: z.string().optional(),
   image: z.string().optional(),
   isActive: z.boolean(),
+  sessionIds: z.array(z.string()).default([]),
 });
 
 interface UserFormProps {
-  initialData?: Partial<User> | null;
+  initialData?: Partial<User> & { allSessions?: any[] } | null;
   setOpen: (open: boolean) => void;
   currentUserId?: string;
+  availableSessions?: { id: string; name: string }[];
 }
 
 
-export function UserForm({ initialData, setOpen, currentUserId }: UserFormProps) {
+export function UserForm({ initialData, setOpen, currentUserId, availableSessions = [] }: UserFormProps) {
   const { data: session, status } = useSession();
 
   const router = useRouter();
@@ -68,6 +70,7 @@ export function UserForm({ initialData, setOpen, currentUserId }: UserFormProps)
       phone: initialData?.phone || "",
       image: initialData?.image || "",
       isActive: isCurrentUser ? true : (initialData?.isActive ?? true),
+      sessionIds: initialData?.allSessions?.map((s: any) => s.sessionId) || [],
     },
   });
 
@@ -295,6 +298,57 @@ export function UserForm({ initialData, setOpen, currentUserId }: UserFormProps)
                     : "Si se desactiva, el usuario no podrá iniciar sesión."}
                 </FormDescription>
               </div>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="sessionIds"
+          render={() => (
+            <FormItem>
+              <div className="mb-3">
+                <FormLabel className="text-base font-semibold">Sesiones Asignadas</FormLabel>
+                <FormDescription>
+                  Selecciona a qué sesiones puede ingresar este usuario.
+                </FormDescription>
+              </div>
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2">
+                {availableSessions?.map((item) => (
+                  <FormField
+                    key={item.id}
+                    control={form.control}
+                    name="sessionIds"
+                    render={({ field }) => {
+                      return (
+                        <FormItem
+                          key={item.id}
+                          className="flex flex-row items-center space-x-3 space-y-0 p-3 border rounded-md hover:bg-slate-50 cursor-pointer"
+                        >
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(item.id)}
+                              onCheckedChange={(checked) => {
+                                return checked
+                                  ? field.onChange([...field.value, item.id])
+                                  : field.onChange(
+                                      field.value?.filter(
+                                        (value) => value !== item.id
+                                      )
+                                    )
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-medium truncate text-sm flex-1 cursor-pointer">
+                            {item.name}
+                          </FormLabel>
+                        </FormItem>
+                      )
+                    }}
+                  />
+                ))}
+              </div>
+              <FormMessage />
             </FormItem>
           )}
         />

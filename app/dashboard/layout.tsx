@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma";
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { Search, LineChart, Home } from "lucide-react"
 import { UserMenu } from "@/components/user-menu";
 import { Logo } from "@/components/logo";
@@ -52,6 +53,10 @@ export default async function DashboardLayout({
   } : null;
 
   const sessionId = session?.user?.sessionId;
+
+  if (!sessionId) {
+    redirect("/select-session");
+  }
 
   // Fetch current session name
   let currentSessionName: string | null = null;
@@ -197,12 +202,20 @@ export default async function DashboardLayout({
             </form>
           </div>
           <div className="flex items-center gap-3">
-            {currentSessionName && (
-              <div className="hidden sm:flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Sesión:</span>
-                <span className="text-sm font-bold tracking-tight">{currentSessionName}</span>
-              </div>
-            )}
+            <div className="hidden sm:flex items-center gap-4 border-r pr-4">
+              {user?.name && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">Usuario:</span>
+                  <span className="text-sm font-bold tracking-tight">{user.name}</span>
+                </div>
+              )}
+              {currentSessionName && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">Sesión:</span>
+                  <span className="text-sm font-bold tracking-tight">{currentSessionName}</span>
+                </div>
+              )}
+            </div>
             <UserMenu user={userForMenu} />
           </div>
         </header>

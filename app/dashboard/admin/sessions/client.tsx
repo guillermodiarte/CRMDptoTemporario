@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { createSession, toggleSessionStatus, deleteSession } from "./actions";
 import { useRouter } from "next/navigation";
 import { EditSessionDialog } from "./edit-dialog";
+import { SessionsActions } from "@/components/sessions-actions";
 
 export function SessionManager({ sessions }: { sessions: any[] }) {
   const router = useRouter();
@@ -92,12 +93,14 @@ export function SessionManager({ sessions }: { sessions: any[] }) {
 
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Sesiones Activas</h2>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva Sesión
-            </Button>
+        <div className="flex gap-2">
+          <SessionsActions data={sessions} />
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Nueva Sesión
+              </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -124,7 +127,8 @@ export function SessionManager({ sessions }: { sessions: any[] }) {
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <div className="rounded-md border">

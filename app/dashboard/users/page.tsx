@@ -12,20 +12,39 @@ export default async function UsersPage() {
     redirect("/dashboard");
   }
 
-  // Fetch users WITH their role in the current session
-  const userSessions = await (prisma as any).userSession.findMany({
-    where: { sessionId },
-    include: {
-      user: true,
+  // Fetch users that belong to this session, including ALL their session memberships
+  const usersInSession = await prisma.user.findMany({
+    where: {
+      sessions: {
+        some: { sessionId }
+      }
     },
-    orderBy: { user: { name: "asc" } },
+    include: {
+      sessions: {
+        include: {
+          session: { select: { name: true, isActive: true } }
+        }
+      }
+    },
+    orderBy: { name: "asc" }
   });
 
-  // Merge user data with their session-specific role
-  const users = userSessions.map((us: any) => ({
-    ...us.user,
-    role: us.role, // Override with session-specific role
-  }));
+  // Fetch all active sessions for the assignment form
+  const availableSessions = await prisma.session.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" }
+  });
 
-  return <UsersClient data={users} currentUserId={session?.user?.id} />;
+  // Merge user data with their session-specific role and pass all their sessions
+  const users = usersInSession.map((user: any) => {
+    const currentMembership = user.sessions.find((s: any) => s.sessionId === sessionId);
+    return {
+      ...user,
+      role: currentMembership?.role || "VISUALIZER",
+      allSessions: user.sessions
+    };
+  });
+
+  return <UsersClient data={users} currentUserId={session?.user?.id} availableSessions={availableSessions} />;
 }

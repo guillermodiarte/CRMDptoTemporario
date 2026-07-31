@@ -45,7 +45,7 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     const csvRows = [];
     csvRows.push([
       "Huésped", "Teléfono", "Departamento", "Check-In", "Check-Out",
-      "Personas", "Camas", "Cochera", "Total", "Seña", "Limpieza", "Insumos", "Moneda", "Estado", "Pago", "No-Show", "Lista Negra", "Motivo Lista Negra", "Fuente", "Notas"
+      "Personas", "Camas", "Cochera", "Total", "Seña", "Limpieza", "Insumos", "Moneda", "Estado", "Pago", "No-Show", "Lista Negra", "Motivo Lista Negra", "Fuente", "Notas", "Tipo de Cambio", "ID Grupo"
     ].join(","));
 
     data.forEach(res => {
@@ -74,7 +74,9 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
         isBlacklisted ? "SI" : "NO",
         `"${(blacklistEntry?.reason || "").replace(/"/g, '""')}"`,
         res.source,
-        `"${(res.notes || "").replace(/"/g, '""')}"`
+        `"${(res.notes || "").replace(/"/g, '""')}"`,
+        res.exchangeRate || 1,
+        `"${(res.groupId || "").replace(/"/g, '""')}"`
       ];
       csvRows.push(row.join(","));
     });
@@ -115,19 +117,27 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
             else if (normalizedKey === "check-out" || normalizedKey === "checkout") newRow["CheckOut"] = row[key];
             else if (normalizedKey === "personas") newRow["GuestPeopleCount"] = row[key];
             else if (normalizedKey === "camas") newRow["BedsRequired"] = row[key];
-            else if (normalizedKey === "cochera" || normalizedKey === "cocheras") newRow["HasParking"] = row[key];
-            else if (normalizedKey === "total") newRow["TotalAmount"] = row[key];
-            else if (normalizedKey === "seña" || normalizedKey === "sena") newRow["DepositAmount"] = row[key];
-            else if (normalizedKey === "limpieza") newRow["CleaningFee"] = row[key];
-            else if (normalizedKey === "insumos") newRow["AmenitiesFee"] = row[key];
-            else if (normalizedKey === "moneda" || normalizedKey === "currency") newRow["Currency"] = row[key];
-            else if (normalizedKey === "estado") newRow["Status"] = row[key]; // Optional
-            else if (normalizedKey === "pago") newRow["PaymentStatus"] = row[key];
-            else if (normalizedKey === "fuente" || normalizedKey === "source") newRow["Source"] = row[key];
-            else if (normalizedKey === "notas") newRow["Notes"] = row[key];
-            else if (normalizedKey === "lista negra" || normalizedKey === "listanegra") newRow["IsBlacklisted"] = row[key];
-            else if (normalizedKey === "motivo lista negra") newRow["BlacklistReason"] = row[key];
-            else newRow[key] = row[key];
+            else {
+              const mapped = (() => {
+                if (normalizedKey === "total" || normalizedKey === "monto total" || normalizedKey === "totalamount") return "TotalAmount";
+                if (normalizedKey === "seña" || normalizedKey === "sena" || normalizedKey === "depositamount" || normalizedKey === "anticipo") return "DepositAmount";
+                if (normalizedKey === "limpieza" || normalizedKey === "cleaningfee") return "CleaningFee";
+                if (normalizedKey === "insumos" || normalizedKey === "amenitiesfee") return "AmenitiesFee";
+                if (normalizedKey === "moneda" || normalizedKey === "currency") return "Currency";
+                if (normalizedKey === "estado" || normalizedKey === "status") return "Status";
+                if (normalizedKey === "pago" || normalizedKey === "paymentstatus" || normalizedKey === "estado de pago") return "PaymentStatus";
+                if (normalizedKey === "cochera" || normalizedKey === "hasparking") return "HasParking";
+                if (normalizedKey === "fuente" || normalizedKey === "source") return "Source";
+                if (normalizedKey === "notas" || normalizedKey === "notes") return "Notes";
+                if (normalizedKey === "tipo de cambio" || normalizedKey === "exchangerate") return "ExchangeRate";
+                if (normalizedKey === "id grupo" || normalizedKey === "groupid") return "GroupId";
+                return null;
+              })();
+              if (mapped) newRow[mapped] = row[key];
+              else if (normalizedKey === "lista negra" || normalizedKey === "listanegra") newRow["IsBlacklisted"] = row[key];
+              else if (normalizedKey === "motivo lista negra") newRow["BlacklistReason"] = row[key];
+              else newRow[key] = row[key];
+            }
           });
           return newRow;
         });
@@ -240,6 +250,12 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           if ((row.Source || "DIRECT") !== existingRes.source) {
             diffs["Source"] = { old: existingRes.source, new: row.Source || "DIRECT" };
           }
+          if (parseFloat(row.ExchangeRate || "1") !== (existingRes.exchangeRate || 1)) {
+            diffs["ExchangeRate"] = { old: existingRes.exchangeRate || 1, new: parseFloat(row.ExchangeRate || "1") };
+          }
+          if ((row.GroupId || "") !== (existingRes.groupId || "")) {
+            diffs["GroupId"] = { old: existingRes.groupId || "", new: row.GroupId || "" };
+          }
           if (normalizePhone(row.GuestPhone || "") !== normalizePhone(existingRes.guestPhone || "")) {
             diffs["GuestPhone"] = { old: existingRes.guestPhone, new: row.GuestPhone };
           }
@@ -328,6 +344,8 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           paymentStatus: row.PaymentStatus || "UNPAID",
           source: row.Source || "DIRECT",
           notes: row.Notes || row.Notas || "",
+          exchangeRate: row.ExchangeRate ? parseFloat(row.ExchangeRate) : 1,
+          groupId: row.GroupId || null,
           force: true
         };
 
@@ -382,6 +400,8 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     { header: "Insumos", accessorKey: "AmenitiesFee", cell: (val: any) => val ? <span>${val}</span> : "-" },
     { header: "Pago", accessorKey: "PaymentStatus", cell: (val: any) => <span className="text-[10px]">{val}</span> },
     { header: "Cochera", accessorKey: "HasParking" },
+    { header: "TC", accessorKey: "ExchangeRate", cell: (val: any) => <span className="text-[10px]">{val}</span> },
+    { header: "Grupo", accessorKey: "GroupId", cell: (val: any) => <span className="truncate max-w-[50px] block text-[10px]" title={val}>{val || "-"}</span> },
     { header: "Notas", accessorKey: "Notes", cell: (val: any) => <span className="truncate max-w-[80px] block text-[10px]" title={val}>{val || "-"}</span> },
     {
       header: "Error",

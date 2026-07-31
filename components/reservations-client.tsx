@@ -50,7 +50,12 @@ import {
 import { format } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type ReservationWithDept = Reservation & { department: Department; bedsRequired?: number };
+type ReservationWithDept = Reservation & { 
+  department: Department; 
+  bedsRequired?: number;
+  groupTotalAmount?: number;
+  groupDepositAmount?: number;
+};
 
 interface ReservationsClientProps {
   data: ReservationWithDept[];
@@ -108,8 +113,19 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   const selectedMonth = monthParam ? parseInt(monthParam) : now.getMonth();
   const selectedDate = new Date(selectedYear, selectedMonth, 1);
 
-  const handleEdit = (res: ReservationWithDept) => {
-    setEditingRes(res);
+  const handleEdit = async (res: ReservationWithDept) => {
+    if (res.groupId) {
+      try {
+        const fullGroupRes = await fetch(`/api/reservations/group/${res.groupId}`).then(r => r.json());
+        // Use the original id so the PATCH request goes to the correct endpoint
+        setEditingRes({ ...fullGroupRes, id: res.id });
+      } catch (e) {
+        console.error("Failed to fetch full group", e);
+        setEditingRes(res);
+      }
+    } else {
+      setEditingRes(res);
+    }
     setOpen(true);
   };
 
@@ -393,7 +409,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Gastos (Limp+Ins)</TableHead>
                 <TableHead className="text-right">Deuda</TableHead>
-                {!isVisualizer && <TableHead className="text-right">Acciones</TableHead>}
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -433,6 +449,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 }
 
                 const debt = res.totalAmount - (res.depositAmount || 0);
+                const groupDebt = (res.groupTotalAmount ?? res.totalAmount) - (res.groupDepositAmount ?? res.depositAmount ?? 0);
                 const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid && (res.paymentStatus as any) !== 'CANCELLED';
 
                 return (
@@ -518,10 +535,15 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     <TableCell className="text-right">
                       <div className="flex flex-col items-end">
                         <span className={isNoShow || (res.paymentStatus as any) === 'CANCELLED' ? "line-through text-muted-foreground" : ""}>
-                          {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
+                          {res.groupId && (
+                            <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none text-right" title="Monto de este mes">
+                              Mes: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
+                            </div>
+                          )}
+                          {res.currency === 'USD' ? `US$ ${res.groupTotalAmount ?? res.totalAmount}` : formatCurrency(res.groupTotalAmount ?? res.totalAmount)}
                         </span>
                         {res.currency === 'USD' && !isNoShow && (res.paymentStatus as any) !== 'CANCELLED' && (
-                          <span className="text-xs text-muted-foreground">≈ {formatCurrency(Math.round(res.totalAmount * dollarRate))}</span>
+                          <span className="text-xs text-muted-foreground">≈ {formatCurrency(Math.round((res.groupTotalAmount ?? res.totalAmount) * dollarRate))}</span>
                         )}
                         {(isNoShow || (res.paymentStatus as any) === 'CANCELLED') && (
                           <span className="text-xs text-orange-600 font-semibold">Seña: {formatCurrency(res.depositAmount || 0)}</span>
@@ -545,11 +567,19 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     <TableCell className="text-right text-red-600 font-medium">
                       {(res.paymentStatus as any) === 'CANCELLED'
                         ? '-'
-                        : (!isPaid && !isNoShow ? (res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)) : '-')
+                        : (!isPaid && !isNoShow ? (
+                            <div className="flex flex-col items-end">
+                              {res.groupId && (
+                                <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none text-right" title="Deuda de este mes">
+                                  Mes: {res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)}
+                                </div>
+                              )}
+                              <span>{res.currency === 'USD' ? `US$ ${groupDebt}` : formatCurrency(groupDebt)}</span>
+                            </div>
+                          ) : '-')
                       }
                     </TableCell>
-                    {!isVisualizer && (
-                      <TableCell className="text-right flex justify-end gap-1">
+                    <TableCell className="text-right flex justify-end gap-1">
                         {(() => {
                           const actions = [];
 
@@ -563,76 +593,78 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             });
                           }
 
-                          if (!isPaid && !isNoShow && (res.paymentStatus as any) !== 'CANCELLED') {
-                            actions.push({
-                              label: "Marcar Pagado",
-                              icon: <DollarSign className="h-4 w-4" />,
-                              onClick: () => handleMarkPaidClick(res.id, res.totalAmount),
-                              className: "text-green-600 hover:text-green-700 hover:bg-green-50 shadow-sm border border-green-100 rounded-full",
-                              title: "Marcar Pagado"
-                            });
-                          }
+                          if (!isVisualizer) {
+                            if (!isPaid && !isNoShow && (res.paymentStatus as any) !== 'CANCELLED') {
+                              actions.push({
+                                label: "Marcar Pagado",
+                                icon: <DollarSign className="h-4 w-4" />,
+                                onClick: () => handleMarkPaidClick(res.id, res.totalAmount),
+                                className: "text-green-600 hover:text-green-700 hover:bg-green-50 shadow-sm border border-green-100 rounded-full",
+                                title: "Marcar Pagado"
+                              });
+                            }
 
-                          if (canMarkNoShow) {
-                            actions.push({
-                              label: "Marcar No Presentado",
-                              icon: <UserX className="h-4 w-4" />,
-                              onClick: () => handleNoShowClick(res.id),
-                              className: "text-orange-500 hover:text-orange-600 hover:bg-orange-50 shadow-sm border border-orange-100 rounded-full",
-                              title: "Marcar No Presentado"
-                            });
-                          }
+                            if (canMarkNoShow) {
+                              actions.push({
+                                label: "Marcar No Presentado",
+                                icon: <UserX className="h-4 w-4" />,
+                                onClick: () => handleNoShowClick(res.id),
+                                className: "text-orange-500 hover:text-orange-600 hover:bg-orange-50 shadow-sm border border-orange-100 rounded-full",
+                                title: "Marcar No Presentado"
+                              });
+                            }
 
-                          if (isBlacklisted) {
+                            if (isBlacklisted) {
+                              actions.push({
+                                label: "En Lista Negra",
+                                icon: <Ban className="h-4 w-4" />,
+                                onClick: () => { },
+                                disabled: true,
+                                className: "text-red-500 opacity-70 cursor-not-allowed shadow-sm border border-red-100 rounded-full",
+                                title: "Huésped ya en lista negra"
+                              });
+                            } else {
+                              actions.push({
+                                label: "Reportar",
+                                icon: <ShieldAlert className="h-4 w-4" />,
+                                onClick: () => setReportBlacklistData(res),
+                                className: "text-red-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-red-100 rounded-full",
+                                title: "Reportar a Lista Negra"
+                              });
+                            }
+
+                            const canEdit = res.department.isActive && !res.department.isArchived;
+
+                            if (canEdit) {
+                              actions.push({
+                                label: "Editar",
+                                icon: <Pencil className="h-4 w-4" />,
+                                onClick: () => handleEdit(res),
+                                className: "text-blue-600 hover:text-blue-700 hover:bg-blue-50 shadow-sm border border-blue-100 rounded-full", // Blue for clean consistency
+                                title: "Editar"
+                              });
+                            }
+
+                            const canCancel = (res.paymentStatus as any) !== 'CANCELLED' && new Date(res.checkIn) >= today && !isNoShow;
+
+                            if (canCancel) {
+                              actions.push({
+                                label: "Cancelar Reserva",
+                                icon: <XCircle className="h-4 w-4" />,
+                                onClick: () => handleCancelReservationClick(res.id),
+                                className: "text-red-600 hover:text-red-700 hover:bg-red-50 shadow-sm border border-red-100 rounded-full",
+                                title: "Cancelar Reserva"
+                              });
+                            }
+
                             actions.push({
-                              label: "En Lista Negra",
-                              icon: <Ban className="h-4 w-4" />,
-                              onClick: () => { },
-                              disabled: true,
-                              className: "text-red-500 opacity-70 cursor-not-allowed shadow-sm border border-red-100 rounded-full",
-                              title: "Huésped ya en lista negra"
-                            });
-                          } else {
-                            actions.push({
-                              label: "Reportar",
-                              icon: <ShieldAlert className="h-4 w-4" />,
-                              onClick: () => setReportBlacklistData(res),
+                              label: "Eliminar",
+                              icon: <Trash className="h-4 w-4" />,
+                              onClick: () => handleDeleteClick(res.id),
                               className: "text-red-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-red-100 rounded-full",
-                              title: "Reportar a Lista Negra"
+                              title: "Eliminar"
                             });
                           }
-
-                          const canEdit = res.department.isActive && !res.department.isArchived;
-
-                          if (canEdit) {
-                            actions.push({
-                              label: "Editar",
-                              icon: <Pencil className="h-4 w-4" />,
-                              onClick: () => handleEdit(res),
-                              className: "text-blue-600 hover:text-blue-700 hover:bg-blue-50 shadow-sm border border-blue-100 rounded-full", // Blue for clean consistency
-                              title: "Editar"
-                            });
-                          }
-
-                          const canCancel = (res.paymentStatus as any) !== 'CANCELLED' && new Date(res.checkIn) >= today && !isNoShow;
-
-                          if (canCancel) {
-                            actions.push({
-                              label: "Cancelar Reserva",
-                              icon: <XCircle className="h-4 w-4" />,
-                              onClick: () => handleCancelReservationClick(res.id),
-                              className: "text-red-600 hover:text-red-700 hover:bg-red-50 shadow-sm border border-red-100 rounded-full",
-                              title: "Cancelar Reserva"
-                            });
-                          }
-
-                          actions.push({
-                            label: "Eliminar",
-                            icon: <Trash className="h-4 w-4" />,
-                            onClick: () => handleDeleteClick(res.id),
-                            className: "text-red-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-red-100 rounded-full",
-                            title: "Eliminar"
-                          });
 
                           // --- SPLIT BUTTON LOGIC ---
                           // Priority for Primary Action:
@@ -707,7 +739,6 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           );
                         })()}
                       </TableCell>
-                    )}
                   </TableRow>
                 );
               })}
@@ -734,6 +765,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
             const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
             const debt = res.totalAmount - (res.depositAmount || 0);
+            const groupDebt = (res.groupTotalAmount ?? res.totalAmount) - (res.groupDepositAmount ?? res.depositAmount ?? 0);
             const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
             const isCancelled = (res.paymentStatus as any) === 'CANCELLED';
 
@@ -816,30 +848,42 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     </div>
 
                     {/* New Info Row: Nights, People, Beds (Mobile) */}
-                    <div className="col-span-2 flex justify-start gap-4 text-sm mt-1">
+                    <div className="col-span-2 flex flex-wrap justify-start gap-4 text-sm mt-1">
                       <div className="flex items-center gap-1">
-                        <span>{Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)))}</span>
-                        <Moon className="h-4 w-4 text-muted-foreground" />
+                        {(() => {
+                          const nights = Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)));
+                          return (
+                            <>
+                              <span>{nights} {nights === 1 ? 'Noche' : 'Noches'}</span>
+                              <Moon className="h-4 w-4 text-muted-foreground" />
+                            </>
+                          );
+                        })()}
                       </div>
                       {!isParkingUnit && (
                         <>
                           <div className="flex items-center gap-1">
-                            <span>{res.guestPeopleCount}</span>
+                            <span>{res.guestPeopleCount} {res.guestPeopleCount === 1 ? 'Persona' : 'Personas'}</span>
                             <Users className="h-4 w-4 text-muted-foreground" />
                           </div>
                           <div className="flex items-center gap-1">
-                            <span>{res.bedsRequired || 1}</span>
+                            <span>{res.bedsRequired || 1} {(res.bedsRequired || 1) === 1 ? 'Cama' : 'Camas'}</span>
                             <BedDouble className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </>
                       )}
                     </div>
 
-                    <div className="col-span-2 flex justify-between items-center sm:hidden mt-2">
+                    <div className="col-span-2 flex justify-between items-end sm:hidden mt-2">
                       {/* Mobile Row for Financials */}
                       <div className="flex flex-col">
+                        {res.groupId && (
+                          <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none">
+                            Mes: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
+                          </div>
+                        )}
                         <div className={`font-bold text-base ${(res.paymentStatus as any) === 'CANCELLED' || isNoShow ? "text-muted-foreground line-through text-xs" : "text-black"}`}>
-                          Total: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
+                          Total: {res.currency === 'USD' ? `US$ ${res.groupTotalAmount ?? res.totalAmount}` : formatCurrency(res.groupTotalAmount ?? res.totalAmount)}
                         </div>
                         {((res.paymentStatus as any) === 'CANCELLED' || isNoShow) && (
                           <div className="text-orange-600 font-bold text-sm">
@@ -848,33 +892,40 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         )}
                       </div>
                       {((res.paymentStatus as any) !== 'CANCELLED' && !isNoShow) && (
-                        <div className={`font-bold text-base ${!isPaid ? "text-red-600" : ""}`}>
-                          Deuda: {!isPaid ? (res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)) : '-'}
+                        <div className="flex flex-col items-end">
+                          {res.groupId && !isPaid && (
+                            <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none text-right">
+                              Mes: {res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)}
+                            </div>
+                          )}
+                          <div className={`font-bold text-base ${!isPaid ? "text-red-600" : ""}`}>
+                            Deuda: {!isPaid ? (res.currency === 'USD' ? `US$ ${groupDebt}` : formatCurrency(groupDebt)) : '-'}
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
 
                   {/* Actions Row (Wrapped) */}
-                  {!isVisualizer && (
-                    <div className="flex flex-col gap-3 pt-1">
-                      {/* Top Row: Indicators + Edit/Delete */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-                        <div className="flex items-center gap-2">
-                          {res.hasParking && (
-                            <span title="Cochera" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium whitespace-nowrap"><Car className="h-5 w-5" /> Requiere Cochera</span>
-                          )}
-                          {res.notes && (
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <button title="Ver nota" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium"><NotepadText className="h-5 w-5" /> Nota</button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-64 p-3 text-sm bg-white shadow-lg border rounded-md">
-                                {res.notes}
-                              </PopoverContent>
-                            </Popover>
-                          )}
-                        </div>
+                  <div className="flex flex-col gap-3 pt-1">
+                    {/* Top Row: Indicators + Edit/Delete */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+                      <div className="flex items-center gap-2">
+                        {res.hasParking && (
+                          <span title="Cochera" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium whitespace-nowrap"><Car className="h-5 w-5" /> Requiere Cochera</span>
+                        )}
+                        {res.notes && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button title="Ver nota" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium"><NotepadText className="h-5 w-5" /> Nota</button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-3 text-sm bg-white shadow-lg border rounded-md">
+                              {res.notes}
+                            </PopoverContent>
+                          </Popover>
+                        )}
+                      </div>
+                      {!isVisualizer && (
                         <div className="flex items-center gap-2">
                           {res.department.isActive && !res.department.isArchived && (
                             <Button variant="outline" size="sm" onClick={() => handleEdit(res)} className="h-10 px-3 text-gray-600 bg-white border-gray-300">
@@ -885,9 +936,11 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             <Trash className="h-4 w-4 mr-2" /> Eliminar
                           </Button>
                         </div>
-                      </div>
+                      )}
+                    </div>
 
-                      {/* Bottom Row: Status Actions */}
+                    {/* Bottom Row: Status Actions */}
+                    {!isVisualizer && (
                       <div className="flex flex-wrap gap-2 w-full justify-end">
                         {!isPaid && !isNoShow && (res.paymentStatus as any) !== 'CANCELLED' && (
                           <Button variant="outline" size="sm" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)} className="h-10 px-3 text-green-600 bg-green-50/50 border-green-200">
@@ -910,8 +963,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           </Button>
                         )}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );

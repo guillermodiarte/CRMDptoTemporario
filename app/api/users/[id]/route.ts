@@ -18,7 +18,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { name, email, password, role, phone, isActive, image } = body;
+    const { name, email, password, role, phone, isActive, image, sessionIds } = body;
 
     const updateData: any = {};
     if (name) updateData.name = name;
@@ -85,25 +85,49 @@ export async function PATCH(
     if (!user) throw new Error("Failed to update user");
 
     // Handle Role Update (UserSession)
-    // We assume the admin is updating the role within the CONTEXT of their current session.
-    const currentSessionId = (session.user as any).sessionId;
-
-    if (role && currentSessionId) {
-      // Update or Create the UserSession for this user and this session
-      await prisma.userSession.upsert({
-        where: {
-          userId_sessionId: {
-            userId: id,
-            sessionId: currentSessionId
-          }
-        },
-        update: { role: role as Role },
-        create: {
-          userId: id,
-          sessionId: currentSessionId,
-          role: role as Role
-        }
+    if (sessionIds && Array.isArray(sessionIds)) {
+      // We overwrite their sessions completely.
+      // First, delete existing ones that are NOT in sessionIds
+      await prisma.userSession.deleteMany({
+        where: { userId: id, sessionId: { notIn: sessionIds } }
       });
+
+      // Upsert the ones that are in sessionIds
+      for (const sId of sessionIds) {
+        await prisma.userSession.upsert({
+          where: {
+            userId_sessionId: {
+              userId: id,
+              sessionId: sId
+            }
+          },
+          update: { role: role ? (role as Role) : undefined }, // Update role if provided
+          create: {
+            userId: id,
+            sessionId: sId,
+            role: role ? (role as Role) : "VISUALIZER"
+          }
+        });
+      }
+    } else {
+      const currentSessionId = (session.user as any).sessionId;
+      if (role && currentSessionId) {
+        // Fallback: Update or Create the UserSession for this user and this session
+        await prisma.userSession.upsert({
+          where: {
+            userId_sessionId: {
+              userId: id,
+              sessionId: currentSessionId
+            }
+          },
+          update: { role: role as Role },
+          create: {
+            userId: id,
+            sessionId: currentSessionId,
+            role: role as Role
+          }
+        });
+      }
     }
 
     const { password: _, ...cleaned } = user;

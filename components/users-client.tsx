@@ -44,12 +44,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+type ExtendedUser = User & { role?: string; allSessions?: any[] };
+
 interface UsersClientProps {
-  data: User[];
+  data: ExtendedUser[];
   currentUserId?: string;
+  availableSessions?: { id: string; name: string }[];
 }
 
-export function UsersClient({ data, currentUserId }: UsersClientProps) {
+export function UsersClient({ data, currentUserId, availableSessions = [] }: UsersClientProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
@@ -115,7 +118,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
 
         {isMounted && (
           <div className="flex gap-2">
-            <UsersActions data={data} />
+            <UsersActions data={data} availableSessions={availableSessions} />
 
             {/* Add Existing User Dialog */}
             <AddExistingUserDialog
@@ -136,6 +139,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
                   initialData={editingUser}
                   setOpen={setOpen}
                   currentUserId={currentUserId}
+                  availableSessions={availableSessions}
                 />
               </DialogContent>
             </Dialog>
@@ -195,6 +199,7 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
             <TableRow>
               <TableHead>Usuario</TableHead>
               <TableHead>Rol</TableHead>
+              <TableHead>Sesiones</TableHead>
               <TableHead>Teléfono</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -213,6 +218,19 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
                     <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>
                       {user.role === 'ADMIN' ? 'Administrador' : user.role === 'VISUALIZER' ? 'Visualizador' : user.role}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {user.allSessions && user.allSessions.length > 0 ? (
+                        user.allSessions.map((s: any) => (
+                          <Badge key={s.sessionId} variant="outline" className="bg-slate-50 text-xs">
+                            {s.session.name}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     {user.phone || "-"}
@@ -267,6 +285,15 @@ export function UsersClient({ data, currentUserId }: UsersClientProps) {
                   <div className="font-bold text-base whitespace-normal break-words leading-tight">{user.name || "Sin nombre"}</div>
                   <div className="text-sm text-muted-foreground whitespace-normal break-words mt-0.5">{user.email}</div>
                   {user.phone && <div className="text-xs text-muted-foreground mt-1">{user.phone}</div>}
+                  {user.allSessions && user.allSessions.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {user.allSessions.map((s: any) => (
+                        <Badge key={s.sessionId} variant="outline" className="bg-slate-50 text-[10px]">
+                          {s.session.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'} className="shrink-0">
                   {user.role === 'ADMIN' ? 'Administrador' : user.role === 'VISUALIZER' ? 'Visualizador' : user.role}

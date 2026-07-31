@@ -81,6 +81,7 @@ export async function POST(req: Request) {
       phone: z.string().optional(),
       image: z.string().optional(),
       isActive: z.boolean().optional(),
+      sessionIds: z.array(z.string()).optional().default([]),
     });
 
     const result = dynamicSchema.safeParse(body);
@@ -91,6 +92,7 @@ export async function POST(req: Request) {
     }
 
     const { name, email, password, role, phone, isActive, image } = result.data;
+    let { sessionIds } = result.data;
 
     // Check duplicate
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -98,10 +100,14 @@ export async function POST(req: Request) {
       return new NextResponse("El email ya está registrado", { status: 409 });
     }
 
-    const sessionId = (session?.user as any)?.sessionId;
+    const currentSessionId = (session?.user as any)?.sessionId;
 
-    if (!sessionId && !isSuperAdmin) {
-      return new NextResponse("Session ID required", { status: 400 });
+    if ((!sessionIds || sessionIds.length === 0) && currentSessionId) {
+      sessionIds = [currentSessionId];
+    }
+
+    if ((!sessionIds || sessionIds.length === 0) && !isSuperAdmin) {
+      return new NextResponse("Se requiere al menos una sesión", { status: 400 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -119,15 +125,17 @@ export async function POST(req: Request) {
         },
       });
 
-      // 2. Create UserSession if sessionId exists
-      if (sessionId) {
-        await tx.userSession.create({
-          data: {
-            userId: newUser.id,
-            sessionId,
-            role: role as Role,
-          }
-        });
+      // 2. Create UserSessions
+      if (sessionIds && sessionIds.length > 0) {
+        for (const sId of sessionIds) {
+          await tx.userSession.create({
+            data: {
+              userId: newUser.id,
+              sessionId: sId,
+              role: role as Role,
+            }
+          });
+        }
       }
 
       return newUser;

@@ -19,7 +19,7 @@ import {
   isWeekend as isWeekendFn,
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, ShieldAlert, Home, Car } from "lucide-react"; // Removed Zoom icons
+import { ChevronLeft, ChevronRight, ShieldAlert, Home, Car, Expand, Shrink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -90,11 +90,13 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
   const [viewHalf, setViewHalf] = useState<'first' | 'second'>(() =>
     new Date().getDate() <= 15 ? 'first' : 'second'
   );
-  // Mobile Chunk State (0-5 blocks of 5 days)
+  
+  const [mobileDaysView, setMobileDaysView] = useState<5 | 10>(5);
   const [mobileChunk, setMobileChunk] = useState(() => Math.floor((new Date().getDate() - 1) / 5));
 
   const [isDesktop, setIsDesktop] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  const [isForceLandscape, setIsForceLandscape] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -109,17 +111,16 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
     return () => window.removeEventListener("resize", checkMedia);
   }, []);
 
-  // Calculate Range based on Half
   // Calculate Range based on Half or Mobile Chunk
   const intervalStart = useMemo(() => {
     const start = startOfMonth(currentDate);
     if (isDesktop) {
       return viewHalf === 'first' ? start : setDate(start, 16);
     } else {
-      // Mobile 5-day chunks: 0:1-5, 1:6-10, 2:11-15, 3:16-20, 4:21-25, 5:26-End
-      return addDays(start, mobileChunk * 5);
+      // Mobile chunks
+      return addDays(start, mobileChunk * mobileDaysView);
     }
-  }, [currentDate, viewHalf, isDesktop, mobileChunk]);
+  }, [currentDate, viewHalf, isDesktop, mobileChunk, mobileDaysView]);
 
   const intervalEnd = useMemo(() => {
     const start = startOfMonth(currentDate);
@@ -128,11 +129,14 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
     if (isDesktop) {
       return viewHalf === 'first' ? setDate(start, 15) : end;
     } else {
-      // Mobile: End of 5-day chunk (start + 4 days, but max endOfMonth)
-      const calculatedEnd = addDays(intervalStart, 4);
+      const maxC = Math.floor(29 / mobileDaysView);
+      if (mobileChunk >= maxC) {
+        return end;
+      }
+      const calculatedEnd = addDays(intervalStart, mobileDaysView - 1);
       return isBefore(calculatedEnd, end) ? calculatedEnd : end;
     }
-  }, [currentDate, viewHalf, isDesktop, intervalStart, mobileChunk]);
+  }, [currentDate, viewHalf, isDesktop, intervalStart, mobileChunk, mobileDaysView]);
 
   const days = useMemo(() => eachDayOfInterval({ start: intervalStart, end: intervalEnd }), [intervalStart, intervalEnd]);
 
@@ -153,7 +157,23 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
     const today = new Date();
     setCurrentDate(today);
     setViewHalf(today.getDate() <= 15 ? 'first' : 'second');
-    setMobileChunk(Math.floor((today.getDate() - 1) / 5));
+    const maxC = Math.floor(29 / mobileDaysView);
+    let newChunk = Math.floor((today.getDate() - 1) / mobileDaysView);
+    if (newChunk > maxC) newChunk = maxC;
+    setMobileChunk(newChunk);
+  };
+
+  const toggleMobileView = () => {
+    setIsForceLandscape(prev => !prev);
+    setMobileDaysView(prev => {
+      const nextView = prev === 5 ? 10 : 5;
+      const currentDayOfMonth = getDate(intervalStart);
+      const maxC = Math.floor(29 / nextView);
+      let newChunk = Math.floor((currentDayOfMonth - 1) / nextView);
+      if (newChunk > maxC) newChunk = maxC;
+      setMobileChunk(newChunk);
+      return nextView;
+    });
   };
 
   // Mobile Pagination
@@ -162,17 +182,14 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
     else {
       // Go to prev month, last chunk
       const prevMonth = subMonths(currentDate, 1);
-      const daysInPrev = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0).getDate();
-      const lastChunk = Math.floor((daysInPrev - 1) / 5);
       setCurrentDate(prevMonth);
-      setMobileChunk(lastChunk);
+      setMobileChunk(Math.floor(29 / mobileDaysView));
     }
   };
 
   const handleNextChunk = () => {
-    // Check if current chunk is the last one (if intervalEnd is end of month)
-    const endOfCurrentMonth = endOfMonth(currentDate);
-    if (isSameDay(intervalEnd, endOfCurrentMonth)) {
+    const maxC = Math.floor(29 / mobileDaysView);
+    if (mobileChunk >= maxC) {
       // Go to next month
       setCurrentDate(addMonths(currentDate, 1));
       setMobileChunk(0);
@@ -219,7 +236,18 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
   if (!isMounted) return <div className="h-full bg-slate-50 border rounded-xl animate-pulse" />;
 
   return (
-    <div className="flex flex-col h-full bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden select-none font-sans">
+    <div 
+      className={cn(
+        "flex flex-col bg-white overflow-hidden select-none font-sans",
+        isForceLandscape 
+          ? "fixed top-0 left-0 w-[100vh] h-[100vw] z-50 rounded-none shadow-2xl" 
+          : "h-full border border-slate-200 rounded-xl shadow-sm"
+      )}
+      style={isForceLandscape ? {
+        transform: 'rotate(90deg) translateY(-100%)',
+        transformOrigin: 'top left'
+      } : {}}
+    >
       {/* Controls Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-white z-20 shrink-0">
         <div className="flex items-center gap-4">
@@ -273,7 +301,9 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
             </div>
           )}
 
-          <Button variant="outline" size="sm" onClick={handleToday}>Hoy</Button>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" onClick={handleToday}>Hoy</Button>
+          </div>
         </div>
 
         {/* Legend (Restored for context since Zoom is gone) */}
@@ -286,6 +316,18 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
 
       {/* Calendar Grid */}
       <div ref={viewportRef} className="flex-1 w-full overflow-hidden bg-white relative flex flex-col">
+        {/* Floating Landscape Toggle Button (Mobile Only) */}
+        {!isDesktop && (
+          <Button
+            variant="default"
+            size="icon"
+            onClick={toggleMobileView}
+            className="absolute bottom-4 right-4 z-50 rounded-full shadow-lg h-14 w-14 bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {isForceLandscape ? <Shrink className="h-6 w-6" /> : <Expand className="h-6 w-6" />}
+          </Button>
+        )}
+        
         {/* Header Row */}
         <div className="flex border-b h-10 shrink-0 shadow-sm z-40 bg-white">
           {/* Corner */}
