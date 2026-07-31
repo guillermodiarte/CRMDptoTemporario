@@ -98,7 +98,7 @@ export async function POST(req: Request) {
 
     // Fetch active supplies for snapshot
     const supplies = await prisma.supply.findMany({ where: { isActive: true, sessionId } });
-    const amenitiesFee = supplies.reduce((acc, curr) => acc + curr.cost, 0);
+    const calculatedAmenitiesFee = supplies.reduce((acc, curr) => acc + curr.cost, 0);
 
     // SPLITTING LOGIC
     const splits = calculateReservationSplits(
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
       Number(totalAmount),
       Number(cleaningFee || 0),
       Number(depositAmount || 0),
-      amenitiesFee
+      amenitiesFee !== undefined ? Number(amenitiesFee) : calculatedAmenitiesFee
     );
 
     const generatedGroupId = groupId || (splits.length > 1 ? generateUUID() : null);
