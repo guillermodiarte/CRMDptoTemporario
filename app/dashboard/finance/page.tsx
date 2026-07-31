@@ -214,6 +214,7 @@ export default async function FinancePage({
       distribution={distribution}
       departmentStats={departmentStats}
       platformStats={platformStats}
+      reservations={reservations}
       summary={{ totalIncome, totalExpense, netProfit }}
       role={userRole}
       date={displayDate}

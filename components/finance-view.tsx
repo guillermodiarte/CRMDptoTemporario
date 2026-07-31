@@ -35,6 +35,7 @@ interface FinanceViewProps {
   monthlyStats: any[];
   distribution: any[];
   summary: { totalIncome: number; totalExpense: number; netProfit: number };
+  reservations?: any[];
   role?: string;
   date?: Date;
   platformStats?: any[];
@@ -51,7 +52,7 @@ const PLATFORM_COLORS: Record<string, string> = {
   'OTHER': '#888888'
 };
 
-export function FinanceView({ expenses, departments, monthlyStats, distribution, summary, role, date = new Date(), departmentStats = [], platformStats = [], startYear, endYear }: FinanceViewProps) {
+export function FinanceView({ expenses, departments, monthlyStats, distribution, summary, role, date = new Date(), departmentStats = [], platformStats = [], startYear, endYear, reservations = [] }: FinanceViewProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
@@ -148,7 +149,22 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
     setOpen(true);
   };
 
-  const renderExpenseTable = (list: typeof expenses, title: string, showDetails: boolean = false, defaultType?: string) => (
+
+  const cleaningExpensesList = reservations
+    .filter(r => r.paymentStatus === 'PAID' && r.status !== 'NO_SHOW' && (r.cleaningFee || 0) > 0)
+    .map(r => ({
+      id: r.id,
+      date: r.checkIn,
+      description: r.guestName,
+      department: departments.find(d => d.id === r.departmentId),
+      amount: r.cleaningFee,
+      isCleaning: true
+    }));
+
+  const renderExpenseTable = (list: any[], title: string, showDetails: boolean = false, defaultType?: string, isCleaning: boolean = false) => {
+    const totalAmount = list.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    
+    return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg">{title}</CardTitle>
@@ -169,7 +185,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                 {showDetails && <TableHead className="text-right text-xs">Cant.</TableHead>}
                 {showDetails && <TableHead className="text-right text-xs">P. Unit</TableHead>}
                 <TableHead className="text-right">Total</TableHead>
-                {!isVisualizer && !isPdfExporting && <TableHead className="w-[90px]"></TableHead>}
+                {!isVisualizer && !isPdfExporting && !isCleaning && <TableHead className="w-[90px]"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -183,7 +199,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                   {showDetails && <TableCell className="text-right text-xs">{exp.quantity || 1}</TableCell>}
                   {showDetails && <TableCell className="text-right text-xs">{formatCurrency(exp.unitPrice || 0)}</TableCell>}
                   <TableCell className="text-right text-xs font-medium">{formatCurrency(exp.amount)}</TableCell>
-                  {!isVisualizer && !isPdfExporting && (
+                  {!isVisualizer && !isPdfExporting && !isCleaning && (
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(exp)}>
@@ -202,6 +218,13 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                   <TableCell colSpan={showDetails ? (isVisualizer ? 5 : 6) : (isVisualizer ? 3 : 4)} className="text-center text-xs text-muted-foreground h-16">
                     Sin movimientos
                   </TableCell>
+                </TableRow>
+              )}
+              {list.length > 0 && (
+                <TableRow className="bg-muted/50 font-medium">
+                  <TableCell colSpan={showDetails ? 4 : 2} className="text-right">Total:</TableCell>
+                  <TableCell className="text-right text-red-600">-{formatCurrency(totalAmount)}</TableCell>
+                  {!isVisualizer && !isPdfExporting && !isCleaning && <TableCell></TableCell>}
                 </TableRow>
               )}
             </TableBody>
@@ -223,7 +246,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
               </div>
               <div className="text-right shrink-0">
                 <div className="font-bold text-sm text-red-600">-${exp.amount}</div>
-                {!isVisualizer && (
+                {!isVisualizer && !isCleaning && (
                   <div className="flex justify-end gap-1 mt-1">
                     <Button variant="outline" size="sm" onClick={() => onEdit(exp)} className="h-8 px-3 text-xs">
                       Editar
@@ -241,10 +264,17 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
               Sin movimientos
             </div>
           )}
+          {list.length > 0 && (
+            <div className="p-3 border-t bg-muted/30 flex justify-between items-center">
+              <div className="font-bold text-sm">Total</div>
+              <div className="font-bold text-sm text-red-600">-{formatCurrency(totalAmount)}</div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
   );
+};
 
   // Determine default date for new expenses
   const today = new Date();
@@ -515,6 +545,11 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
         {/* Supply Table (Span 2 columns) */}
         <div className="col-span-1 lg:col-span-2">
           {renderExpenseTable(supplyExpenses, "Insumos y Mantenimiento", true, "SUPPLY")}
+        </div>
+
+        {/* Cleaning Table */}
+        <div className="col-span-1">
+          {renderExpenseTable(cleaningExpensesList, "Gastos de Limpieza", false, undefined, true)}
         </div>
       </div>
     </div>
