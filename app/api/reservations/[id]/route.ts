@@ -66,6 +66,7 @@ export async function PATCH(
             departmentId: body.departmentId || firstPart.departmentId,
             guestName: body.guestName || firstPart.guestName,
             guestPhone: body.guestPhone || firstPart.guestPhone,
+            guestDni: body.guestDni !== undefined ? body.guestDni : firstPart.guestDni,
             guestPeopleCount: body.guestPeopleCount !== undefined ? Number(body.guestPeopleCount) : firstPart.guestPeopleCount,
             bedsRequired: body.bedsRequired !== undefined ? Number(body.bedsRequired) : (firstPart.bedsRequired || 1),
             checkIn: split.checkIn,
@@ -121,6 +122,7 @@ export async function PATCH(
         departmentId,
         guestName,
         guestPhone,
+        guestDni,
         guestPeopleCount,
         bedsRequired,
         checkIn,
@@ -180,6 +182,7 @@ export async function PATCH(
           departmentId,
           guestName,
           guestPhone,
+          guestDni,
           guestPeopleCount: guestPeopleCount ? Number(guestPeopleCount) : undefined,
           bedsRequired: bedsRequired ? Number(bedsRequired) : undefined,
           checkIn: start,
@@ -222,31 +225,15 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Check for groupId
-    const res = await prisma.reservation.findUnique({ where: { id } });
+    const reservation = await prisma.reservation.delete({
+      where: { id }
+    });
 
-    if (res && res.groupId) {
-      // Delete entire group
-      await prisma.reservation.deleteMany({
-        where: { groupId: res.groupId }
-      });
+    revalidatePath("/dashboard/reservations");
+    revalidatePath("/dashboard/calendar");
+    revalidatePath("/dashboard/finance");
 
-      revalidatePath("/dashboard/reservations");
-      revalidatePath("/dashboard/calendar");
-      revalidatePath("/dashboard/finance");
-
-      return NextResponse.json({ message: "Group deleted" });
-    } else {
-      const reservation = await prisma.reservation.delete({
-        where: { id }
-      });
-
-      revalidatePath("/dashboard/reservations");
-      revalidatePath("/dashboard/calendar");
-      revalidatePath("/dashboard/finance");
-
-      return NextResponse.json(reservation);
-    }
+    return NextResponse.json(reservation);
 
   } catch (error) {
     console.log("[RESERVATION_DELETE]", error);

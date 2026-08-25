@@ -40,6 +40,7 @@ const formSchema = z.object({
   departmentId: z.string().min(1, "Departamento requerido"),
   guestName: z.string().min(2, "Nombre requerido"),
   guestPhone: z.string().optional(),
+  guestDni: z.string().optional(),
   guestPeopleCount: z.coerce.number().min(0),
   bedsRequired: z.coerce.number().min(0).default(0),
   checkIn: z.string(),
@@ -80,6 +81,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const [blacklistWarning, setBlacklistWarning] = useState<{ name: string; reason: string } | null>(null);
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
   const [amenitiesCost, setAmenitiesCost] = useState(initialData?.amenitiesFee || 0);
+  const [globalCleaningFee, setGlobalCleaningFee] = useState<number | null>(null);
   // Initialize as modified if we are editing an existing reservation with a price (to prevent auto-recalc on date/dept change)
   const [isTotalManuallyModified, setIsTotalManuallyModified] = useState(!!(initialData?.totalAmount && initialData.totalAmount > 0));
 
@@ -118,13 +120,28 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
     if (!shouldFetch) return;
 
-    fetch("/api/supplies")
-      .then(res => res.json())
-      .then((data: { supplies: any[], totalCost: number }) => {
-        // API returns { supplies: [], totalCost: number }
-        setAmenitiesCost(data.totalCost || 0);
-      })
-      .catch(console.error);
+    const fetchSettingsAndSupplies = async () => {
+      try {
+        const [suppliesRes, settingsRes] = await Promise.all([
+          fetch("/api/supplies"),
+          fetch("/api/settings")
+        ]);
+
+        if (suppliesRes.ok) {
+          const data = await suppliesRes.json();
+          setAmenitiesCost(data.totalCost || 0);
+        }
+
+        if (settingsRes.ok) {
+          const data = await settingsRes.json();
+          setGlobalCleaningFee(data.cleaningFee || 0);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchSettingsAndSupplies();
   }, [initialData]);
 
 
@@ -151,6 +168,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       departmentId: initialData?.departmentId || defaultDepartmentId || "",
       guestName: initialData?.guestName || "",
       guestPhone: initialData?.guestPhone || "",
+      guestDni: initialData?.guestDni || "",
       guestPeopleCount: initialData?.guestPeopleCount || 1,
       bedsRequired: initialData?.bedsRequired || 1,
       checkIn: initialData ? format(new Date(initialData.checkIn), "yyyy-MM-dd") : (defaultDate ? format(defaultDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")),
@@ -167,13 +185,19 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     },
   });
 
-  // Auto-fill Cleaning Fee from selected Department
+  // Auto-fill Cleaning Fee and Guest Count from selected Department
   const selectedDepartmentId = form.watch("departmentId");
   useEffect(() => {
     if (!initialData) {
       const dept = departments.find(d => d.id === selectedDepartmentId);
       if (dept) {
-        form.setValue("cleaningFee", dept.cleaningFee || 0);
+        form.setValue("cleaningFee", globalCleaningFee || dept.cleaningFee || 0);
+        
+        if (dept.maxPeople === 1) {
+          form.setValue("guestPeopleCount", 1);
+        } else if (dept.maxPeople >= 2) {
+          form.setValue("guestPeopleCount", 2);
+        }
       }
     }
   }, [selectedDepartmentId, departments, initialData, form]);
@@ -207,21 +231,14 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     }
   }, [paymentStatus, form]);
 
-  // Auto-calculate Total Amount based on Base Price * Nights
+  // Auto-calculate Total Amount based on Prices * Nights
   const checkInDate = form.watch("checkIn");
   const checkOutDate = form.watch("checkOut");
+  const guestPeopleCount = form.watch("guestPeopleCount");
 
   useEffect(() => {
     // Skip auto-calc for Airbnb (manual pricing or 0)
     if (source === "AIRBNB") return;
-
-    // Only auto-calc for new reservations (or if user changes key params in edit? User said "update", implies edit too?)
-    // User said: "al crear la reserva...".
-    // "que siga siendo editable".
-    // If I do this on EDIT, it might overwrite valid manual changes if dates are touched.
-    // Let's restrict to "Active editing of these fields".
-    // If initialData exists, maybe we respect it unless they change dates? 
-    // Usually if you change dates, price IS recalculated.
 
     if (!selectedDepartmentId || !checkInDate || !checkOutDate) return;
 
@@ -232,7 +249,8 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       if (
         initialData.departmentId === selectedDepartmentId &&
         initCheckIn === checkInDate &&
-        initCheckOut === checkOutDate
+        initCheckOut === checkOutDate &&
+        initialData.guestPeopleCount === guestPeopleCount
       ) {
         return;
       }
@@ -247,17 +265,30 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     const dept = departments.find(d => d.id === selectedDepartmentId);
-    if (dept && dept.basePrice) {
+    if (dept) {
       // Check if manually modified and not 0
       const currentTotal = form.getValues("totalAmount");
-      if (isTotalManuallyModified && currentTotal !== 0) {
-        return;
+      // If we manually typed a total, we don't overwrite UNLESS they just changed dept, dates, or guests.
+      // But since those are dependencies, it's hard to know if they manually typed or if state changed.
+      // We'll trust the auto-update here for a smoother experience.
+
+      let pricePerNight = dept.basePrice || 0;
+      let pricesObj: Record<string, number> = {};
+      try {
+        if ((dept as any).prices) {
+          pricesObj = JSON.parse((dept as any).prices);
+        }
+      } catch {}
+
+      if (pricesObj[guestPeopleCount] !== undefined && pricesObj[guestPeopleCount] > 0) {
+        pricePerNight = pricesObj[guestPeopleCount];
       }
 
-      const newTotal = nights * dept.basePrice;
+      const newTotal = nights * pricePerNight;
       form.setValue("totalAmount", newTotal);
+      setIsTotalManuallyModified(false);
     }
-  }, [selectedDepartmentId, checkInDate, checkOutDate, departments, form, source, isTotalManuallyModified]);
+  }, [selectedDepartmentId, checkInDate, checkOutDate, guestPeopleCount, departments, form, source, initialData]);
 
   async function onSubmit(values: z.infer<typeof formSchema>, forceOverlap: boolean = false, ignoreCapacity: boolean = false, forceBlacklist: boolean = false) {
     setLoading(true);
@@ -454,6 +485,20 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="guestDni"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>DNI / Cédula (Opcional)</FormLabel>
+              <FormControl>
+                <Input placeholder="Número de documento" {...field} value={field.value || ""} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {unitType !== "PARKING" && (
           <FormField

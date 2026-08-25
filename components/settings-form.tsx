@@ -52,6 +52,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
   const [startYear, setStartYear] = useState<string>("2026");
   const [endYear, setEndYear] = useState<string>("2036");
   const [showParking, setShowParking] = useState<boolean>(true);
+  const [cleaningFee, setCleaningFee] = useState<string>("0");
 
   // Supplies State
   const [supplies, setSupplies] = useState<any[]>([]);
@@ -89,6 +90,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
           setStartYear(String(data.startYear || 2026));
           setEndYear(String(data.endYear || 2036));
           setShowParking(data.showParking !== false);
+          setCleaningFee(String(data.cleaningFee || 0));
         }
 
         if (suppliesRes.ok) {
@@ -125,7 +127,8 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
         body: JSON.stringify({
           startYear,
           endYear,
-          showParking
+          showParking,
+          cleaningFee: Number(cleaningFee) || 0
         }),
       });
 
@@ -702,13 +705,19 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
         {/* Side Column: Config & Backup */}
         <div className="space-y-6">
-          {/* Calendar Settings */}
+          {/* General Settings */}
           <Card>
             <CardHeader>
-              <CardTitle>Configuración de Calendario</CardTitle>
-              <CardDescription>Rango de años visible en el sistema.</CardDescription>
+              <CardTitle>Configuración General</CardTitle>
+              <CardDescription>Opciones generales y rangos de calendario.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="grid w-full items-center gap-1.5">
+                  <Label htmlFor="cleaningFee">Gasto de Limpieza Global ($)</Label>
+                  <Input id="cleaningFee" type="number" value={cleaningFee} onChange={(e) => setCleaningFee(e.target.value)} />
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid w-full items-center gap-1.5">
                   <Label htmlFor="startYear">Año Inicio</Label>

@@ -3,7 +3,7 @@ import type { NextAuthConfig } from 'next-auth';
 export const authConfig = {
   trustHost: true,
   pages: {
-    signIn: '/login',
+    signIn: '/admin',
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
@@ -13,8 +13,8 @@ export const authConfig = {
         if (isLoggedIn) return true;
         return false; // Redirect unauthenticated users to login page
       } else if (isLoggedIn) {
-        // If user is logged in and on login page, redirect to dashboard
-        if (nextUrl.pathname === '/login') {
+        // If user is logged in and on admin page, redirect to dashboard
+        if (nextUrl.pathname === '/admin') {
           return Response.redirect(new URL('/dashboard', nextUrl));
         }
       }

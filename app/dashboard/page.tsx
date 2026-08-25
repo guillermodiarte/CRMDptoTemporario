@@ -35,7 +35,7 @@ export default async function DashboardPage() {
   const nextReservation = await prisma.reservation.findFirst({
     where: {
       checkIn: { gte: today },
-      status: { not: "CANCELLED" },
+      status: { notIn: ["CANCELLED", "PENDING_APPROVAL"] },
       sessionId: sessionId // Filter by session
     },
     orderBy: { checkIn: "asc" },
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
     where: {
       checkIn: { lte: today },
       checkOut: { gte: today },
-      status: { not: "CANCELLED" },
+      status: { notIn: ["CANCELLED", "PENDING_APPROVAL"] },
       sessionId: sessionId // Filter by session
     },
     select: {
@@ -82,7 +82,7 @@ export default async function DashboardPage() {
   const pendingPayments = await prisma.reservation.count({
     where: {
       paymentStatus: { not: "PAID" },
-      status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      status: { notIn: ["CANCELLED", "NO_SHOW", "PENDING_APPROVAL"] },
       checkOut: { gte: startOfToday },
       sessionId: sessionId // Filter by session
     }
@@ -92,7 +92,7 @@ export default async function DashboardPage() {
   const futureReservationsCount = await prisma.reservation.count({
     where: {
       checkIn: { gte: startOfToday },
-      status: { not: "CANCELLED" },
+      status: { notIn: ["CANCELLED", "PENDING_APPROVAL"] },
       sessionId: sessionId // Filter by session
     }
   });

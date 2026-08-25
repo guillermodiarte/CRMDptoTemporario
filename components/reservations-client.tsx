@@ -535,7 +535,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     <TableCell className="text-right">
                       <div className="flex flex-col items-end">
                         <span className={isNoShow || (res.paymentStatus as any) === 'CANCELLED' ? "line-through text-muted-foreground" : ""}>
-                          {res.groupId && (
+                          {res.groupId && res.groupTotalAmount != null && (
                             <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none text-right" title="Monto de este mes">
                               Mes: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
                             </div>
@@ -569,7 +569,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         ? '-'
                         : (!isPaid && !isNoShow ? (
                             <div className="flex flex-col items-end">
-                              {res.groupId && (
+                              {res.groupId && res.groupTotalAmount != null && (
                                 <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none text-right" title="Deuda de este mes">
                                   Mes: {res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)}
                                 </div>
@@ -877,7 +877,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     <div className="col-span-2 flex justify-between items-end sm:hidden mt-2">
                       {/* Mobile Row for Financials */}
                       <div className="flex flex-col">
-                        {res.groupId && (
+                        {res.groupId && res.groupTotalAmount != null && (
                           <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none">
                             Mes: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
                           </div>
@@ -893,7 +893,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
                       {((res.paymentStatus as any) !== 'CANCELLED' && !isNoShow) && (
                         <div className="flex flex-col items-end">
-                          {res.groupId && !isPaid && (
+                          {res.groupId && res.groupTotalAmount != null && !isPaid && (
                             <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none text-right">
                               Mes: {res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)}
                             </div>

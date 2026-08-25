@@ -19,7 +19,7 @@ export async function PATCH(
       type,
       name, description, address, bedCount, maxPeople, hasParking, images,
       wifiName, wifiPass, basePrice, cleaningFee, isActive, alias, color,
-      googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink, isArchived
+      googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink, isArchived, prices, amenities
     } = body;
 
     const existing = await prisma.department.findUnique({ where: { id } });
@@ -47,6 +47,8 @@ export async function PATCH(
         isArchived: typeof isArchived === 'boolean' ? isArchived : undefined,
         googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink,
         images: JSON.stringify(images || []),
+        prices: prices || "{}",
+        ...(amenities !== undefined ? { amenities } : {}),
       },
     });
 

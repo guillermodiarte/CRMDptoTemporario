@@ -11,7 +11,7 @@ export default async function SelectSessionPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/login");
+    redirect("/admin");
   }
 
   // Fetch available sessions for the user
@@ -45,7 +45,7 @@ export default async function SelectSessionPage() {
             <form
               action={async () => {
                 "use server";
-                await signOut({ redirectTo: "/login" });
+                await signOut({ redirectTo: "/admin" });
               }}
             >
               <Button variant="outline" className="w-full gap-2">
@@ -80,7 +80,7 @@ export default async function SelectSessionPage() {
           <form
             action={async () => {
               "use server";
-              await signOut({ redirectTo: "/login" });
+              await signOut({ redirectTo: "/admin" });
             }}
           >
             <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">

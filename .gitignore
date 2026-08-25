@@ -58,3 +58,6 @@ Thumbs.db
 .vscode
 .idea
 *.iml
+
+# Uploads
+public/uploads/

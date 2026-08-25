@@ -27,6 +27,7 @@ export default async function ReservationsPage({
   const reservations = await prisma.reservation.findMany({
     where: {
       sessionId,
+      status: { not: 'PENDING_APPROVAL' },
       checkIn: {
         gte: startDate,
         lte: endDate,
@@ -38,30 +39,42 @@ export default async function ReservationsPage({
 
   const groupIds = Array.from(new Set(reservations.filter(r => r.groupId).map(r => r.groupId as string)));
   
-  let groupTotals: Record<string, { totalAmount: number, depositAmount: number }> = {};
+  let groupTotals: Record<string, { totalAmount: number, depositAmount: number, isMultiDept: boolean }> = {};
   if (groupIds.length > 0) {
     const groupParts = await prisma.reservation.findMany({
-      where: { groupId: { in: groupIds } },
-      select: { groupId: true, totalAmount: true, depositAmount: true }
+      where: { groupId: { in: groupIds }, status: { not: 'PENDING_APPROVAL' } },
+      select: { groupId: true, totalAmount: true, depositAmount: true, departmentId: true }
     });
     
     groupTotals = groupParts.reduce((acc, curr) => {
       if (!acc[curr.groupId!]) {
-        acc[curr.groupId!] = { totalAmount: 0, depositAmount: 0 };
+        acc[curr.groupId!] = { totalAmount: 0, depositAmount: 0, isMultiDept: false, _deptIds: new Set() } as any;
       }
       acc[curr.groupId!].totalAmount += curr.totalAmount;
       acc[curr.groupId!].depositAmount += curr.depositAmount;
+      (acc[curr.groupId!] as any)._deptIds.add(curr.departmentId);
       return acc;
-    }, {} as Record<string, { totalAmount: number, depositAmount: number }>);
+    }, {} as Record<string, { totalAmount: number, depositAmount: number, isMultiDept: boolean, _deptIds?: Set<string> }>);
+
+    // Mark groups with more than one distinct department
+    for (const groupId in groupTotals) {
+      const deptIds = (groupTotals[groupId] as any)._deptIds as Set<string>;
+      groupTotals[groupId].isMultiDept = deptIds.size > 1;
+      delete (groupTotals[groupId] as any)._deptIds;
+    }
   }
 
   const enhancedReservations = reservations.map(r => {
     if (r.groupId && groupTotals[r.groupId]) {
-      return {
-        ...r,
-        groupTotalAmount: groupTotals[r.groupId].totalAmount,
-        groupDepositAmount: groupTotals[r.groupId].depositAmount,
-      };
+      const group = groupTotals[r.groupId];
+      // Only show group total for same-dept splits (month splits), not multi-dept combinations
+      if (!group.isMultiDept) {
+        return {
+          ...r,
+          groupTotalAmount: group.totalAmount,
+          groupDepositAmount: group.depositAmount,
+        };
+      }
     }
     return r;
   });

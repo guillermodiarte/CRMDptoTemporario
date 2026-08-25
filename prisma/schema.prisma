@@ -21,6 +21,7 @@ enum PaymentStatus {
 }
 
 enum ReservationStatus {
+  PENDING_APPROVAL
   TENTATIVE
   CONFIRMED
   CANCELLED
@@ -108,6 +109,7 @@ model Department {
   wifiPass    String?
   alias       String?
   basePrice   Float    @default(0)
+  prices      String   @default("{}") // JSON string: { "1": 65000, "2": 70000, ... }
   cleaningFee Float    @default(0)
   color       String   @default("#3b82f6")
   
@@ -126,6 +128,7 @@ model Department {
   platformLinks  String? // Deprecated or keep for legacy, but user asked to split. I will remove it to force migration visually or keep it optional? I will replace it.
   
   images      String   @default("[]") // JSON string of image URLs
+  amenities   String   @default("[]") // JSON string of amenity keys
   bedCount    Int
   maxPeople   Int
   hasParking  Boolean  @default(false)
@@ -153,6 +156,8 @@ model Reservation {
   // Guest Data
   guestName        String
   guestPhone       String?
+  guestDni         String?
+  guestNationality String?
   guestPeopleCount Int
   bedsRequired     Int     @default(1)
 

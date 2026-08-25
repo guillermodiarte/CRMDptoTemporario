@@ -7,6 +7,8 @@ import {
   ShieldAlert,
   Settings,
   Car,
+  Images,
+  ClipboardCheck,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -27,6 +29,7 @@ import { Search, LineChart, Home } from "lucide-react"
 import { UserMenu } from "@/components/user-menu";
 import { Logo } from "@/components/logo";
 import { MobileNav } from "@/components/mobile-nav";
+import { NotificationBell } from "@/components/notification-bell";
 import Image from "next/image";
 
 export const dynamic = 'force-dynamic';
@@ -118,6 +121,13 @@ export default async function DashboardLayout({
                 Calendario
               </Link>
               <Link
+                href="/dashboard/approvals"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+              >
+                <ClipboardCheck className="h-5 w-5 text-amber-500" />
+                Aprobaciones
+              </Link>
+              <Link
                 href="/dashboard/reservations"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
               >
@@ -181,6 +191,22 @@ export default async function DashboardLayout({
                   Gestión de Sesiones
                 </Link>
               )}
+              <Link
+                href="/dashboard/departments/gallery"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+              >
+                <Images className="h-5 w-5 text-violet-500" />
+                Galería
+              </Link>
+              <div className="my-2 border-t" />
+              <Link
+                href="/?preview=true"
+                target="_blank"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+              >
+                <Building className="h-5 w-5 text-teal-500" />
+                Ver Sitio Público
+              </Link>
             </nav>
           </div>
         </div>
@@ -216,6 +242,7 @@ export default async function DashboardLayout({
                 </div>
               )}
             </div>
+            <NotificationBell />
             <UserMenu user={userForMenu} />
           </div>
         </header>

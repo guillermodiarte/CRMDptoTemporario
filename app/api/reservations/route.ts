@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const {
-      departmentId, guestName, guestPhone, guestPeopleCount, bedsRequired,
+      departmentId, guestName, guestPhone, guestDni, guestPeopleCount, bedsRequired,
       checkIn, checkOut, totalAmount, depositAmount, cleaningFee, amenitiesFee,
       currency, paymentStatus, source, notes, force, hasParking, groupId, exchangeRate
     } = body;
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
       where: {
         departmentId,
         sessionId,
-        status: { not: "CANCELLED" },
+        status: { notIn: ["CANCELLED", "PENDING_APPROVAL"] },
         paymentStatus: { not: "CANCELLED" },
         OR: [
           {
@@ -119,6 +119,7 @@ export async function POST(req: Request) {
             departmentId,
             guestName,
             guestPhone,
+            guestDni,
             guestPeopleCount: Number(guestPeopleCount),
             bedsRequired: bedsRequired !== undefined ? Number(bedsRequired) : 1, // Default to 1 if missing (allow 0 for parking)
             checkIn: split.checkIn,

@@ -129,7 +129,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
               if (!open) setEditingDepartment(null);
             }}
           >
-            <DialogContent className="sm:max-w-[700px] h-[85vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[1000px] max-h-[92vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingDepartment ? `Editar ${entityName}` : `Crear ${entityName}`}

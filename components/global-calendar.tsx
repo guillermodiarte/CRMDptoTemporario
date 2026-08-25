@@ -87,9 +87,12 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
   // Display State
   const [currentDate, setCurrentDate] = useState(new Date());
   // Initialize based on current date: 1-15 -> first, 16+ -> second
-  const [viewHalf, setViewHalf] = useState<'first' | 'second'>(() =>
-    new Date().getDate() <= 15 ? 'first' : 'second'
-  );
+  const [viewHalf, setViewHalf] = useState<'first' | 'middle' | 'second'>(() => {
+    const d = new Date().getDate();
+    if (d <= 6) return 'first';
+    if (d <= 22) return 'middle';
+    return 'second';
+  });
   
   const [mobileDaysView, setMobileDaysView] = useState<5 | 10>(5);
   const [mobileChunk, setMobileChunk] = useState(() => Math.floor((new Date().getDate() - 1) / 5));
@@ -115,7 +118,9 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
   const intervalStart = useMemo(() => {
     const start = startOfMonth(currentDate);
     if (isDesktop) {
-      return viewHalf === 'first' ? start : setDate(start, 16);
+      if (viewHalf === 'first') return start;
+      if (viewHalf === 'middle') return setDate(start, 7);
+      return setDate(start, 16);
     } else {
       // Mobile chunks
       return addDays(start, mobileChunk * mobileDaysView);
@@ -127,7 +132,9 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
     const end = endOfMonth(currentDate);
 
     if (isDesktop) {
-      return viewHalf === 'first' ? setDate(start, 15) : end;
+      if (viewHalf === 'first') return setDate(start, 15);
+      if (viewHalf === 'middle') return setDate(start, 22);
+      return end;
     } else {
       const maxC = Math.floor(29 / mobileDaysView);
       if (mobileChunk >= maxC) {
@@ -275,6 +282,15 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
                 )}
               >
                 1ra Quincena
+              </button>
+              <button
+                onClick={() => setViewHalf('middle')}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                  viewHalf === 'middle' ? "bg-white shadow text-slate-900" : "text-slate-500 hover:text-slate-700"
+                )}
+              >
+                7 al 22
               </button>
               <button
                 onClick={() => setViewHalf('second')}

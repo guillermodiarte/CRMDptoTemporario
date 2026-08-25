@@ -7,7 +7,7 @@ export default async function BlacklistPage() {
   const session = await auth();
 
   if (!session) {
-    redirect("/login");
+    redirect("/admin");
   }
 
   const sessionId = session?.user?.sessionId;

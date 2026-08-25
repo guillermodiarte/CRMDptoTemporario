@@ -6,15 +6,17 @@ import { useRouter } from "next/navigation";
 import Papa from "papaparse";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import JSZip from "jszip";
 import {
   Download,
   Upload,
   FileSpreadsheet,
-  FileDown
+  FileJson,
+  Archive,
+  FolderOpen,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,9 +104,83 @@ export function DepartmentsActions({ data, role, defaultType = "APARTMENT" }: De
     link.click();
   };
 
+  // --- Export JSON ---
+  const handleExportJSON = async () => {
+    try {
+      const res = await fetch("/api/departments/export");
+      const json = await res.json();
+      const blob = new Blob([JSON.stringify(json, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = getExportFileName("json");
+      link.click();
+    } catch {
+      alert("Error al exportar JSON");
+    }
+  };
 
+  // --- Export ZIP (images) ---
+  const handleExportZIP = async () => {
+    try {
+      const res = await fetch("/api/departments/export");
+      const depts: Department[] = await res.json();
+      const zip = new JSZip();
 
-  // --- Import Logic ---
+      for (const dept of depts) {
+        let images: string[] = [];
+        try { images = JSON.parse(dept.images || "[]"); } catch {}
+        if (!images.length) continue;
+
+        const folderName = (dept.name || dept.id).replace(/[/\\?%*:|"<>]/g, "-");
+        const folder = zip.folder(folderName)!;
+
+        for (let i = 0; i < images.length; i++) {
+          const url = images[i];
+          try {
+            const imgRes = await fetch(url);
+            const blob = await imgRes.blob();
+            const ext = url.split(".").pop()?.split("?")[0] || "jpg";
+            folder.file(`foto_${i + 1}.${ext}`, blob);
+          } catch {
+            console.warn("No se pudo descargar:", url);
+          }
+        }
+      }
+
+      const content = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(content);
+      link.download = getExportFileName("zip");
+      link.click();
+    } catch (e) {
+      alert("Error al exportar ZIP de imágenes");
+      console.error(e);
+    }
+  };
+
+  // --- Import JSON ---
+  const handleImportJSON = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!Array.isArray(data)) throw new Error("El archivo debe contener un array de departamentos");
+
+      const res = await fetch("/api/departments/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      alert(`Importación completada:\n✅ Creados: ${result.created}\n✏️ Actualizados: ${result.updated}${result.errors?.length ? `\n⚠️ Errores: ${result.errors.join(", ")}` : ""}`);
+      router.refresh();
+    } catch (err: any) {
+      alert("Error al importar: " + err.message);
+    }
+  };
+
 
   const downloadTemplate = () => {
     const headers = CSV_CONFIG.map(c => c.label).join(",");
@@ -365,24 +441,44 @@ export function DepartmentsActions({ data, role, defaultType = "APARTMENT" }: De
             <Download className="h-4 w-4" /> Exportar / Importar
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuLabel className="text-xs text-slate-400 font-normal">Exportar</DropdownMenuLabel>
           <DropdownMenuItem onClick={handleExportCSV}>
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV {entityName}
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportJSON}>
+            <FileJson className="mr-2 h-4 w-4" /> Exportar JSON (datos completos)
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportZIP}>
+            <Archive className="mr-2 h-4 w-4 text-amber-600" /> Exportar Imágenes (ZIP)
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => document.getElementById("dept-file-upload")?.click()}>
+          <DropdownMenuLabel className="text-xs text-slate-400 font-normal">Importar</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => document.getElementById("dept-file-upload-csv")?.click()}>
             <Upload className="mr-2 h-4 w-4" /> Importar CSV
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => document.getElementById("dept-file-upload-json")?.click()}>
+            <FileJson className="mr-2 h-4 w-4 text-blue-600" /> Importar JSON
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {/* CSV upload input */}
       <input
-        id="dept-file-upload"
+        id="dept-file-upload-csv"
         type="file"
         accept=".csv"
         className="hidden"
         onChange={handleFileUpload}
+      />
+      {/* JSON upload input */}
+      <input
+        id="dept-file-upload-json"
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleImportJSON}
       />
 
       <ImportPreviewModal
@@ -398,3 +494,4 @@ export function DepartmentsActions({ data, role, defaultType = "APARTMENT" }: De
     </div>
   );
 }
+

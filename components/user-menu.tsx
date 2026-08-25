@@ -49,7 +49,7 @@ export function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={async () => {
           await signOut({ redirect: false });
-          window.location.href = "/login";
+          window.location.href = "/admin";
         }}>
           Cerrar Sesión
         </DropdownMenuItem>

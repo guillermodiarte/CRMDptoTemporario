@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Loader2, ArrowRight, ArrowLeft, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { signIn } from 'next-auth/react';
-import { getUserSessions } from '@/app/login/actions';
+import { getUserSessions } from '@/app/admin/actions';
 
 export default function LoginForm() {
   const router = useRouter();

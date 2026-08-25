@@ -36,7 +36,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: { d
 
   const reservations = await prisma.reservation.findMany({
     where: {
-      status: { not: "CANCELLED" },
+      status: { notIn: ["CANCELLED", "PENDING_APPROVAL"] },
       sessionId,
       OR: [
         {

@@ -17,7 +17,9 @@ import {
   Settings,
   ShieldAlert,
   Search,
-  Car
+  Car,
+  Images,
+  ClipboardCheck,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { UserMenu } from "@/components/user-menu";
@@ -97,6 +99,14 @@ export function MobileNav({ role, user, showParking, isSuperAdmin }: MobileNavPr
             Calendario
           </Link>
           <Link
+            href="/dashboard/approvals"
+            className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+            onClick={() => setOpen(false)}
+          >
+            <ClipboardCheck className="h-5 w-5 text-amber-500" />
+            Aprobaciones
+          </Link>
+          <Link
             href="/dashboard/reservations"
             className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => setOpen(false)}
@@ -168,6 +178,14 @@ export function MobileNav({ role, user, showParking, isSuperAdmin }: MobileNavPr
               Gestión de Sesiones
             </Link>
           )}
+          <Link
+            href="/dashboard/departments/gallery"
+            className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+            onClick={() => setOpen(false)}
+          >
+            <Images className="h-5 w-5 text-violet-500" />
+            Galería
+          </Link>
         </nav>
         {/* We can reproduce the search bar here if desired, or leave it in the header. 
             The original design had it in the content but the header search was outside the sheet.

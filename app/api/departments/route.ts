@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       type, // Extract Type
       name, description, address, bedCount, maxPeople, hasParking, images,
       wifiName, wifiPass, basePrice, cleaningFee, alias, color,
-      googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink, isArchived
+      googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink, isArchived, prices, amenities
     } = body;
 
     // ...
@@ -67,6 +67,8 @@ export async function POST(req: Request) {
             hasParking: !!hasParking,
             googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink,
             images: JSON.stringify(images || []),
+            prices: prices || "{}",
+            amenities: amenities || "[]",
           },
         });
       }
@@ -88,6 +90,8 @@ export async function POST(req: Request) {
           hasParking: !!hasParking,
           googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink,
           images: JSON.stringify(images || []),
+          prices: prices || "{}",
+          amenities: amenities || "[]",
           isArchived: typeof isArchived === 'boolean' ? isArchived : false,
           sessionId,
         },

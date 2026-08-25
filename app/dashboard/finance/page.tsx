@@ -12,7 +12,7 @@ export default async function FinancePage({
   searchParams?: Promise<{ month?: string; year?: string }>;
 }) {
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session) redirect("/admin");
   const userRole = (session?.user as any)?.role;
   const sessionId = session?.user?.sessionId;
 

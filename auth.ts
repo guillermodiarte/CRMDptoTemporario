@@ -75,20 +75,16 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           orderBy: { updatedAt: 'desc' } // Most recently active?
         });
 
-        if (memberships.length === 1) {
+        if (memberships.length > 0) {
+          // Default to the most recently updated session
           token.sessionId = memberships[0].sessionId;
           token.role = memberships[0].role;
-        } else if (memberships.length > 1) {
-          // Check if sessionId passed in user object (from authorize)
+
+          // If sessionId explicitly passed during login, override default
           if (user.sessionId) {
             token.sessionId = user.sessionId;
-            // Find role for this session
             const membership = memberships.find(m => m.sessionId === user.sessionId);
             token.role = membership?.role || null;
-          } else {
-            // Default to pending if not provided
-            token.sessionId = null;
-            token.role = null;
           }
         } else {
           // No sessions. 
