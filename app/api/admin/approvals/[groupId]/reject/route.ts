@@ -11,10 +11,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
     const sessionId = await requireSessionId();
     const { groupId } = await params;
 
-    // Only cancel the reservations belonging to this admin's session
-    await prisma.reservation.updateMany({
-      where: { groupId, sessionId, status: 'PENDING_APPROVAL' },
-      data: { status: 'CANCELLED' }
+    // Delete (not cancel) the pending reservations so they don't pollute the reservations list
+    await prisma.reservation.deleteMany({
+      where: { groupId, sessionId, status: 'PENDING_APPROVAL' }
     });
 
     revalidatePath('/dashboard/approvals');

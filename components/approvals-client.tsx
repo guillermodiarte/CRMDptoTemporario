@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CheckCircle2, XCircle, User, Phone, Calendar, Users, IdCard, Globe, Car, Building2, Clock } from 'lucide-react';
+import { CheckCircle2, XCircle, User, Phone, Calendar, Users, IdCard, Globe, Car, Building2, Clock, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 type Reservation = {
@@ -21,6 +21,7 @@ type Reservation = {
   hasParking: boolean;
   groupId: string | null;
   notes: string | null;
+  conflictId?: number | null;
   department: { id: string; name: string; images: string; sessionId: string | null };
 };
 
@@ -40,23 +41,158 @@ export function ApprovalsClient({
   const [approvals, setApprovals] = useState<ApprovalGroup[]>(initialApprovals);
   const [loading, setLoading] = useState<string | null>(null);
   const [deposits, setDeposits] = useState<Record<string, number>>({});
+  const [conflictWarning, setConflictWarning] = useState<{
+    groupId: string;
+    confirmedConflicts: { deptName: string; checkIn: string; checkOut: string }[];
+    pendingConflicts: { deptName: string; checkIn: string; checkOut: string; conflictGroupId: string }[];
+  } | null>(null);
+  const [highlightedGroupIds, setHighlightedGroupIds] = useState<string[]>([]);
+  const [confirmDeny, setConfirmDeny] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleAction = async (groupId: string, action: 'approve' | 'reject') => {
+  const handleAction = async (groupId: string, action: 'approve' | 'reject', force = false) => {
+    if (action === 'reject' && !force) {
+      setConfirmDeny(groupId);
+      return;
+    }
     setLoading(`${groupId}-${action}`);
     try {
-      const body = action === 'approve' ? JSON.stringify({ depositAmount: deposits[groupId] ?? 10000 }) : undefined;
+      const bodyObj: Record<string, unknown> = action === 'approve'
+        ? { depositAmount: deposits[groupId] ?? 10000 }
+        : {};
+      if (force && action === 'approve') bodyObj.forceApprove = true;
+
       const res = await fetch(`/api/admin/approvals/${groupId}/${action}`, { 
         method: 'POST',
-        headers: action === 'approve' ? { 'Content-Type': 'application/json' } : undefined,
-        body
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyObj)
       });
-      if (res.ok) {
+
+      if (res.status === 409) {
+        // Conflict detected – show warning dialog
+        const data = await res.json();
+        const conflictGroupIds = (data.pendingConflicts || []).map((c: any) => c.conflictGroupId).filter(Boolean);
+        setHighlightedGroupIds(conflictGroupIds);
+        setConflictWarning({
+          groupId,
+          confirmedConflicts: data.confirmedConflicts || [],
+          pendingConflicts: data.pendingConflicts || []
+        });
+      } else if (res.ok) {
+        setConflictWarning(null);
+        setHighlightedGroupIds([]);
         setApprovals(prev => prev.filter(g => g.groupId !== groupId));
         router.refresh();
       }
     } catch { }
     setLoading(null);
+  };
+
+  // --- Conflict warning modal ---
+  const ConflictModal = () => {
+    if (!conflictWarning) return null;
+    const hasConfirmed = conflictWarning.confirmedConflicts.length > 0;
+    const hasPending = conflictWarning.pendingConflicts.length > 0;
+    return (
+      <div className="fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-4" onClick={() => { setConflictWarning(null); setHighlightedGroupIds([]); }}>
+        <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 text-lg">Conflicto de fechas detectado</h3>
+              <p className="text-sm text-slate-500">
+                {hasConfirmed && hasPending ? 'Hay conflictos con reservas confirmadas y otras aprobaciones pendientes' :
+                 hasConfirmed ? 'Ya existe un huésped confirmado para esas fechas' :
+                 'Hay otra aprobación pendiente con conflicto de fechas'}
+              </p>
+            </div>
+          </div>
+
+          {hasConfirmed && (
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-2">🟥 Reservas confirmadas en conflicto</p>
+              <div className="space-y-2">
+                {conflictWarning.confirmedConflicts.map((d, i) => (
+                  <div key={i} className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm">
+                    <p className="font-semibold text-red-800">{d.deptName}</p>
+                    <p className="text-red-600 text-xs mt-0.5">
+                      {format(new Date(d.checkIn), "d MMM", { locale: es })} → {format(new Date(d.checkOut), "d MMM yyyy", { locale: es })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hasPending && (
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-orange-700 uppercase tracking-wider mb-2">🟠 Otras aprobaciones pendientes en conflicto</p>
+              <div className="space-y-2">
+                {conflictWarning.pendingConflicts.map((d, i) => (
+                  <div key={i} className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-sm">
+                    <p className="font-semibold text-orange-800">{d.deptName}</p>
+                    <p className="text-orange-600 text-xs mt-0.5">
+                      {format(new Date(d.checkIn), "d MMM", { locale: es })} → {format(new Date(d.checkOut), "d MMM yyyy", { locale: es })}
+                    </p>
+                    <p className="text-orange-500 text-[10px] mt-1">La tarjeta conflictiva está resaltada en naranja ↓</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="text-sm text-slate-600 mb-5">¿Estás seguro de que querés aprobar igualmente y superponer la reserva?</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setConflictWarning(null); setHighlightedGroupIds([]); }}
+              className="flex-1 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-semibold hover:bg-slate-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => { setConflictWarning(null); setHighlightedGroupIds([]); handleAction(conflictWarning.groupId, 'approve', true); }}
+              className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-colors"
+            >
+              Aprobar de todas formas
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Deny confirmation modal ---
+  const DenyModal = () => {
+    if (!confirmDeny) return null;
+    return (
+      <div className="fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-4" onClick={() => setConfirmDeny(null)}>
+        <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <XCircle className="w-5 h-5 text-amber-600" />
+            </div>
+            <h3 className="font-bold text-slate-800">Denegar solicitud</h3>
+          </div>
+          <p className="text-sm text-slate-600 mb-5">¿Confermas que querés denegar esta solicitud? La reserva será eliminada definitivamente.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setConfirmDeny(null)}
+              className="flex-1 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-semibold hover:bg-slate-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => { const id = confirmDeny; setConfirmDeny(null); handleAction(id, 'reject', true); }}
+              className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-colors"
+            >
+              Sí, denegar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (approvals.length === 0) {
@@ -70,7 +206,10 @@ export function ApprovalsClient({
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <ConflictModal />
+      <DenyModal />
+      <div className="space-y-6">
       {approvals.map((group) => {
         const isCombination = group.reservations.length > 1;
         const primaryReservation = group.pendingForSession[0] || group.reservations[0];
@@ -84,17 +223,43 @@ export function ApprovalsClient({
           coverImage = Array.isArray(parsed) ? parsed[0] : parsed;
         } catch { coverImage = null; }
 
+        const isHighlighted = highlightedGroupIds.includes(group.groupId);
+        const hasConflict = group.reservations.some(r => r.conflictId);
+
         return (
-          <div key={group.groupId} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div key={group.groupId} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${
+            isHighlighted ? 'border-orange-400 ring-2 ring-orange-400 ring-opacity-60' :
+            hasConflict ? 'border-red-300 ring-1 ring-red-300 ring-opacity-50' : 'border-slate-200'
+          }`}>
             {/* Header */}
-            <div className={`px-6 py-4 flex items-center justify-between border-b ${isPending ? 'bg-amber-50 border-amber-100' : 'bg-slate-50 border-slate-100'}`}>
+            <div className={`px-6 py-4 flex items-center justify-between border-b ${
+              isHighlighted
+                ? 'bg-orange-50 border-orange-200'
+                : hasConflict
+                  ? 'bg-red-50 border-red-200'
+                  : isPending ? 'bg-amber-50 border-amber-100' : 'bg-slate-50 border-slate-100'
+            }`}>
               <div className="flex items-center gap-3">
-                <Clock className={`w-5 h-5 ${isPending ? 'text-amber-500' : 'text-slate-400'}`} />
+                <Clock className={`w-5 h-5 ${
+                  isHighlighted ? 'text-orange-500' : isPending ? 'text-amber-500' : 'text-slate-400'
+                }`} />
                 <div>
                   <h3 className="font-bold text-slate-800">
-                    {isCombination ? 'Reserva Combinada' : 'Solicitud de Reserva'}
+                    {isHighlighted ? '⚠️ ' : ''}{isCombination ? 'Reserva Combinada' : 'Solicitud de Reserva'}
                   </h3>
-                  <p className="text-xs text-slate-500">ID: {group.groupId.slice(0, 8)}...</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs text-slate-500">ID: {group.groupId.slice(0, 8)}...</p>
+                    {isHighlighted && (
+                      <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-md border border-orange-300">
+                        En conflicto con otra aprobación pendiente
+                      </span>
+                    )}
+                    {group.reservations.some(r => r.conflictId) && (
+                      <span className="text-[10px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-md border border-red-200">
+                        ¡ALERTA DE CONFLICTO!
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <span className={`text-xs font-semibold px-3 py-1 rounded-full ${isPending ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
@@ -158,10 +323,15 @@ export function ApprovalsClient({
                       <div key={res.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isMySegment && isPending ? 'border-amber-200 bg-amber-50' : 'border-slate-100 bg-slate-50'}`}>
                         {img && <img src={img} alt={res.department.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <Building2 className="w-3 h-3 text-slate-400" />
                             <span className="font-medium text-slate-800 text-sm truncate">{res.department.name}</span>
                             {isMySegment && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">Tu sesión</span>}
+                            {res.conflictId && (
+                              <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md font-bold border border-red-200 flex-shrink-0">
+                                ⚠️ Conflicto #{res.conflictId}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
                             <Calendar className="w-3 h-3" />
@@ -233,7 +403,8 @@ export function ApprovalsClient({
           </div>
         );
       })}
-    </div>
+      </div>
+    </>
   );
 }
 

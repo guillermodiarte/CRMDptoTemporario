@@ -40,6 +40,67 @@ export default async function ApprovalsPage() {
       grouped[res.groupId].push(res);
     }
 
+    // --- Conflict Detection ---
+    const departmentIds = [...new Set(allRelated.map(r => r.departmentId))];
+    const blockingReservations = await prisma.reservation.findMany({
+      where: {
+        departmentId: { in: departmentIds },
+        status: { notIn: ['CANCELLED', 'PENDING_APPROVAL'] }
+      },
+      select: { id: true, departmentId: true, checkIn: true, checkOut: true }
+    });
+
+    const conflicts: Record<string, number> = {};
+    const adj: Record<string, string[]> = {};
+    for (const r of allRelated) {
+      adj[r.id] = [];
+    }
+
+    for (let i = 0; i < allRelated.length; i++) {
+      const r1 = allRelated[i];
+      if (r1.status !== 'PENDING_APPROVAL' || r1.sessionId !== sessionId) continue;
+
+      // check blocking
+      for (const b of blockingReservations) {
+        if (r1.departmentId === b.departmentId && r1.checkIn < b.checkOut && r1.checkOut > b.checkIn) {
+           adj[r1.id].push(r1.id); // self-edge means it's in a conflict
+           break;
+        }
+      }
+
+      // check other pending
+      for (let j = i + 1; j < allRelated.length; j++) {
+        const r2 = allRelated[j];
+        if (r2.status !== 'PENDING_APPROVAL' || r2.sessionId !== sessionId) continue;
+        
+        if (r1.departmentId === r2.departmentId && r1.checkIn < r2.checkOut && r1.checkOut > r2.checkIn) {
+          adj[r1.id].push(r2.id);
+          adj[r2.id].push(r1.id);
+        }
+      }
+    }
+
+    let conflictCounter = 1;
+    const visited = new Set<string>();
+    
+    for (const r of allRelated) {
+      if (!visited.has(r.id) && adj[r.id].length > 0) {
+        const stack = [r.id];
+        while (stack.length > 0) {
+          const node = stack.pop()!;
+          if (!visited.has(node)) {
+            visited.add(node);
+            conflicts[node] = conflictCounter;
+            for (const neighbor of adj[node]) {
+              if (!visited.has(neighbor)) stack.push(neighbor);
+            }
+          }
+        }
+        conflictCounter++;
+      }
+    }
+    // --- End Conflict Detection ---
+
     approvals = Object.entries(grouped).map(([groupId, reservations]) => ({
       groupId,
       reservations: reservations.map(r => ({
@@ -53,27 +114,27 @@ export default async function ApprovalsPage() {
           ...r,
           checkIn: r.checkIn.toISOString(),
           checkOut: r.checkOut.toISOString(),
+          conflictId: conflicts[r.id] || null
         })),
     }));
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-amber-100 rounded-2xl">
-          <ClipboardCheck className="w-7 h-7 text-amber-600" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">Aprobación de Reservas</h1>
-          <p className="text-slate-500 text-sm mt-0.5">
-            {approvals.length === 0
-              ? 'No hay solicitudes pendientes'
-              : `${approvals.length} solicitud(es) esperando tu aprobación`}
-          </p>
-        </div>
+        <ClipboardCheck className="w-8 h-8 text-sky-600" />
+        <h1 className="text-3xl font-bold text-slate-800">Aprobaciones Pendientes</h1>
       </div>
 
-      <ApprovalsClient initialApprovals={approvals} currentSessionId={sessionId} />
+      {approvals.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+          <ClipboardCheck className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <h2 className="text-xl font-medium text-slate-600">No hay reservas pendientes de aprobación</h2>
+          <p className="text-slate-500 mt-2">Las nuevas solicitudes web aparecerán aquí.</p>
+        </div>
+      ) : (
+        <ApprovalsClient initialApprovals={approvals} currentSessionId={sessionId} />
+      )}
     </div>
   );
 }

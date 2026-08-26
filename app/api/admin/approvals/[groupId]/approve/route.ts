@@ -14,6 +14,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
     const bodyText = await req.text();
     const body = bodyText ? JSON.parse(bodyText) : {};
     const depositAmount = body.depositAmount ? Number(body.depositAmount) : 0;
+    const forceApprove = body.forceApprove === true;
 
     // Fetch all reservations in this group to calculate total and find the first one
     const groupReservations = await prisma.reservation.findMany({
@@ -30,6 +31,62 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
 
     // Filter to only those in the current session and in PENDING_APPROVAL
     const toApprove = groupReservations.filter(r => r.sessionId === sessionId && r.status === 'PENDING_APPROVAL');
+
+    // --- Check for date conflicts ---
+    if (!forceApprove) {
+      const confirmedConflicts: { deptName: string; checkIn: string; checkOut: string }[] = [];
+      const pendingConflicts: { deptName: string; checkIn: string; checkOut: string; conflictGroupId: string }[] = [];
+
+      for (const res of toApprove) {
+        const dept = await prisma.department.findUnique({ where: { id: res.departmentId }, select: { name: true } });
+
+        // Check against confirmed reservations
+        const confirmedOverlap = await prisma.reservation.findFirst({
+          where: {
+            departmentId: res.departmentId,
+            status: { notIn: ['CANCELLED', 'PENDING_APPROVAL'] },
+            checkIn: { lt: res.checkOut },
+            checkOut: { gt: res.checkIn },
+            id: { not: res.id }
+          }
+        });
+        if (confirmedOverlap) {
+          confirmedConflicts.push({
+            deptName: dept?.name || res.departmentId,
+            checkIn: confirmedOverlap.checkIn.toISOString(),
+            checkOut: confirmedOverlap.checkOut.toISOString()
+          });
+        }
+
+        // Check against other PENDING_APPROVAL reservations (different group)
+        const pendingOverlap = await prisma.reservation.findFirst({
+          where: {
+            departmentId: res.departmentId,
+            status: 'PENDING_APPROVAL',
+            checkIn: { lt: res.checkOut },
+            checkOut: { gt: res.checkIn },
+            groupId: { not: groupId }
+          }
+        });
+        if (pendingOverlap) {
+          pendingConflicts.push({
+            deptName: dept?.name || res.departmentId,
+            checkIn: pendingOverlap.checkIn.toISOString(),
+            checkOut: pendingOverlap.checkOut.toISOString(),
+            conflictGroupId: pendingOverlap.groupId || ''
+          });
+        }
+      }
+
+      if (confirmedConflicts.length > 0 || pendingConflicts.length > 0) {
+        return NextResponse.json({
+          conflict: true,
+          confirmedConflicts,
+          pendingConflicts
+        }, { status: 409 });
+      }
+    }
+    // --- End conflict check ---
 
     for (const res of toApprove) {
       const isFirst = res.id === firstReservationId;

@@ -23,6 +23,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `Departamento ${seg.deptId} no encontrado` }, { status: 404 });
       }
 
+      // Fetch global cleaning fee for this session
+      let cleaningFee = 0;
+      if (dept.sessionId) {
+        const settings = await prisma.systemSettings.findUnique({
+          where: { sessionId_key: { sessionId: dept.sessionId, key: "DEFAULT_CLEANING_FEE" } }
+        });
+        cleaningFee = settings ? parseFloat(settings.value) : 0;
+      }
+
       const reservation = await prisma.reservation.create({
         data: {
           departmentId: dept.id,
@@ -39,6 +48,7 @@ export async function POST(req: NextRequest) {
           checkOut: new Date(seg.checkOut),
           totalAmount: seg.totalAmount,
           depositAmount: 0,
+          cleaningFee: cleaningFee,
           hasParking: hasParking || false,
           groupId,
           notes: type === 'combination' ? `Reserva combinada (${segments.length} departamentos)` : null,
