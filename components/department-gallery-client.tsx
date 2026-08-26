@@ -39,6 +39,7 @@ import Link from "next/link";
 import JSZip from "jszip";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
 interface DeptSummary {
@@ -304,7 +305,7 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
       setImagesByDept(prev => ({ ...prev, [selectedDeptId]: newImgs }));
       await saveImages(selectedDeptId, newImgs);
     } catch {
-      alert("Error al subir imágenes");
+      toast.error("Error al subir imágenes");
     } finally {
       setUploading(false);
     }
@@ -388,9 +389,11 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
             const lower = relativePath.toLowerCase();
             if (!lower.match(/\.(jpg|jpeg|png|webp|gif)$/)) return;
             promises.push(
-              zipEntry.async("blob").then(blob => {
+              zipEntry.async("arraybuffer").then(ab => {
                 const fileName = relativePath.split("/").pop() ?? relativePath;
-                imageFiles.push(new File([blob], fileName, { type: blob.type || "image/jpeg" }));
+                const ext = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+                const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+                imageFiles.push(new File([ab], fileName, { type: mime }));
               })
             );
           });
@@ -409,7 +412,7 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
           await saveImages(dept.id, newImgs);
           totalImported += urls.length;
         }
-        alert(`✅ ${totalImported} imágenes importadas en los departamentos correspondientes`);
+        toast.success(`${totalImported} imágenes importadas en los departamentos correspondientes`);
       } else {
         // ── Single-department ZIP (flat) ────────────────────────────────
         const imageFiles: File[] = [];
@@ -419,15 +422,17 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
           const lower = relativePath.toLowerCase();
           if (!lower.match(/\.(jpg|jpeg|png|webp|gif)$/)) return;
           promises.push(
-            zipEntry.async("blob").then(blob => {
+            zipEntry.async("arraybuffer").then(ab => {
               const fileName = relativePath.split("/").pop() ?? relativePath;
-              imageFiles.push(new File([blob], fileName, { type: blob.type || "image/jpeg" }));
+              const ext = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+              const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+              imageFiles.push(new File([ab], fileName, { type: mime }));
             })
           );
         });
         await Promise.all(promises);
 
-        if (!imageFiles.length) { alert("No se encontraron imágenes en el ZIP"); return; }
+        if (!imageFiles.length) { toast.error("No se encontraron imágenes en el ZIP"); setUploading(false); return; }
 
         const fd = new FormData();
         imageFiles.forEach(f => fd.append("files", f));
@@ -439,10 +444,10 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
         const newImgs = [...existing, ...urls.map((url, i) => ({ url, name: imageFiles[i]?.name ?? `Foto ${existing.length + i + 1}` }))];
         setImagesByDept(prev => ({ ...prev, [selectedDeptId]: newImgs }));
         await saveImages(selectedDeptId, newImgs);
-        alert(`✅ ${urls.length} imágenes importadas desde el ZIP`);
+        toast.success(`${urls.length} imágenes importadas desde el ZIP`);
       }
     } catch (err: any) {
-      alert("Error al importar ZIP: " + err.message);
+      toast.error("Error al importar ZIP: " + err.message);
     } finally {
       setUploading(false);
     }
