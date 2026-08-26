@@ -112,6 +112,17 @@ if [ -f ".next/standalone/server.js" ]; then
         log "WARNING: public directory not found"
     fi
 
+    # Ensure uploads volume is linked for persistent storage
+    UPLOADS_DIR="/app/public/uploads"
+    if [ ! -d "$UPLOADS_DIR" ]; then
+        UPLOADS_DIR="$(pwd)/public/uploads"
+    fi
+    mkdir -p "$UPLOADS_DIR"
+    mkdir -p .next/standalone/public
+    rm -rf .next/standalone/public/uploads
+    ln -sfn "$UPLOADS_DIR" .next/standalone/public/uploads
+    log "Linked uploads volume: $UPLOADS_DIR -> .next/standalone/public/uploads"
+
     # 2. Copy Static folder
     if [ -d ".next/static" ]; then
         mkdir -p .next/standalone/.next/static
