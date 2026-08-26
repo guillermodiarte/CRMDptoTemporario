@@ -7,6 +7,8 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/auth";
 
+export const dynamic = 'force-dynamic';
+
 export default async function SelectSessionPage() {
   const session = await auth();
 

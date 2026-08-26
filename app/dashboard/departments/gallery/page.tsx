@@ -7,6 +7,8 @@ export const metadata = {
   title: "Galería de Imágenes | Departamentos",
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function DepartmentGalleryPage() {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");

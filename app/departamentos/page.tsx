@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { PublicNavbar } from '@/components/public-navbar';
 import { DepartmentsGallery } from '@/components/departments-gallery';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DepartamentosPage() {
   const activeDepartments = await prisma.department.findMany({
     where: {

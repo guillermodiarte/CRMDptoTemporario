@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { SessionManager } from "./client";
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminSessionsPage() {
   const session = await auth();
 

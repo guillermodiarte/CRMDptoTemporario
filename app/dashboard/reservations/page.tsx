@@ -3,6 +3,8 @@ import { ReservationsClient } from "@/components/reservations-client";
 import { getDollarRate } from "@/lib/dollar";
 import { auth } from "@/auth";
 
+export const dynamic = 'force-dynamic';
+
 export default async function ReservationsPage({
   searchParams,
 }: {

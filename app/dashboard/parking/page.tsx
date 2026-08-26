@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { DepartmentsClient } from "@/components/departments-client";
 
+export const dynamic = 'force-dynamic';
+
 export default async function ParkingPage() {
   const session = await auth();
   const userRole = (session?.user as any)?.role;

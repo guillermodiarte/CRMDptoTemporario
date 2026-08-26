@@ -4,6 +4,8 @@ import prisma from '@/lib/prisma'
 import { PublicLandingClient } from '@/components/public-landing-client'
 import { PublicNavbar } from '@/components/public-navbar'
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home({ 
   searchParams 
 }: { 

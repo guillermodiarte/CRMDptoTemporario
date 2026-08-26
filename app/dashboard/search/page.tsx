@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { ReservationsClient } from "@/components/reservations-client";
 import { redirect } from "next/navigation";
 
+export const dynamic = 'force-dynamic';
+
 export default async function SearchPage({
   searchParams,
 }: {

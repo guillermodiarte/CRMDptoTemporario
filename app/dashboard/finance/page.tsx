@@ -6,6 +6,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { getDollarRate } from "@/lib/dollar";
 
+export const dynamic = 'force-dynamic';
+
 export default async function FinancePage({
   searchParams,
 }: {
