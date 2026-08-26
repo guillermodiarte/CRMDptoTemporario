@@ -310,34 +310,49 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
     }
   };
 
-  /* Export ZIP for selected department */
+  /* Export ZIP for current department — uses server endpoint (reads from filesystem) */
   const handleExportZIP = async () => {
     if (!selectedDeptId) return;
     setZipping(true);
     try {
-      const zip = new JSZip();
-      const imgs = currentImages;
-      const folderName = (selectedDept?.name ?? "departamento").replace(/[/\\?%*:|"<>]/g, "-");
-      const folder = zip.folder(folderName)!;
-      for (let i = 0; i < imgs.length; i++) {
-        try {
-          const res = await fetch(imgs[i].url);
-          const blob = await res.blob();
-          const ext = imgs[i].url.split(".").pop()?.split("?")[0] ?? "jpg";
-          folder.file(`${imgs[i].name.replace(/[/\\?%*:|"<>]/g, "-")}.${ext}`, blob);
-        } catch { /* skip */ }
-      }
-      const content = await zip.generateAsync({ type: "blob" });
+      const res = await fetch(`/api/departments/images-zip?departmentId=${selectedDeptId}`);
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
       const link = document.createElement("a");
-      link.href = URL.createObjectURL(content);
-      link.download = `${folderName}_imagenes.zip`;
+      link.href = URL.createObjectURL(blob);
+      const deptName = (selectedDept?.name ?? "departamento").replace(/[/\\?%*:|"<>]/g, "-");
+      link.download = `${deptName}_imagenes.zip`;
       link.click();
+    } catch (e: any) {
+      alert("Error al exportar ZIP: " + e.message);
     } finally {
       setZipping(false);
     }
   };
 
-  /* Import ZIP */
+  /* Export ZIP for ALL departments — subfolder per department */
+  const handleExportAllZIP = async () => {
+    setZipping(true);
+    try {
+      const res = await fetch(`/api/departments/images-zip`);
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `todos_los_departamentos_imagenes.zip`;
+      link.click();
+    } catch (e: any) {
+      alert("Error al exportar ZIP: " + e.message);
+    } finally {
+      setZipping(false);
+    }
+  };
+
+  /**
+   * Import ZIP — auto-detects format:
+   *   - Flat ZIP (all images at root)  → import into the currently selected department
+   *   - Subfolder ZIP (one folder per dept, matches names) → import each folder into its department
+   */
   const handleImportZIP = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedDeptId) return;
     const file = e.target.files?.[0];
@@ -346,35 +361,86 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
     setUploading(true);
     try {
       const zip = await JSZip.loadAsync(file);
-      const imageFiles: File[] = [];
-      const promises: Promise<void>[] = [];
-      zip.forEach((relativePath, zipEntry) => {
-        if (zipEntry.dir) return;
-        const lower = relativePath.toLowerCase();
-        if (!lower.match(/\.(jpg|jpeg|png|webp|gif)$/)) return;
-        promises.push(
-          zipEntry.async("blob").then(blob => {
-            const fileName = relativePath.split("/").pop() ?? relativePath;
-            imageFiles.push(new File([blob], fileName, { type: blob.type || "image/jpeg" }));
-          })
-        );
+
+      // Detect if the ZIP has top-level subfolders (export-all format)
+      const topLevelFolders = new Set<string>();
+      zip.forEach((relativePath) => {
+        const parts = relativePath.split("/");
+        if (parts.length > 1 && parts[0]) topLevelFolders.add(parts[0]);
       });
-      await Promise.all(promises);
 
-      if (!imageFiles.length) { alert("No se encontraron imágenes en el ZIP"); setUploading(false); return; }
+      // Check if any top-level folder name matches a department name (case-insensitive)
+      const deptNames = departments.map(d => d.name.toLowerCase().replace(/[/\\?%*:|"<>]/g, "-"));
+      const hasSubfolderMatch = [...topLevelFolders].some(f => deptNames.includes(f.toLowerCase()));
 
-      const fd = new FormData();
-      imageFiles.forEach(f => fd.append("files", f));
-      // Store in department subfolder
-      if (selectedDept?.name) fd.append("department", selectedDept.name);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      const urls: string[] = data.urls ?? [];
-      const existing = imagesByDept[selectedDeptId] ?? [];
-      const newImgs = [...existing, ...urls.map((url, i) => ({ url, name: imageFiles[i]?.name ?? `Foto ${existing.length + i + 1}` }))];
-      setImagesByDept(prev => ({ ...prev, [selectedDeptId]: newImgs }));
-      await saveImages(selectedDeptId, newImgs);
-      alert(`✅ ${urls.length} imágenes importadas desde el ZIP`);
+      if (hasSubfolderMatch) {
+        // ── Multi-department ZIP ─────────────────────────────────────────
+        let totalImported = 0;
+        for (const dept of departments) {
+          const safeName = dept.name.replace(/[/\\?%*:|"<>]/g, "-");
+          // Find the matching folder in the ZIP
+          const imageFiles: File[] = [];
+          const promises: Promise<void>[] = [];
+          zip.forEach((relativePath, zipEntry) => {
+            if (zipEntry.dir) return;
+            const folder = relativePath.split("/")[0];
+            if (folder.toLowerCase() !== safeName.toLowerCase()) return;
+            const lower = relativePath.toLowerCase();
+            if (!lower.match(/\.(jpg|jpeg|png|webp|gif)$/)) return;
+            promises.push(
+              zipEntry.async("blob").then(blob => {
+                const fileName = relativePath.split("/").pop() ?? relativePath;
+                imageFiles.push(new File([blob], fileName, { type: blob.type || "image/jpeg" }));
+              })
+            );
+          });
+          await Promise.all(promises);
+          if (!imageFiles.length) continue;
+
+          const fd = new FormData();
+          imageFiles.forEach(f => fd.append("files", f));
+          fd.append("department", dept.name);
+          const res = await fetch("/api/upload", { method: "POST", body: fd });
+          const data = await res.json();
+          const urls: string[] = data.urls ?? [];
+          const existing = imagesByDept[dept.id] ?? [];
+          const newImgs = [...existing, ...urls.map((url, i) => ({ url, name: imageFiles[i]?.name ?? `Foto ${existing.length + i + 1}` }))];
+          setImagesByDept(prev => ({ ...prev, [dept.id]: newImgs }));
+          await saveImages(dept.id, newImgs);
+          totalImported += urls.length;
+        }
+        alert(`✅ ${totalImported} imágenes importadas en los departamentos correspondientes`);
+      } else {
+        // ── Single-department ZIP (flat) ────────────────────────────────
+        const imageFiles: File[] = [];
+        const promises: Promise<void>[] = [];
+        zip.forEach((relativePath, zipEntry) => {
+          if (zipEntry.dir) return;
+          const lower = relativePath.toLowerCase();
+          if (!lower.match(/\.(jpg|jpeg|png|webp|gif)$/)) return;
+          promises.push(
+            zipEntry.async("blob").then(blob => {
+              const fileName = relativePath.split("/").pop() ?? relativePath;
+              imageFiles.push(new File([blob], fileName, { type: blob.type || "image/jpeg" }));
+            })
+          );
+        });
+        await Promise.all(promises);
+
+        if (!imageFiles.length) { alert("No se encontraron imágenes en el ZIP"); return; }
+
+        const fd = new FormData();
+        imageFiles.forEach(f => fd.append("files", f));
+        if (selectedDept?.name) fd.append("department", selectedDept.name);
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        const data = await res.json();
+        const urls: string[] = data.urls ?? [];
+        const existing = imagesByDept[selectedDeptId] ?? [];
+        const newImgs = [...existing, ...urls.map((url, i) => ({ url, name: imageFiles[i]?.name ?? `Foto ${existing.length + i + 1}` }))];
+        setImagesByDept(prev => ({ ...prev, [selectedDeptId]: newImgs }));
+        await saveImages(selectedDeptId, newImgs);
+        alert(`✅ ${urls.length} imágenes importadas desde el ZIP`);
+      }
     } catch (err: any) {
       alert("Error al importar ZIP: " + err.message);
     } finally {
@@ -440,13 +506,19 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
               </Button>
               <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
 
-              {/* Export ZIP */}
-              <Button size="sm" variant="outline" onClick={handleExportZIP} disabled={zipping || currentImages.length === 0}>
+              {/* Export ZIP — current dept */}
+              <Button size="sm" variant="outline" onClick={handleExportZIP} disabled={zipping || currentImages.length === 0} title="Exportar imágenes de este departamento">
                 {zipping ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Archive className="w-4 h-4 mr-1 text-amber-600" />}
                 {zipping ? "Comprimiendo..." : "Exportar ZIP"}
               </Button>
 
-              {/* Import ZIP */}
+              {/* Export ZIP — all departments */}
+              <Button size="sm" variant="outline" onClick={handleExportAllZIP} disabled={zipping} title="Exportar imágenes de TODOS los departamentos">
+                {zipping ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Archive className="w-4 h-4 mr-1 text-indigo-600" />}
+                {zipping ? "Comprimiendo..." : "Exportar Todo"}
+              </Button>
+
+              {/* Import ZIP (auto-detects single dept vs all depts) */}
               <Button size="sm" variant="outline" onClick={() => zipInputRef.current?.click()} disabled={uploading}>
                 <Upload className="w-4 h-4 mr-1 text-blue-600" /> Importar ZIP
               </Button>

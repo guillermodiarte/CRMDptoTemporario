@@ -119,44 +119,22 @@ export function DepartmentsActions({ data, role, defaultType = "APARTMENT" }: De
     }
   };
 
-  // --- Export ZIP (images) ---
+  // --- Export ZIP (images) — uses server endpoint to read from filesystem ---
   const handleExportZIP = async () => {
     try {
-      const res = await fetch("/api/departments/export");
-      const depts: Department[] = await res.json();
-      const zip = new JSZip();
-
-      for (const dept of depts) {
-        let images: string[] = [];
-        try { images = JSON.parse(dept.images || "[]"); } catch {}
-        if (!images.length) continue;
-
-        const folderName = (dept.name || dept.id).replace(/[/\\?%*:|"<>]/g, "-");
-        const folder = zip.folder(folderName)!;
-
-        for (let i = 0; i < images.length; i++) {
-          const url = images[i];
-          try {
-            const imgRes = await fetch(url);
-            const blob = await imgRes.blob();
-            const ext = url.split(".").pop()?.split("?")[0] || "jpg";
-            folder.file(`foto_${i + 1}.${ext}`, blob);
-          } catch {
-            console.warn("No se pudo descargar:", url);
-          }
-        }
-      }
-
-      const content = await zip.generateAsync({ type: "blob" });
+      const res = await fetch("/api/departments/images-zip");
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
       const link = document.createElement("a");
-      link.href = URL.createObjectURL(content);
+      link.href = URL.createObjectURL(blob);
       link.download = getExportFileName("zip");
       link.click();
-    } catch (e) {
-      alert("Error al exportar ZIP de imágenes");
+    } catch (e: any) {
+      alert("Error al exportar ZIP de imágenes: " + e.message);
       console.error(e);
     }
   };
+
 
   // --- Import JSON ---
   const handleImportJSON = async (e: React.ChangeEvent<HTMLInputElement>) => {
