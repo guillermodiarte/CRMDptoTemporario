@@ -18,6 +18,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "El nombre de la sesión es obligatorio" }, { status: 400 });
     }
 
+    // Ensure the current user exists in the DB.
+    // After a full restore the DB may have been wiped and re-populated with different users,
+    // so the JWT's user.id might not match any DB record. We upsert by email to be safe.
+    const dbUser = await prisma.user.upsert({
+      where: { email: user.email },
+      update: { isSuperAdmin: true },
+      create: {
+        id: user.id,
+        email: user.email,
+        name: user.name ?? "SuperAdmin",
+        password: "", // will be unusable — user must sign in via OAuth or reset
+        isSuperAdmin: true,
+        isActive: true,
+      },
+    });
+
     // Create session
     const newSession = await prisma.session.create({
       data: {
@@ -27,9 +43,12 @@ export async function POST(req: Request) {
     });
 
     // Add the SuperAdmin as ADMIN in the new session
-    await prisma.userSession.create({
-      data: {
-        userId: user.id!,
+    // Use upsert to avoid duplicate key if somehow the relation already exists
+    await prisma.userSession.upsert({
+      where: { userId_sessionId: { userId: dbUser.id, sessionId: newSession.id } },
+      update: { role: "ADMIN" },
+      create: {
+        userId: dbUser.id,
         sessionId: newSession.id,
         role: "ADMIN",
       },
@@ -41,3 +60,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Error interno al crear la sesión" }, { status: 500 });
   }
 }
+

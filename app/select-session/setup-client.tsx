@@ -12,12 +12,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Loader2, Plus, Upload, CheckCircle2, AlertCircle, Database, FolderOpen } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 type Mode = "idle" | "create" | "import";
 
 export function InitialSetupClient() {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>("idle");
   const [sessionName, setSessionName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,8 +36,9 @@ export function InitialSetupClient() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        setStatus({ type: "success", message: "¡Sesión creada! Redirigiendo..." });
-        setTimeout(() => router.push("/select-session"), 1200);
+        setStatus({ type: "success", message: "¡Sesión creada! Recargando..." });
+        // Hard reload so the server re-reads DB and the JWT session refreshes
+        setTimeout(() => { window.location.href = "/select-session"; }, 1200);
       } else {
         setStatus({ type: "error", message: json.error || "Error al crear la sesión" });
       }
@@ -71,8 +70,14 @@ export function InitialSetupClient() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        setStatus({ type: "success", message: "¡Base de datos restaurada! Redirigiendo..." });
-        setTimeout(() => router.push("/select-session"), 1500);
+        setStatus({
+          type: "success",
+          message: "¡Base de datos restaurada! Cerrando sesión para que inicies con tus credenciales de producción...",
+        });
+        // Sign out and redirect to login — the import replaced all users in the DB,
+        // so the current JWT token points to a user that no longer exists.
+        // The user must log in again with their production credentials.
+        setTimeout(() => { window.location.href = "/api/auth/signout?callbackUrl=/admin"; }, 2500);
       } else {
         setStatus({ type: "error", message: json.error || "Error al restaurar la base de datos" });
       }
