@@ -516,14 +516,17 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
           await Promise.all(promises);
           if (!imageFiles.length) continue;
 
+          // Sort alphabetically so foto_01 → pos 1, foto_02 → pos 2, etc.
+          imageFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
           const fd = new FormData();
           imageFiles.forEach(f => fd.append("files", f));
           fd.append("department", dept.name);
           const res = await fetch("/api/upload", { method: "POST", body: fd });
           const data = await res.json();
           const urls: string[] = data.urls ?? [];
-          const existing = imagesByDept[dept.id] ?? [];
-          const newImgs = [...existing, ...urls.map((url, i) => ({ url, name: imageFiles[i]?.name ?? `Foto ${existing.length + i + 1}` }))];
+          // Replace existing images with the imported set (maintains order)
+          const newImgs = urls.map((url, i) => ({ url, name: `Foto ${i + 1}` }));
           setImagesByDept(prev => ({ ...prev, [dept.id]: newImgs }));
           await saveImages(dept.id, newImgs);
           totalImported += urls.length;
@@ -552,14 +555,17 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
 
         if (!imageFiles.length) { toast.error("No se encontraron imágenes en el ZIP"); setUploading(false); return; }
 
+        // Sort alphabetically so foto_01 → pos 1, foto_02 → pos 2, etc.
+        imageFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
         const fd = new FormData();
         imageFiles.forEach(f => fd.append("files", f));
         if (selectedDept?.name) fd.append("department", selectedDept.name);
         const res = await fetch("/api/upload", { method: "POST", body: fd });
         const data = await res.json();
         const urls: string[] = data.urls ?? [];
-        const existing = imagesByDept[selectedDeptId] ?? [];
-        const newImgs = [...existing, ...urls.map((url, i) => ({ url, name: imageFiles[i]?.name ?? `Foto ${existing.length + i + 1}` }))];
+        // Replace existing images with the imported set (maintains order)
+        const newImgs = urls.map((url, i) => ({ url, name: `Foto ${i + 1}` }));
         setImagesByDept(prev => ({ ...prev, [selectedDeptId]: newImgs }));
         await saveImages(selectedDeptId, newImgs);
         toast.success(`${urls.length} imágenes importadas desde el ZIP`);

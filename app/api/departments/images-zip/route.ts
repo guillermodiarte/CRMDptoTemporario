@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
     const cwd = process.cwd();
 
     for (const dept of departments) {
+      // The DB stores URLs in the exact order the user arranged them in the gallery
       let urls: string[] = [];
       try { urls = JSON.parse(dept.images || "[]"); } catch {}
       if (!urls.length) continue;
@@ -49,23 +50,26 @@ export async function GET(req: NextRequest) {
           ? zip // flat — images at root
           : zip.folder((dept.name || dept.id).replace(/[/\\?%*:|"<>]/g, "-"))!;
 
+      // Pad digits so alphabetical sort == gallery order (e.g. foto_001 → foto_024)
+      const pad = String(urls.length).length; // e.g. 24 photos → pad to 2 digits
+
       for (let i = 0; i < urls.length; i++) {
         const url = urls[i]; // e.g. "/uploads/Dpto_1/12345-foto.jpg"
+        const seq = String(i + 1).padStart(pad, "0"); // e.g. "01", "02"...
         try {
           if (url.startsWith("/uploads/")) {
             // Local file — read from filesystem (fast, no HTTP)
             const filePath = path.join(cwd, "public", url);
             const buffer = await readFile(filePath);
             const ext = path.extname(url).slice(1) || "jpg";
-            const name = `foto_${i + 1}.${ext}`;
-            folder.file(name, buffer);
+            folder.file(`foto_${seq}.${ext}`, buffer);
           } else {
             // External URL (Airbnb CDN, etc.) — fetch over HTTP
             const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
             if (res.ok) {
               const ab = await res.arrayBuffer();
               const ext = url.split(".").pop()?.split("?")[0] || "jpg";
-              folder.file(`foto_${i + 1}.${ext}`, ab);
+              folder.file(`foto_${seq}.${ext}`, ab);
             }
           }
         } catch (e) {
