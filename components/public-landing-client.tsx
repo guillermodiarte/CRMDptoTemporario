@@ -61,6 +61,41 @@ const getPriceForPeople = (dept: any, count: number) => {
   return dept.basePrice;
 };
 
+const parseDeptImages = (imagesStr: any): string[] => {
+  try {
+    let parsed = imagesStr || "[]";
+    while (typeof parsed === "string") {
+      try {
+        const next = JSON.parse(parsed);
+        if (typeof next === "string" || Array.isArray(next)) {
+          parsed = next;
+        } else {
+          break;
+        }
+      } catch {
+        break;
+      }
+    }
+    const arr = Array.isArray(parsed) ? parsed : typeof parsed === "string" ? [parsed] : [];
+    return arr
+      .filter(Boolean)
+      .map((item: any) => {
+        let clean = typeof item === "string" ? item : (item?.url ?? "");
+        while (
+          typeof clean === "string" &&
+          ((clean.startsWith('"') && clean.endsWith('"')) ||
+            (clean.startsWith("'") && clean.endsWith("'")))
+        ) {
+          clean = clean.slice(1, -1);
+        }
+        return clean.trim();
+      })
+      .filter((u: string) => u.length > 0);
+  } catch {
+    return [];
+  }
+};
+
 export function PublicLandingClient({ initialDepartments }: { initialDepartments: any[] }) {
   const [checkInDate, setCheckInDate] = useState<Date | undefined>(undefined);
   const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(undefined);
@@ -525,15 +560,7 @@ export function PublicLandingClient({ initialDepartments }: { initialDepartments
 
               {/* Render Direct Departments */}
               {directDepts.map((dept, index) => {
-                let parsedImages: string[] = [];
-                try {
-                  const parsed = JSON.parse(dept.images);
-                  if (Array.isArray(parsed)) parsedImages = parsed;
-                  else if (typeof parsed === 'string') parsedImages = [parsed];
-                } catch {
-                  parsedImages = dept.images ? [dept.images] : [];
-                }
-
+                const parsedImages = parseDeptImages(dept.images);
                 const priceForSelection = getPriceForPeople(dept, peopleCount === '' ? 1 : peopleCount);
 
                 return (
@@ -598,16 +625,7 @@ export function PublicLandingClient({ initialDepartments }: { initialDepartments
                   <div className="p-5 flex-1 flex flex-col gap-4">
                     {comb.segments.map((seg, sIdx) => {
                       const d = departments.find(dep => dep.id === seg.deptId);
-                      let parsedImages: string[] = [];
-                      if (d) {
-                        try {
-                          const parsed = JSON.parse(d.images);
-                          if (Array.isArray(parsed)) parsedImages = parsed;
-                          else if (typeof parsed === 'string') parsedImages = [parsed];
-                        } catch {
-                          parsedImages = d.images ? [d.images] : [];
-                        }
-                      }
+                      const parsedImages = d ? parseDeptImages(d.images) : [];
                       
                       return (
                       <div key={sIdx} className="relative pl-4 border-l-2 border-slate-200">
@@ -871,14 +889,7 @@ function ReservationRequestModal({
             <div className="mt-4 pt-4 border-t border-slate-200">
               <span className="text-slate-800 font-semibold mb-2 block text-sm uppercase tracking-wider">Alojamiento</span>
               {data.type === 'direct' ? (() => {
-                let parsedImages: string[] = [];
-                try {
-                  const parsed = JSON.parse(data.dept!.images);
-                  if (Array.isArray(parsed)) parsedImages = parsed;
-                  else if (typeof parsed === 'string') parsedImages = [parsed];
-                } catch {
-                  parsedImages = data.dept!.images ? [data.dept!.images] : [];
-                }
+                const parsedImages = parseDeptImages(data.dept?.images);
                 
                 return (
                   <div 
@@ -897,17 +908,7 @@ function ReservationRequestModal({
                   {data.comb!.segments.map((seg, i) => {
                     const d = departments.find(dep => dep.id === seg.deptId);
                     const segPrice = d ? getPriceForPeople(d, people) * seg.nights : 0;
-                    
-                    let parsedImages: string[] = [];
-                    if (d) {
-                      try {
-                        const parsed = JSON.parse(d.images);
-                        if (Array.isArray(parsed)) parsedImages = parsed;
-                        else if (typeof parsed === 'string') parsedImages = [parsed];
-                      } catch {
-                        parsedImages = d.images ? [d.images] : [];
-                      }
-                    }
+                    const parsedImages = d ? parseDeptImages(d.images) : [];
 
                     return (
                       <div 

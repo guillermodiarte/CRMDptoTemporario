@@ -59,12 +59,34 @@ interface GalleryImage {
 
 function parseImages(dept: DeptSummary): GalleryImage[] {
   try {
-    let parsed = JSON.parse(dept.images || "[]");
-    if (typeof parsed === "string" && parsed.startsWith("[")) {
-      try { parsed = JSON.parse(parsed); } catch (e) {}
+    let parsed: any = dept.images || "[]";
+    while (typeof parsed === "string") {
+      try {
+        const next = JSON.parse(parsed);
+        if (typeof next === "string" || Array.isArray(next)) {
+          parsed = next;
+        } else {
+          break;
+        }
+      } catch {
+        break;
+      }
     }
-    const arr: string[] = Array.isArray(parsed) ? parsed : typeof parsed === "string" ? [parsed] : [];
-    return arr.map((url, i) => ({ url, name: `Foto ${i + 1}` }));
+    const arr: any[] = Array.isArray(parsed) ? parsed : typeof parsed === "string" ? [parsed] : [];
+    return arr
+      .filter(Boolean)
+      .map((item, i) => {
+        let cleanUrl = typeof item === "string" ? item : (item?.url ?? "");
+        while (
+          typeof cleanUrl === "string" &&
+          ((cleanUrl.startsWith('"') && cleanUrl.endsWith('"')) ||
+            (cleanUrl.startsWith("'") && cleanUrl.endsWith("'")))
+        ) {
+          cleanUrl = cleanUrl.slice(1, -1);
+        }
+        return { url: cleanUrl.trim(), name: `Foto ${i + 1}` };
+      })
+      .filter(img => img.url.length > 0);
   } catch {
     return [];
   }
@@ -726,7 +748,7 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
               </div>
             </div>
           ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <DndContext id="gallery-dnd-context" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={currentImages.map(i => i.url)} strategy={rectSortingStrategy}>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
                   {currentImages.map((img, index) => (

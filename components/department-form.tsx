@@ -90,11 +90,34 @@ export function DepartmentForm({ setOpen, initialData, forcedType }: DepartmentF
   const [imageUrls, setImageUrls] = useState<string[]>(() => {
     if (!initialData?.images) return [];
     try {
-      let parsed = JSON.parse(initialData.images as string);
-      if (typeof parsed === "string" && parsed.startsWith("[")) {
-        try { parsed = JSON.parse(parsed); } catch (e) {}
+      let parsed: any = initialData.images;
+      while (typeof parsed === "string") {
+        try {
+          const next = JSON.parse(parsed);
+          if (typeof next === "string" || Array.isArray(next)) {
+            parsed = next;
+          } else {
+            break;
+          }
+        } catch {
+          break;
+        }
       }
-      return Array.isArray(parsed) ? parsed : [];
+      const arr = Array.isArray(parsed) ? parsed : [];
+      return arr
+        .filter(Boolean)
+        .map(item => {
+          let clean = typeof item === "string" ? item : (item?.url ?? "");
+          while (
+            typeof clean === "string" &&
+            ((clean.startsWith('"') && clean.endsWith('"')) ||
+              (clean.startsWith("'") && clean.endsWith("'")))
+          ) {
+            clean = clean.slice(1, -1);
+          }
+          return clean.trim();
+        })
+        .filter(u => u.length > 0);
     } catch { return []; }
   });
 

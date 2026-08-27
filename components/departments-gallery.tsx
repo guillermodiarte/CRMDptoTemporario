@@ -27,11 +27,36 @@ const AMENITY_MAP: Record<string, { icon: React.ReactNode; label: string }> = {
 
 function parseImages(dept: SharedDepartment): string[] {
   try {
-    const parsed = JSON.parse(dept.images);
-    if (Array.isArray(parsed)) return parsed;
-    if (typeof parsed === "string") return [parsed];
+    let parsed: any = dept.images || "[]";
+    while (typeof parsed === "string") {
+      try {
+        const next = JSON.parse(parsed);
+        if (typeof next === "string" || Array.isArray(next)) {
+          parsed = next;
+        } else {
+          break;
+        }
+      } catch {
+        break;
+      }
+    }
+    const arr = Array.isArray(parsed) ? parsed : typeof parsed === "string" ? [parsed] : [];
+    return arr
+      .filter(Boolean)
+      .map(item => {
+        let clean = typeof item === "string" ? item : (item?.url ?? "");
+        while (
+          typeof clean === "string" &&
+          ((clean.startsWith('"') && clean.endsWith('"')) ||
+            (clean.startsWith("'") && clean.endsWith("'")))
+        ) {
+          clean = clean.slice(1, -1);
+        }
+        return clean.trim();
+      })
+      .filter(u => u.length > 0);
   } catch { }
-  return dept.images ? [dept.images] : [];
+  return [];
 }
 function parsePrices(dept: SharedDepartment): Record<string, number> {
   try { const p = (dept as any).prices; if (!p) return {}; return JSON.parse(p) ?? {}; } catch { return {}; }
