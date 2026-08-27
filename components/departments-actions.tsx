@@ -36,15 +36,19 @@ interface DepartmentsActionsProps {
 const CSV_CONFIG = [
   { label: "Nombre", key: "name", type: "string", required: true },
   { label: "Dirección", key: "address", type: "string" },
-  { label: "Alias", key: "alias", type: "string" }, // ... existing
-  { label: "Tipo", key: "type", type: "string" }, // Added Type
-  { label: "Descripción Interna", key: "description", type: "string" }, // Added Description
+  { label: "Alias", key: "alias", type: "string" },
+  { label: "Tipo", key: "type", type: "string" },
+  { label: "Descripción Interna", key: "description", type: "string" },
   { label: "Color", key: "color", type: "string" },
   { label: "Activo", key: "isActive", type: "boolean" },
+  { label: "Visible en Web", key: "showOnPublic", type: "boolean" },
   { label: "Capacidad", key: "maxPeople", type: "number" },
   { label: "Camas", key: "bedCount", type: "number" },
+  { label: "Tiene Cochera", key: "hasParking", type: "boolean" },
   { label: "Precio Base", key: "basePrice", type: "currency" },
+  { label: "Precios por Pax (JSON)", key: "prices", type: "string" },
   { label: "Limpieza", key: "cleaningFee", type: "currency" },
+  { label: "Comodidades (JSON)", key: "amenities", type: "string" },
   { label: "WiFi Nombre", key: "wifiName", type: "string" },
   { label: "WiFi Pass", key: "wifiPass", type: "string" },
   { label: "Ubicación Llaves", key: "keyLocation", type: "string" },

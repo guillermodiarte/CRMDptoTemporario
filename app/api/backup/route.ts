@@ -48,7 +48,7 @@ export async function GET() {
         users,
         sessions,
         userSessions,
-        departments,
+        departments: departments.map(d => ({ ...d, images: "[]" })),
         reservations,
         supplies,
         expenses,

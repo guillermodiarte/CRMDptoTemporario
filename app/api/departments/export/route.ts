@@ -11,7 +11,12 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(departments);
+    const cleaned = departments.map(d => ({
+      ...d,
+      images: "[]",
+    }));
+
+    return NextResponse.json(cleaned);
   } catch (error) {
     console.error("[DEPARTMENTS_EXPORT]", error);
     return new NextResponse("Internal Error", { status: 500 });

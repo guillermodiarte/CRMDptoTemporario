@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const {
-      departmentId, guestName, guestPhone, guestDni, guestPeopleCount, bedsRequired,
+      departmentId, guestName, guestPhone, guestDni, guestNationality, guestPeopleCount, bedsRequired,
       checkIn, checkOut, totalAmount, depositAmount, cleaningFee, amenitiesFee,
       currency, paymentStatus, source, notes, force, hasParking, groupId, exchangeRate
     } = body;
@@ -120,6 +120,7 @@ export async function POST(req: Request) {
             guestName,
             guestPhone,
             guestDni,
+            guestNationality: guestNationality || null,
             guestPeopleCount: Number(guestPeopleCount),
             bedsRequired: bedsRequired !== undefined ? Number(bedsRequired) : 1, // Default to 1 if missing (allow 0 for parking)
             checkIn: split.checkIn,

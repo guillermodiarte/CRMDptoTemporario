@@ -8,8 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Download, Upload, FileSpreadsheet } from "lucide-react";
+import { Download, Upload, FileSpreadsheet, FileJson } from "lucide-react";
 import { Department, Reservation } from "@prisma/client";
 import { format, parse, isValid } from "date-fns";
 import { es } from "date-fns/locale";
@@ -44,7 +45,7 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
   const exportToCSV = () => {
     const csvRows = [];
     csvRows.push([
-      "Huésped", "Teléfono", "Departamento", "Check-In", "Check-Out",
+      "Huésped", "Teléfono", "DNI", "Nacionalidad", "Departamento", "Check-In", "Check-Out",
       "Personas", "Camas", "Cochera", "Total", "Seña", "Limpieza", "Insumos", "Moneda", "Estado", "Pago", "No-Show", "Lista Negra", "Motivo Lista Negra", "Fuente", "Notas", "Tipo de Cambio", "ID Grupo"
     ].join(","));
 
@@ -57,6 +58,8 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
       const row = [
         `"${res.guestName.replace(/"/g, '""')}"`,
         `"${(res.guestPhone || "").replace(/"/g, '""')}"`,
+        `"${(res.guestDni || "").replace(/"/g, '""')}"`,
+        `"${(res.guestNationality || "").replace(/"/g, '""')}"`,
         `"${res.department.name.replace(/"/g, '""')}"`,
         format(new Date(res.checkIn), "yyyy-MM-dd"),
         format(new Date(res.checkOut), "yyyy-MM-dd"),
@@ -91,6 +94,40 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     document.body.removeChild(link);
   };
 
+  const exportToJSON = () => {
+    const exportData = data.map(res => ({
+      guestName: res.guestName,
+      guestPhone: res.guestPhone || "",
+      guestDni: res.guestDni || "",
+      guestNationality: res.guestNationality || "",
+      departmentName: res.department.name,
+      checkIn: format(new Date(res.checkIn), "yyyy-MM-dd"),
+      checkOut: format(new Date(res.checkOut), "yyyy-MM-dd"),
+      guestPeopleCount: res.guestPeopleCount,
+      bedsRequired: res.bedsRequired || 1,
+      hasParking: res.hasParking,
+      totalAmount: res.totalAmount,
+      depositAmount: res.depositAmount,
+      cleaningFee: res.cleaningFee || 0,
+      amenitiesFee: res.amenitiesFee || 0,
+      currency: res.currency || "ARS",
+      status: res.status,
+      paymentStatus: res.paymentStatus,
+      source: res.source,
+      notes: res.notes || "",
+      exchangeRate: res.exchangeRate || 1,
+      groupId: res.groupId || ""
+    }));
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = getExportFileName("json");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // --- Import Logic ---
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,13 +147,15 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           Object.keys(row).forEach(key => {
             const normalizedKey = key.trim().toLowerCase().replace(/^\uFEFF/, "");
             // Map Spanish/mixed keys to English
-            if (normalizedKey === "huésped" || normalizedKey === "huesped") newRow["GuestName"] = row[key];
-            else if (normalizedKey === "teléfono" || normalizedKey === "telefono") newRow["GuestPhone"] = row[key];
-            else if (normalizedKey === "departamento" || normalizedKey === "depto") newRow["DepartmentName"] = row[key];
+            if (normalizedKey === "huésped" || normalizedKey === "huesped" || normalizedKey === "guestname") newRow["GuestName"] = row[key];
+            else if (normalizedKey === "teléfono" || normalizedKey === "telefono" || normalizedKey === "guestphone") newRow["GuestPhone"] = row[key];
+            else if (normalizedKey === "dni" || normalizedKey === "documento" || normalizedKey === "guestdni") newRow["GuestDni"] = row[key];
+            else if (normalizedKey === "nacionalidad" || normalizedKey === "pais" || normalizedKey === "guestnationality") newRow["GuestNationality"] = row[key];
+            else if (normalizedKey === "departamento" || normalizedKey === "depto" || normalizedKey === "departmentname") newRow["DepartmentName"] = row[key];
             else if (normalizedKey === "check-in" || normalizedKey === "checkin") newRow["CheckIn"] = row[key];
             else if (normalizedKey === "check-out" || normalizedKey === "checkout") newRow["CheckOut"] = row[key];
-            else if (normalizedKey === "personas") newRow["GuestPeopleCount"] = row[key];
-            else if (normalizedKey === "camas") newRow["BedsRequired"] = row[key];
+            else if (normalizedKey === "personas" || normalizedKey === "guestpeoplecount") newRow["GuestPeopleCount"] = row[key];
+            else if (normalizedKey === "camas" || normalizedKey === "bedsrequired") newRow["BedsRequired"] = row[key];
             else {
               const mapped = (() => {
                 if (normalizedKey === "total" || normalizedKey === "monto total" || normalizedKey === "totalamount") return "TotalAmount";
@@ -152,6 +191,52 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     e.target.value = ""; // Reset input
   };
 
+  const handleImportJSON = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    setPreviewRows([]);
+    setStats({ total: 0, new: 0, updated: 0, same: 0, errors: 0 });
+
+    try {
+      const text = await file.text();
+      const rawData = JSON.parse(text);
+      if (!Array.isArray(rawData)) {
+        throw new Error("El archivo JSON debe ser una lista de reservas (array)");
+      }
+
+      const normalizedData = rawData.map((item: any) => ({
+        GuestName: item.guestName ?? item.GuestName,
+        GuestPhone: item.guestPhone ?? item.GuestPhone,
+        GuestDni: item.guestDni ?? item.GuestDni,
+        GuestNationality: item.guestNationality ?? item.GuestNationality,
+        DepartmentName: item.departmentName ?? item.department?.name ?? item.DepartmentName,
+        CheckIn: item.checkIn ?? item.CheckIn,
+        CheckOut: item.checkOut ?? item.CheckOut,
+        GuestPeopleCount: item.guestPeopleCount ?? item.GuestPeopleCount ?? "1",
+        BedsRequired: item.bedsRequired ?? item.BedsRequired ?? "1",
+        TotalAmount: item.totalAmount ?? item.TotalAmount ?? "0",
+        DepositAmount: item.depositAmount ?? item.DepositAmount ?? "0",
+        CleaningFee: item.cleaningFee ?? item.CleaningFee,
+        AmenitiesFee: item.amenitiesFee ?? item.AmenitiesFee,
+        Currency: item.currency ?? item.Currency ?? "ARS",
+        Status: item.status ?? item.Status ?? "CONFIRMED",
+        PaymentStatus: item.paymentStatus ?? item.PaymentStatus ?? "UNPAID",
+        HasParking: item.hasParking === true || item.HasParking === "SI" || item.HasParking === true ? "SI" : "NO",
+        Source: item.source ?? item.Source ?? "DIRECT",
+        Notes: item.notes ?? item.Notes ?? "",
+        ExchangeRate: item.exchangeRate ?? item.ExchangeRate ?? "1",
+        GroupId: item.groupId ?? item.GroupId ?? ""
+      }));
+
+      validateAndSetPreview(normalizedData);
+      setImportOpen(true);
+    } catch (err: any) {
+      alert("Error al importar JSON de reservas: " + err.message);
+    }
+  };
+
   const validateAndSetPreview = (rows: any[]) => {
     const preview: ImportPreviewRow[] = [];
     let statsParams = { total: rows.length, new: 0, updated: 0, same: 0, errors: 0 };
@@ -164,7 +249,7 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
       if (!row.DepartmentName) issues.push("Falta Depto");
       if (!row.CheckIn) issues.push("Falta CheckIn");
       if (!row.CheckOut) issues.push("Falta CheckOut");
-      if (!row.TotalAmount) issues.push("Falta Total");
+      if (row.TotalAmount === undefined || row.TotalAmount === null || row.TotalAmount === "") issues.push("Falta Total");
 
       // Validate Department
       const dept = departments.find(d => d.name.toLowerCase() === (row.DepartmentName || "").toLowerCase());
@@ -177,11 +262,19 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
         row.AmenitiesFee = "0";
       }
 
+      // Format date strings if needed
+      if (row.CheckIn && String(row.CheckIn).includes("T")) {
+        row.CheckIn = format(new Date(row.CheckIn), "yyyy-MM-dd");
+      }
+      if (row.CheckOut && String(row.CheckOut).includes("T")) {
+        row.CheckOut = format(new Date(row.CheckOut), "yyyy-MM-dd");
+      }
+
       // Validate Dates
       if (row.CheckIn && !isValid(parse(row.CheckIn, "yyyy-MM-dd", new Date()))) issues.push("CheckIn inválido");
       if (row.CheckOut && !isValid(parse(row.CheckOut, "yyyy-MM-dd", new Date()))) issues.push("CheckOut inválido");
 
-      const currency = row.Currency ? row.Currency.toUpperCase() : "ARS";
+      const currency = row.Currency ? String(row.Currency).toUpperCase() : "ARS";
       if (!["ARS", "USD"].includes(currency)) issues.push("Moneda inválida");
 
       if (issues.length > 0) {
@@ -192,17 +285,10 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
         });
       } else {
         // Check for duplicates/updates
-        // Conditions: Same Phone AND Same Dates AND Same Department
-        const normalizedImportPhone = normalizePhone(row.GuestPhone || "");
         const dCheckIn = row.CheckIn;
-        const dCheckOut = row.CheckOut;
 
         const existingRes = data.find(d => {
-          const existingPhone = normalizePhone(d.guestPhone || "");
           const dStart = format(new Date(d.checkIn), "yyyy-MM-dd");
-          const dEnd = format(new Date(d.checkOut), "yyyy-MM-dd");
-
-          // Exact Match: Guest Name + CheckIn + Department (CheckOut can change -> Update)
           const sameName = d.guestName.toLowerCase().trim() === (row.GuestName || "").toLowerCase().trim();
           const sameDept = d.department.name.toLowerCase() === (row.DepartmentName || "").trim().toLowerCase();
 
@@ -216,7 +302,12 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           if (format(new Date(existingRes.checkOut), "yyyy-MM-dd") !== row.CheckOut) {
             diffs["CheckOut"] = { old: format(new Date(existingRes.checkOut), "yyyy-MM-dd"), new: row.CheckOut };
           }
-
+          if (row.GuestDni && row.GuestDni !== (existingRes.guestDni || "")) {
+            diffs["GuestDni"] = { old: existingRes.guestDni || "", new: row.GuestDni };
+          }
+          if (row.GuestNationality && row.GuestNationality !== (existingRes.guestNationality || "")) {
+            diffs["GuestNationality"] = { old: existingRes.guestNationality || "", new: row.GuestNationality };
+          }
           if (parseFloat(row.TotalAmount) !== existingRes.totalAmount) {
             diffs["TotalAmount"] = { old: existingRes.totalAmount, new: parseFloat(row.TotalAmount) };
           }
@@ -238,8 +329,8 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           if (parseInt(row.BedsRequired || "1") !== existingRes.bedsRequired) {
             diffs["BedsRequired"] = { old: existingRes.bedsRequired, new: parseInt(row.BedsRequired || "1") };
           }
-          if ((row.HasParking?.toUpperCase() === "SI") !== existingRes.hasParking) {
-            diffs["HasParking"] = { old: existingRes.hasParking ? "SI" : "NO", new: row.HasParking?.toUpperCase() || "NO" };
+          if ((String(row.HasParking).toUpperCase() === "SI") !== existingRes.hasParking) {
+            diffs["HasParking"] = { old: existingRes.hasParking ? "SI" : "NO", new: String(row.HasParking).toUpperCase() === "SI" ? "SI" : "NO" };
           }
           if ((row.CleaningFee ? parseFloat(row.CleaningFee) : 0) !== existingRes.cleaningFee) {
             diffs["CleaningFee"] = { old: existingRes.cleaningFee, new: row.CleaningFee ? parseFloat(row.CleaningFee) : 0 };
@@ -292,7 +383,6 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     let successCount = 0;
     const importErrors: string[] = [];
 
-    // Use selected rows passed from modal
     for (const rowObj of rowsToProcess) {
       if (rowObj.status !== "NEW" && rowObj.status !== "UPDATE") continue;
       const row = rowObj.data;
@@ -329,17 +419,19 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
         const body = {
           guestName: row.GuestName,
           guestPhone: row.GuestPhone || "",
+          guestDni: row.GuestDni || "",
+          guestNationality: row.GuestNationality || "",
           guestPeopleCount: isParking ? 0 : parseInt(row.GuestPeopleCount || "1"),
           bedsRequired: isParking ? 0 : parseInt(row.BedsRequired || "1"),
-          hasParking: (row.HasParking?.toUpperCase() === "SI"),
+          hasParking: (row.HasParking === true || String(row.HasParking).toUpperCase() === "SI"),
           departmentId: row._departmentId,
           checkIn: row.CheckIn,
           checkOut: row.CheckOut,
           totalAmount: parseFloat(row.TotalAmount),
           depositAmount: parseFloat(row.DepositAmount || "0"),
-          cleaningFee: row.CleaningFee ? parseFloat(row.CleaningFee) : undefined,
-          amenitiesFee: row.AmenitiesFee ? parseFloat(row.AmenitiesFee) : undefined,
-          currency: row.Currency ? row.Currency.toUpperCase() : "ARS",
+          cleaningFee: row.CleaningFee !== undefined && row.CleaningFee !== "" ? parseFloat(row.CleaningFee) : undefined,
+          amenitiesFee: row.AmenitiesFee !== undefined && row.AmenitiesFee !== "" ? parseFloat(row.AmenitiesFee) : undefined,
+          currency: row.Currency ? String(row.Currency).toUpperCase() : "ARS",
           status: row.Status || "CONFIRMED",
           paymentStatus: row.PaymentStatus || "UNPAID",
           source: row.Source || "DIRECT",
@@ -354,18 +446,21 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           // PATCH update
           res = await fetch(`/api/reservations/${row._id}`, {
             method: "PATCH",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
           });
         } else {
           // POST create
           res = await fetch("/api/reservations", {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
           });
         }
 
         if (!res.ok) {
-          throw new Error("Failed");
+          const errText = await res.text();
+          throw new Error(errText || "Error en el servidor");
         }
         successCount++;
       } catch (e: any) {
@@ -383,10 +478,11 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
   };
 
   // Columns definition for the modal
-  // Columns definition for the modal
   const columns = [
     { header: "Huésped", accessorKey: "GuestName", cell: (val: any) => <span className="font-medium whitespace-nowrap">{val}</span> },
     { header: "Tel", accessorKey: "GuestPhone", cell: (val: any) => <span className="text-xs truncate max-w-[80px] block" title={val}>{val}</span> },
+    { header: "DNI", accessorKey: "GuestDni", cell: (val: any) => <span className="text-xs block">{val || "-"}</span> },
+    { header: "Nacionalidad", accessorKey: "GuestNationality", cell: (val: any) => <span className="text-xs block">{val || "-"}</span> },
     { header: "CheckIn", accessorKey: "CheckIn" },
     { header: "CheckOut", accessorKey: "CheckOut" },
     { header: "Depto", accessorKey: "DepartmentName", cell: (val: any) => <span className="text-xs truncate max-w-[100px] block" title={val}>{val}</span> },
@@ -420,24 +516,39 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
             <span className="hidden md:inline">Exportar / Importar</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="text-xs text-slate-400 font-normal">Exportar</DropdownMenuLabel>
           <DropdownMenuItem onClick={exportToCSV}>
             <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={exportToJSON}>
+            <FileJson className="mr-2 h-4 w-4" /> Exportar JSON
+          </DropdownMenuItem>
+
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => document.getElementById("reservation-file-upload")?.click()}>
+          <DropdownMenuLabel className="text-xs text-slate-400 font-normal">Importar</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => document.getElementById("reservation-file-upload-csv")?.click()}>
             <Upload className="mr-2 h-4 w-4" /> Importar CSV
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => document.getElementById("reservation-file-upload-json")?.click()}>
+            <FileJson className="mr-2 h-4 w-4 text-blue-600" /> Importar JSON
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <input
-        id="reservation-file-upload"
+        id="reservation-file-upload-csv"
         type="file"
         accept=".csv"
         className="hidden"
         onChange={handleFileUpload}
+      />
+      <input
+        id="reservation-file-upload-json"
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleImportJSON}
       />
 
       <ImportPreviewModal
@@ -453,3 +564,4 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     </div>
   );
 }
+
