@@ -18,6 +18,21 @@ export default async function SelectSessionPage() {
 
   const isSuperAdmin = (session.user as any).isSuperAdmin === true;
 
+  if (isSuperAdmin) {
+    const allActiveSessions = await prisma.session.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, isActive: true }
+    });
+
+    for (const s of allActiveSessions) {
+      await prisma.userSession.upsert({
+        where: { userId_sessionId: { userId: session.user.id, sessionId: s.id } },
+        update: { role: 'ADMIN' },
+        create: { userId: session.user.id, sessionId: s.id, role: 'ADMIN' }
+      });
+    }
+  }
+
   // Fetch available sessions for the user
   const memberships = await prisma.userSession.findMany({
     where: {

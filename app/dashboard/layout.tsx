@@ -61,15 +61,17 @@ export default async function DashboardLayout({
     redirect("/select-session");
   }
 
-  // Fetch current session name
-  let currentSessionName: string | null = null;
-  if (sessionId) {
-    const currentSession = await (prisma as any).session.findUnique({
-      where: { id: sessionId },
-      select: { name: true },
-    });
-    currentSessionName = currentSession?.name || null;
+  // Fetch and verify current active session
+  const currentSession = await (prisma as any).session.findFirst({
+    where: { id: sessionId, isActive: true },
+    select: { name: true },
+  });
+
+  if (!currentSession) {
+    redirect("/select-session");
   }
+
+  const currentSessionName: string = currentSession.name;
 
   // Fetch System Settings for Menu Visibility
   let showParking = true; // Default

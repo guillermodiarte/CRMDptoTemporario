@@ -50,8 +50,11 @@ export default function LoginForm() {
         setSessions(userSessions);
         setStep('selection');
         setLoading(false);
+      } else if (userSessions.length === 1) {
+        // Single session -> Direct login passing the active sessionId
+        await performLogin(credentials.email, credentials.password, userSessions[0].sessionId);
       } else {
-        // Single session or no session -> Direct login
+        // No session -> Direct login
         await performLogin(credentials.email, credentials.password);
       }
     } catch (error) {

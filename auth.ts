@@ -69,50 +69,106 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         // Always derive isSuperAdmin from email — never trust DB value
         token.isSuperAdmin = user.email?.toLowerCase().trim() === 'guillermo.diarte@gmail.com';
 
-        // Fetch memberships to decide default session
+        // Fetch active memberships
         const memberships = await prisma.userSession.findMany({
-          where: { userId: user.id },
-          orderBy: { updatedAt: 'desc' } // Most recently active?
+          where: { 
+            userId: user.id,
+            session: { isActive: true }
+          },
+          include: {
+            session: {
+              select: { isActive: true }
+            }
+          },
+          orderBy: { updatedAt: 'desc' }
         });
 
-        if (memberships.length > 0) {
-          // Default to the most recently updated session
-          token.sessionId = memberships[0].sessionId;
-          token.role = memberships[0].role;
+        if (user.sessionId) {
+          // If sessionId explicitly passed during login, verify it is active
+          const validSession = await prisma.session.findFirst({
+            where: { id: user.sessionId, isActive: true }
+          });
 
-          // If sessionId explicitly passed during login, override default
-          if (user.sessionId) {
-            token.sessionId = user.sessionId;
-            const membership = memberships.find(m => m.sessionId === user.sessionId);
-            token.role = membership?.role || null;
+          if (validSession) {
+            token.sessionId = validSession.id;
+            const membership = memberships.find(m => m.sessionId === validSession.id);
+            token.role = token.isSuperAdmin ? 'ADMIN' : (membership?.role || 'ADMIN');
+            // Ensure userSession exists
+            await prisma.userSession.upsert({
+              where: { userId_sessionId: { userId: user.id, sessionId: validSession.id } },
+              update: { role: token.role as any },
+              create: { userId: user.id, sessionId: validSession.id, role: token.role as any }
+            });
           }
-        } else {
-          // No sessions. 
-          token.sessionId = null;
-          token.role = null;
+        }
+
+        if (!token.sessionId) {
+          if (memberships.length > 0) {
+            // Default to the most recently updated active session
+            token.sessionId = memberships[0].sessionId;
+            token.role = memberships[0].role;
+          } else if (token.isSuperAdmin) {
+            // SuperAdmin with no active userSession: link to first active session in DB if exists
+            const firstActive = await prisma.session.findFirst({
+              where: { isActive: true },
+              orderBy: { createdAt: 'asc' }
+            });
+            if (firstActive) {
+              token.sessionId = firstActive.id;
+              token.role = 'ADMIN';
+              await prisma.userSession.upsert({
+                where: { userId_sessionId: { userId: user.id, sessionId: firstActive.id } },
+                update: { role: 'ADMIN' },
+                create: { userId: user.id, sessionId: firstActive.id, role: 'ADMIN' }
+              });
+            } else {
+              token.sessionId = null;
+              token.role = 'ADMIN';
+            }
+          } else {
+            // No sessions
+            token.sessionId = null;
+            token.role = null;
+          }
         }
 
         // SUPER ADMIN ENFORCEMENT: Always ADMIN, no exceptions
-        if (user.email?.toLowerCase().trim() === 'guillermo.diarte@gmail.com') {
+        if (token.isSuperAdmin) {
           token.role = 'ADMIN';
         }
       }
 
       // Handle Session Switch (Client update)
       if (trigger === "update" && session?.sessionId) {
-        // Verify user belongs to this session
-        const membership = await prisma.userSession.findUnique({
-          where: {
-            userId_sessionId: {
-              userId: token.sub!,
-              sessionId: session.sessionId
-            }
-          }
+        // Verify session is active
+        const activeSession = await prisma.session.findFirst({
+          where: { id: session.sessionId, isActive: true }
         });
 
-        if (membership) {
-          token.sessionId = membership.sessionId;
-          token.role = membership.role;
+        if (activeSession) {
+          if (token.isSuperAdmin) {
+            token.sessionId = activeSession.id;
+            token.role = 'ADMIN';
+            await prisma.userSession.upsert({
+              where: { userId_sessionId: { userId: token.sub!, sessionId: activeSession.id } },
+              update: { role: 'ADMIN' },
+              create: { userId: token.sub!, sessionId: activeSession.id, role: 'ADMIN' }
+            });
+          } else {
+            const membership = await prisma.userSession.findUnique({
+              where: {
+                userId_sessionId: {
+                  userId: token.sub!,
+                  sessionId: session.sessionId
+                }
+              }
+            });
+
+            if (membership) {
+              token.sessionId = membership.sessionId;
+              token.role = membership.role;
+            }
+          }
         }
       }
 
