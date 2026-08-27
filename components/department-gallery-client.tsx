@@ -384,13 +384,15 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
           const promises: Promise<void>[] = [];
           zip.forEach((relativePath, zipEntry) => {
             if (zipEntry.dir) return;
+            if (relativePath.includes("__MACOSX")) return;
             const folder = relativePath.split("/")[0];
             if (folder.toLowerCase() !== safeName.toLowerCase()) return;
+            const fileName = relativePath.split("/").pop() ?? relativePath;
+            if (fileName.startsWith(".")) return;
             const lower = relativePath.toLowerCase();
             if (!lower.match(/\.(jpg|jpeg|png|webp|gif)$/)) return;
             promises.push(
               zipEntry.async("arraybuffer").then(ab => {
-                const fileName = relativePath.split("/").pop() ?? relativePath;
                 const ext = fileName.split('.').pop()?.toLowerCase() || 'jpg';
                 const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
                 imageFiles.push(new File([ab], fileName, { type: mime }));
@@ -419,11 +421,13 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
         const promises: Promise<void>[] = [];
         zip.forEach((relativePath, zipEntry) => {
           if (zipEntry.dir) return;
+          if (relativePath.includes("__MACOSX")) return;
+          const fileName = relativePath.split("/").pop() ?? relativePath;
+          if (fileName.startsWith(".")) return;
           const lower = relativePath.toLowerCase();
           if (!lower.match(/\.(jpg|jpeg|png|webp|gif)$/)) return;
           promises.push(
             zipEntry.async("arraybuffer").then(ab => {
-              const fileName = relativePath.split("/").pop() ?? relativePath;
               const ext = fileName.split('.').pop()?.toLowerCase() || 'jpg';
               const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
               imageFiles.push(new File([ab], fileName, { type: mime }));

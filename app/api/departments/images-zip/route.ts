@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const content = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+    const content = await zip.generateAsync({ type: "nodebuffer", compression: "STORE" });
 
     const deptName = departmentId
       ? (departments[0]?.name ?? "departamento").replace(/[/\\?%*:|"<>]/g, "-")
