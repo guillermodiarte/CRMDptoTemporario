@@ -26,7 +26,8 @@ export default async function DepartmentsPage() {
   if (isSuperAdmin && sessionId) {
     const allOtherSessions = await prisma.session.findMany({
       where: {
-        id: { not: sessionId }
+        id: { not: sessionId },
+        isActive: true
       },
       include: {
         departments: {
