@@ -49,8 +49,11 @@ export async function PATCH(
         showOnPublic: showOnPublic !== undefined ? showOnPublic : undefined,
         isArchived: typeof isArchived === 'boolean' ? isArchived : undefined,
         googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink,
-        images: JSON.stringify(images || []),
-        prices: prices || "{}",
+        // Only update images if explicitly provided. Handle both Array (from gallery save) and String (legacy).
+        ...(images !== undefined ? {
+          images: Array.isArray(images) ? JSON.stringify(images) : (typeof images === 'string' ? images : "[]")
+        } : {}),
+        prices: prices !== undefined ? (prices || "{}") : undefined,
         ...(amenities !== undefined ? { amenities } : {}),
       },
     });

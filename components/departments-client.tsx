@@ -75,10 +75,8 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
     try {
       await fetch(`/api/departments/${dept.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({
-          ...dept,
-          isActive: !dept.isActive,
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !dept.isActive })
       });
       router.refresh();
     } catch (e) {
@@ -93,10 +91,8 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
     try {
       await fetch(`/api/departments/${dept.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({
-          ...dept,
-          showOnPublic: !dept.showOnPublic,
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ showOnPublic: !dept.showOnPublic })
       });
       router.refresh();
     } catch (e) {
