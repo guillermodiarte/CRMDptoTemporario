@@ -422,6 +422,29 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
   };
 
   /* Upload new images */
+  /* Upload files in small batches to prevent ECONNRESET or proxy payload limits */
+  const uploadFilesInBatches = async (filesToUpload: File[], deptName: string, batchSize = 4): Promise<string[]> => {
+    const allUrls: string[] = [];
+    for (let i = 0; i < filesToUpload.length; i += batchSize) {
+      const batch = filesToUpload.slice(i, i + batchSize);
+      const fd = new FormData();
+      batch.forEach(f => fd.append("files", f));
+      if (deptName) fd.append("department", deptName);
+
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Error al subir lote" }));
+        throw new Error(err.error || `Error HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      if (Array.isArray(data.urls)) {
+        allUrls.push(...data.urls);
+      }
+    }
+    return allUrls;
+  };
+
+  /* Upload new images */
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedDeptId) return;
     const files = Array.from(e.target.files ?? []);
@@ -429,19 +452,14 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
     e.target.value = "";
     setUploading(true);
     try {
-      const fd = new FormData();
-      files.forEach(f => fd.append("files", f));
-      // Pass department name so files go into a subfolder
-      if (selectedDept?.name) fd.append("department", selectedDept.name);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      const urls: string[] = data.urls ?? [];
+      const urls = await uploadFilesInBatches(files, selectedDept?.name ?? "");
       const existing = imagesByDept[selectedDeptId] ?? [];
       const newImgs = [...existing, ...urls.map((url, i) => ({ url, name: `Foto ${existing.length + i + 1}` }))];
       setImagesByDept(prev => ({ ...prev, [selectedDeptId]: newImgs }));
       await saveImages(selectedDeptId, newImgs);
-    } catch {
-      toast.error("Error al subir imágenes");
+      toast.success(`${urls.length} foto${urls.length !== 1 ? "s" : ""} agregada${urls.length !== 1 ? "s" : ""}`);
+    } catch (err: any) {
+      toast.error("Error al subir imágenes: " + err.message);
     } finally {
       setUploading(false);
     }
@@ -541,12 +559,7 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
           // Sort alphabetically so foto_01 → pos 1, foto_02 → pos 2, etc.
           imageFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
-          const fd = new FormData();
-          imageFiles.forEach(f => fd.append("files", f));
-          fd.append("department", dept.name);
-          const res = await fetch("/api/upload", { method: "POST", body: fd });
-          const data = await res.json();
-          const urls: string[] = data.urls ?? [];
+          const urls = await uploadFilesInBatches(imageFiles, dept.name);
           // Replace existing images with the imported set (maintains order)
           const newImgs = urls.map((url, i) => ({ url, name: `Foto ${i + 1}` }));
           setImagesByDept(prev => ({ ...prev, [dept.id]: newImgs }));
@@ -580,12 +593,7 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
         // Sort alphabetically so foto_01 → pos 1, foto_02 → pos 2, etc.
         imageFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
-        const fd = new FormData();
-        imageFiles.forEach(f => fd.append("files", f));
-        if (selectedDept?.name) fd.append("department", selectedDept.name);
-        const res = await fetch("/api/upload", { method: "POST", body: fd });
-        const data = await res.json();
-        const urls: string[] = data.urls ?? [];
+        const urls = await uploadFilesInBatches(imageFiles, selectedDept?.name ?? "");
         // Replace existing images with the imported set (maintains order)
         const newImgs = urls.map((url, i) => ({ url, name: `Foto ${i + 1}` }));
         setImagesByDept(prev => ({ ...prev, [selectedDeptId]: newImgs }));

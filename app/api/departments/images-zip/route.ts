@@ -6,6 +6,9 @@ import path from "path";
 import { readFile } from "fs/promises";
 import JSZip from "jszip";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 120;
+
 /**
  * GET /api/departments/images-zip
  *   ?departmentId=xxx  → ZIP of a single department
@@ -39,9 +42,36 @@ export async function GET(req: NextRequest) {
     const cwd = process.cwd();
 
     for (const dept of departments) {
-      // The DB stores URLs in the exact order the user arranged them in the gallery
-      let urls: string[] = [];
-      try { urls = JSON.parse(dept.images || "[]"); } catch {}
+      // Robustly unwrap and parse image URLs
+      let parsed: any = dept.images || "[]";
+      while (typeof parsed === "string") {
+        try {
+          const next = JSON.parse(parsed);
+          if (typeof next === "string" || Array.isArray(next)) {
+            parsed = next;
+          } else {
+            break;
+          }
+        } catch {
+          break;
+        }
+      }
+      const rawUrls = Array.isArray(parsed) ? parsed : [];
+      const urls: string[] = rawUrls
+        .filter(Boolean)
+        .map((item: any) => {
+          let clean = typeof item === "string" ? item : (item?.url ?? "");
+          while (
+            typeof clean === "string" &&
+            ((clean.startsWith('"') && clean.endsWith('"')) ||
+              (clean.startsWith("'") && clean.endsWith("'")))
+          ) {
+            clean = clean.slice(1, -1);
+          }
+          return clean.trim();
+        })
+        .filter((u: string) => u.startsWith("/") || u.startsWith("http://") || u.startsWith("https://"));
+
       if (!urls.length) continue;
 
       // If exporting all, create a subfolder per department
@@ -63,7 +93,7 @@ export async function GET(req: NextRequest) {
             const buffer = await readFile(filePath);
             const ext = path.extname(url).slice(1) || "jpg";
             folder.file(`foto_${seq}.${ext}`, buffer);
-          } else {
+          } else if (url.startsWith("http://") || url.startsWith("https://")) {
             // External URL (Airbnb CDN, etc.) — fetch over HTTP
             const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
             if (res.ok) {
