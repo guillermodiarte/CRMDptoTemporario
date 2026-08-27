@@ -19,11 +19,13 @@ export async function PATCH(
       type,
       name, description, address, bedCount, maxPeople, hasParking, images,
       wifiName, wifiPass, basePrice, cleaningFee, isActive, alias, color,
-      googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink, isArchived, prices, amenities
+      googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink, isArchived, prices, amenities, showOnPublic
     } = body;
 
     const existing = await prisma.department.findUnique({ where: { id } });
-    if (!existing || existing.sessionId !== sessionId) {
+    // @ts-ignore
+    const isSuperAdmin = session?.user?.email === "guillermo.diarte@gmail.com";
+    if (!existing || (!isSuperAdmin && existing.sessionId !== sessionId)) {
       return new NextResponse("Not Found or Access Denied", { status: 404 });
     }
 
@@ -44,6 +46,7 @@ export async function PATCH(
         color: color || "#3b82f6",
         hasParking: !!hasParking,
         isActive: isActive !== undefined ? isActive : undefined,
+        showOnPublic: showOnPublic !== undefined ? showOnPublic : undefined,
         isArchived: typeof isArchived === 'boolean' ? isArchived : undefined,
         googleMapsLink, keyLocation, lockBoxCode, ownerName, meterLuz, meterGas, meterAgua, meterWifi, inventoryNotes, airbnbLink, bookingLink,
         images: JSON.stringify(images || []),
@@ -72,7 +75,9 @@ export async function DELETE(
     const { id } = await params;
 
     const existing = await prisma.department.findUnique({ where: { id } });
-    if (!existing || existing.sessionId !== sessionId) {
+    // @ts-ignore
+    const isSuperAdmin = session?.user?.email === "guillermo.diarte@gmail.com";
+    if (!existing || (!isSuperAdmin && existing.sessionId !== sessionId)) {
       return new NextResponse("Not Found or Access Denied", { status: 404 });
     }
 

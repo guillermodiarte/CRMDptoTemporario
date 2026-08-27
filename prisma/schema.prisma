@@ -133,6 +133,7 @@ model Department {
   maxPeople   Int
   hasParking  Boolean  @default(false)
   isActive    Boolean  @default(true) 
+  showOnPublic Boolean @default(true)
   isArchived  Boolean  @default(false) // Soft delete (hidden from everything)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

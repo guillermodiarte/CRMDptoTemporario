@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Department } from "@prisma/client";
-import { Plus, Pencil, Eye, EyeOff, Wifi, Trash, Lock, Download } from "lucide-react";
+import { Plus, Pencil, Eye, EyeOff, Wifi, Trash, Lock, Download, Globe, GlobeLock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,10 +42,11 @@ interface DepartmentsClientProps {
   title?: string;
   role?: string;
   totalSuppliesCost: number;
+  otherSessionsDepts?: { sessionName: string; departments: Department[] }[];
 }
 
 // Fix duplicated state declarations by replacing the component body
-export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDepartments = [], defaultType, title = "Departamentos", role, totalSuppliesCost }) => {
+export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDepartments = [], defaultType, title = "Departamentos", role, totalSuppliesCost, otherSessionsDepts }) => {
   const [departments, setDepartments] = useState<Department[]>(initialDepartments);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
@@ -82,6 +83,24 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
       router.refresh();
     } catch (e) {
       alert("Error al cambiar estado");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const togglePublic = async (dept: Department) => {
+    setTogglingId(dept.id);
+    try {
+      await fetch(`/api/departments/${dept.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          ...dept,
+          showOnPublic: !dept.showOnPublic,
+        })
+      });
+      router.refresh();
+    } catch (e) {
+      alert("Error al cambiar estado público");
     } finally {
       setTogglingId(null);
     }
@@ -271,35 +290,51 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                     </TableCell>
                   )}
                   <TableCell>
-                    <Badge variant={dept.isActive ? "default" : "secondary"}>
-                      {dept.isActive ? "Activo" : "Inactivo"}
-                    </Badge>
+                    <div className="flex flex-col gap-1 items-start">
+                      <Badge variant={dept.isActive ? "default" : "secondary"}>
+                        {dept.isActive ? "Activo" : "Inactivo"}
+                      </Badge>
+                      <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white">
+                        {dept.showOnPublic ? "Público" : "Oculto"}
+                      </Badge>
+                    </div>
                   </TableCell>
                   {!isVisualizer && (
-                    <TableCell className="text-right space-x-2 whitespace-nowrap">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => toggleActive(dept)}
-                        disabled={togglingId === dept.id}
-                        title={dept.isActive ? "Desactivar" : "Activar"}
-                      >
-                        {dept.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(dept)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      {!dept.isActive && (
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="bg-red-500 hover:bg-red-600 text-black"
-                          onClick={() => setDeleteId(dept.id)}
-                          title="Eliminar (Archivar)"
+                          onClick={() => toggleActive(dept)}
+                          disabled={togglingId === dept.id}
+                          title={dept.isActive ? "Desactivar" : "Activar"}
                         >
-                          <Trash className="h-4 w-4" />
+                          {dept.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
                         </Button>
-                      )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => togglePublic(dept)}
+                          disabled={togglingId === dept.id}
+                          title={dept.showOnPublic ? "Ocultar de web" : "Mostrar en web"}
+                        >
+                          {dept.showOnPublic ? <Globe className="h-4 w-4 text-blue-500" /> : <GlobeLock className="h-4 w-4 text-muted-foreground" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(dept)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {!dept.isActive && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="bg-red-500 hover:bg-red-600 text-black"
+                            onClick={() => setDeleteId(dept.id)}
+                            title="Eliminar (Archivar)"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -315,12 +350,11 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
           </Table>
         </div>
 
-        {/* Mobile Card View (Refined) */}
+        {/* Mobile Card View */}
         <div className="md:hidden space-y-3">
           {visibleData.map((dept) => (
             <Card key={dept.id} className={cn("overflow-hidden", !dept.isActive && "opacity-60 bg-muted/50")}>
               <CardContent className="p-3 space-y-3">
-                {/* Header: Name, Status */}
                 <div className="flex flex-col gap-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2 min-w-0 flex-1">
@@ -335,76 +369,18 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                         <div className="text-xs text-muted-foreground whitespace-normal break-words mt-0.5">{dept.address}</div>
                       </div>
                     </div>
-                    <Badge variant={dept.isActive ? "default" : "secondary"} className="shrink-0">
-                      {dept.isActive ? "Activo" : "Inactivo"}
-                    </Badge>
+                    <div className="flex flex-col gap-1 items-end">
+                      <Badge variant={dept.isActive ? "default" : "secondary"}>
+                        {dept.isActive ? "Activo" : "Inactivo"}
+                      </Badge>
+                      <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white">
+                        {dept.showOnPublic ? "Público" : "Oculto"}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
 
-                {/* Details Grid */}
-                <div className="grid grid-cols-2 gap-x-3 gap-y-4 text-sm border-t pt-3 border-b pb-3">
-                  {/* Capacity */}
-                  {/* Slot 1: Capacity or Price Base */}
-                  <div className="pl-3">
-                    {defaultType === 'PARKING' ? (
-                      <>
-                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">Precio</span>
-                        <span className="font-medium text-sm">${dept.basePrice}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">Capacidad</span>
-                        <span className="font-medium text-sm">{dept.maxPeople} pax / {dept.bedCount} camas</span>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Slot 2: Prices (Combined) or Cleaning Fee */}
-                  <div>
-                    {defaultType === 'PARKING' ? (
-                      <>
-                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">Limpieza</span>
-                        <span className="font-medium text-sm">${dept.cleaningFee}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">Precios</span>
-                        <div className="font-medium text-sm flex flex-wrap gap-1">
-                          <span>${dept.basePrice}</span>
-                          <span className="text-muted-foreground">+${dept.cleaningFee} Limp.</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Wifi */}
-                  {defaultType !== 'PARKING' && (
-                    <div className="col-span-2 bg-muted/30 p-3 rounded-md">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                        <Wifi className="h-4 w-4" /> Connectividad
-                      </div>
-                      <div className="font-medium text-sm whitespace-normal break-all">
-                        {dept.wifiName || "-"}
-                      </div>
-                      <div className="text-sm break-all select-all font-mono text-muted-foreground">
-                        Pass: {dept.wifiPass}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Keys/Locker */}
-                  {dept.lockBoxCode && (
-                    <div className="col-span-2 flex items-center gap-2 border px-3 py-2 rounded bg-background text-sm">
-                      <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="text-muted-foreground">Locker:</span>
-                      <span className="font-mono font-medium select-all">{dept.lockBoxCode}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer: Links & Actions */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-1 pl-3">
-                  {/* Links Row */}
+                <div className="flex items-center justify-between gap-3 pt-1 pl-3">
                   <div className="flex gap-3">
                     {dept.googleMapsLink && (
                       <a href={dept.googleMapsLink} target="_blank" rel="noopener noreferrer">
@@ -423,44 +399,114 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                     )}
                   </div>
 
-                  {/* Actions Row */}
                   {!isVisualizer && (
-                    <div className="flex gap-2 ml-auto">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-10 w-10 p-0"
-                        onClick={() => toggleActive(dept)}
-                        disabled={togglingId === dept.id}
-                        title={dept.isActive ? "Desactivar" : "Activar"}
-                      >
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => toggleActive(dept)} disabled={togglingId === dept.id}>
                         {dept.isActive ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5 text-muted-foreground" />}
                       </Button>
-                      <Button variant="outline" size="sm" className="h-10 px-4 text-sm" onClick={() => handleEdit(dept)}>
-                        Editar
+                      <Button variant="ghost" size="icon" onClick={() => togglePublic(dept)} disabled={togglingId === dept.id}>
+                        {dept.showOnPublic ? <Globe className="h-5 w-5 text-blue-500" /> : <GlobeLock className="h-5 w-5 text-muted-foreground" />}
                       </Button>
-                      {!dept.isActive && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-10 w-10 p-0 bg-red-500 hover:bg-red-600 text-black"
-                          onClick={() => setDeleteId(dept.id)}
-                        >
-                          <Trash className="h-5 w-5" />
-                        </Button>
-                      )}
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(dept)}>
+                        <Pencil className="h-5 w-5" />
+                      </Button>
                     </div>
                   )}
                 </div>
               </CardContent>
             </Card>
           ))}
-          {visibleData.length === 0 && (
-            <div className="text-center py-8 text-branch-foreground text-sm">
-              No se encontraron departamentos.
-            </div>
-          )}
         </div>
+
+        {/* Other Sessions Departments (SuperAdmin only) */}
+        {otherSessionsDepts && otherSessionsDepts.length > 0 && (
+          <div className="mt-12 space-y-8 border-t pt-8">
+            <div>
+              <h3 className="text-2xl font-bold tracking-tight text-slate-800">Departamentos de otras Sesiones</h3>
+              <p className="text-sm text-muted-foreground">Como SuperAdmin, puedes ver y editar los departamentos de las demás sesiones.</p>
+            </div>
+            
+            {otherSessionsDepts.map(sessionData => (
+              <div key={sessionData.sessionName} className="space-y-4">
+                <h4 className="text-lg font-semibold border-b pb-2 text-indigo-700">{sessionData.sessionName}</h4>
+                <div className="rounded-md border bg-white overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[300px]">Nombre</TableHead>
+                        {defaultType !== 'PARKING' && <TableHead>Cap./Camas</TableHead>}
+                        <TableHead>Estado</TableHead>
+                        {!isVisualizer && <TableHead className="text-right">Acciones</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sessionData.departments.map(dept => (
+                        <TableRow key={dept.id} className={cn(!dept.isActive && "opacity-60 bg-muted/50")}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {dept.color && (
+                                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dept.color }} />
+                              )}
+                              <div>
+                                <div>{dept.name}</div>
+                                {dept.alias && <div className="text-xs text-muted-foreground">{dept.alias}</div>}
+                                {dept.address && <div className="text-xs text-muted-foreground font-normal">{dept.address}</div>}
+                              </div>
+                            </div>
+                          </TableCell>
+                          {defaultType !== 'PARKING' && (
+                            <TableCell>
+                              <div className="text-sm">
+                                {dept.maxPeople}p / {dept.bedCount}c
+                              </div>
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            <div className="flex flex-col gap-1 items-start">
+                              <Badge variant={dept.isActive ? "default" : "secondary"}>
+                                {dept.isActive ? "Activo" : "Inactivo"}
+                              </Badge>
+                              <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white">
+                                {dept.showOnPublic ? "Público" : "Oculto"}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          {!isVisualizer && (
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => toggleActive(dept)}
+                                  disabled={togglingId === dept.id}
+                                  title={dept.isActive ? "Desactivar" : "Activar"}
+                                >
+                                  {dept.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => togglePublic(dept)}
+                                  disabled={togglingId === dept.id}
+                                  title={dept.showOnPublic ? "Ocultar de web" : "Mostrar en web"}
+                                >
+                                  {dept.showOnPublic ? <Globe className="h-4 w-4 text-blue-500" /> : <GlobeLock className="h-4 w-4 text-muted-foreground" />}
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleEdit(dept)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
 

@@ -10,6 +10,7 @@ export default async function DepartamentosPage() {
     where: {
       type: 'APARTMENT',
       isActive: true,
+      showOnPublic: true,
       isArchived: false,
       OR: [
         { sessionId: null },

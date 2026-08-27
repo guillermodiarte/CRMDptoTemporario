@@ -42,6 +42,7 @@ export async function POST(req: Request) {
           color: item.color ?? "#3b82f6",
           hasParking: !!item.hasParking,
           isActive: item.isActive !== false,
+          showOnPublic: item.showOnPublic !== false,
           isArchived: !!item.isArchived,
           googleMapsLink: item.googleMapsLink ?? null,
           keyLocation: item.keyLocation ?? null,

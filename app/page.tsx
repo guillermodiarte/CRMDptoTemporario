@@ -23,6 +23,7 @@ export default async function Home({
     where: {
       type: 'APARTMENT',
       isActive: true,
+      showOnPublic: true,
       isArchived: false,
       OR: [
         { sessionId: null },
