@@ -34,6 +34,9 @@ import {
   ArrowLeft,
   ChevronRight,
   Loader2,
+  CheckSquare,
+  Square,
+  CheckCheck,
 } from "lucide-react";
 import Link from "next/link";
 import JSZip from "jszip";
@@ -103,16 +106,19 @@ function Lightbox({ images, index, onClose }: { images: GalleryImage[]; index: n
 
 /* ─── Sortable Image Card ────────────────────────────────────────── */
 function SortableCard({
-  image, index, isFirst,
-  onLightbox, onDelete, onRename, onCopy,
+  image, index, isFirst, isSelected, isSelectMode,
+  onLightbox, onDelete, onRename, onCopy, onToggleSelect,
 }: {
   image: GalleryImage;
   index: number;
   isFirst: boolean;
+  isSelected: boolean;
+  isSelectMode: boolean;
   onLightbox: () => void;
   onDelete: () => void;
   onRename: (name: string) => void;
   onCopy: () => void;
+  onToggleSelect: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: image.url });
   const [editing, setEditing] = useState(false);
@@ -131,39 +137,92 @@ function SortableCard({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="group relative bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-md transition-all">
-      {/* Drag handle */}
-      <div {...attributes} {...listeners} className="absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 rounded-lg p-1 cursor-grab active:cursor-grabbing">
-        <GripVertical className="w-4 h-4 text-slate-500" />
-      </div>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group relative bg-white rounded-2xl overflow-hidden shadow-sm border transition-all ${
+        isSelected
+          ? "ring-2 ring-indigo-600 border-indigo-600 shadow-md"
+          : "border-slate-100 hover:shadow-md"
+      }`}
+    >
+      {/* Checkbox Selector (top-left) */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleSelect();
+        }}
+        className={`absolute top-2 left-2 z-30 p-1 rounded-lg transition-all ${
+          isSelected
+            ? "bg-indigo-600 text-white shadow-sm opacity-100"
+            : isSelectMode
+            ? "bg-white/90 text-slate-400 hover:text-slate-700 opacity-100 border border-slate-200"
+            : "bg-white/80 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-indigo-600"
+        }`}
+        title={isSelected ? "Deseleccionar" : "Seleccionar"}
+      >
+        {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+      </button>
+
+      {/* Drag handle (top-left offset when not selecting) */}
+      {!isSelectMode && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute top-2 left-9 z-20 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 rounded-lg p-1 cursor-grab active:cursor-grabbing"
+        >
+          <GripVertical className="w-4 h-4 text-slate-500" />
+        </div>
+      )}
 
       {/* First badge */}
       {isFirst && (
-        <div className="absolute top-2 right-2 z-20 bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+        <div className="absolute top-2 right-2 z-20 bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
           Principal
         </div>
       )}
 
       {/* Image */}
-      <div className="aspect-square overflow-hidden bg-slate-100 cursor-zoom-in" onClick={onLightbox}>
-        <img src={image.url} alt={image.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+      <div
+        className="aspect-square overflow-hidden bg-slate-100 cursor-pointer relative"
+        onClick={() => {
+          if (isSelectMode) {
+            onToggleSelect();
+          } else {
+            onLightbox();
+          }
+        }}
+      >
+        <img
+          src={image.url}
+          alt={image.name}
+          className={`w-full h-full object-cover transition-transform duration-500 ${
+            isSelected ? "scale-95 opacity-90" : "group-hover:scale-105"
+          }`}
+        />
+        {isSelected && (
+          <div className="absolute inset-0 bg-indigo-900/15 pointer-events-none" />
+        )}
       </div>
 
-      {/* Action bar on hover */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent pt-6 pb-2 px-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-end gap-1">
-        <button onClick={onLightbox} title="Ver" className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-          <ZoomIn className="w-4 h-4" />
-        </button>
-        <button onClick={onCopy} title="Copiar URL" className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-          <Copy className="w-4 h-4" />
-        </button>
-        <button onClick={() => { setDraft(image.name); setEditing(true); }} title="Renombrar" className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-          <Pencil className="w-4 h-4" />
-        </button>
-        <button onClick={onDelete} title="Eliminar" className="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-white/10 transition-colors ml-auto">
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
+      {/* Action bar on hover (when not in select mode) */}
+      {!isSelectMode && (
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent pt-6 pb-2 px-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-end gap-1">
+          <button onClick={onLightbox} title="Ver" className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+            <ZoomIn className="w-4 h-4" />
+          </button>
+          <button onClick={onCopy} title="Copiar URL" className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+            <Copy className="w-4 h-4" />
+          </button>
+          <button onClick={() => { setDraft(image.name); setEditing(true); }} title="Renombrar" className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button onClick={onDelete} title="Eliminar" className="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-white/10 transition-colors ml-auto">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Name / edit */}
       <div className="p-2">
@@ -181,7 +240,9 @@ function SortableCard({
             </button>
           </div>
         ) : (
-          <p className="text-xs text-slate-500 truncate px-1">{image.name}</p>
+          <p className={`text-xs truncate px-1 ${isSelected ? "text-indigo-700 font-medium" : "text-slate-500"}`}>
+            {image.name}
+          </p>
         )}
       </div>
     </div>
@@ -208,6 +269,12 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
   const fileInputRef = useRef<HTMLInputElement>(null);
   const zipInputRef = useRef<HTMLInputElement>(null);
 
+  // Multi-select state
+  const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set());
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false);
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -215,6 +282,41 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
 
   const selectedDept = departments.find(d => d.id === selectedDeptId);
   const currentImages = selectedDeptId ? (imagesByDept[selectedDeptId] ?? []) : [];
+
+  // Toggle single image selection
+  const toggleSelectUrl = useCallback((url: string) => {
+    setSelectedUrls(prev => {
+      const next = new Set(prev);
+      if (next.has(url)) {
+        next.delete(url);
+      } else {
+        next.add(url);
+      }
+      return next;
+    });
+  }, []);
+
+  // Select/Deselect all images in current department
+  const handleSelectAll = useCallback(() => {
+    if (selectedUrls.size === currentImages.length) {
+      setSelectedUrls(new Set());
+    } else {
+      setSelectedUrls(new Set(currentImages.map(i => i.url)));
+    }
+  }, [selectedUrls.size, currentImages]);
+
+  // Cancel selection mode
+  const handleCancelSelection = useCallback(() => {
+    setSelectedUrls(new Set());
+    setIsSelectMode(false);
+  }, []);
+
+  // Switch department -> clear selection
+  const handleSelectDept = useCallback((deptId: string) => {
+    setSelectedDeptId(deptId);
+    setSelectedUrls(new Set());
+    setIsSelectMode(false);
+  }, []);
 
   /* Save order to DB */
   const saveImages = useCallback(async (deptId: string, imgs: GalleryImage[]) => {
@@ -251,12 +353,19 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
     saveImages(selectedDeptId, newImgs);
   };
 
-  /* Delete */
+  /* Delete single image */
   const handleDelete = async (deptId: string, index: number) => {
     const imgs = imagesByDept[deptId] ?? [];
     const deletedImg = imgs[index];
     const newImgs = imgs.filter((_, i) => i !== index).map((img, i) => ({ ...img, name: `Foto ${i + 1}` }));
     setImagesByDept(prev => ({ ...prev, [deptId]: newImgs }));
+    if (deletedImg) {
+      setSelectedUrls(prev => {
+        const next = new Set(prev);
+        next.delete(deletedImg.url);
+        return next;
+      });
+    }
     setDeleteConfirm(null);
 
     // Delete physical file if it's a local upload
@@ -275,6 +384,43 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
     await saveImages(deptId, newImgs);
   };
 
+  /* Batch Delete */
+  const handleDeleteBatch = async () => {
+    if (!selectedDeptId || selectedUrls.size === 0) return;
+    setIsDeletingBatch(true);
+    try {
+      const urlsToDelete = Array.from(selectedUrls);
+      const current = imagesByDept[selectedDeptId] ?? [];
+      const newImgs = current
+        .filter(i => !selectedUrls.has(i.url))
+        .map((img, i) => ({ ...img, name: `Foto ${i + 1}` }));
+
+      setImagesByDept(prev => ({ ...prev, [selectedDeptId]: newImgs }));
+      setSelectedUrls(new Set());
+      setIsSelectMode(false);
+      setBatchDeleteConfirm(false);
+
+      // Delete physical files in parallel
+      await Promise.allSettled(
+        urlsToDelete
+          .filter(url => url.startsWith("/uploads/"))
+          .map(url =>
+            fetch("/api/upload/delete", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url }),
+            })
+          )
+      );
+
+      await saveImages(selectedDeptId, newImgs);
+      toast.success(`${urlsToDelete.length} foto${urlsToDelete.length !== 1 ? "s" : ""} eliminada${urlsToDelete.length !== 1 ? "s" : ""} correctamente`);
+    } catch (error: any) {
+      toast.error("Error al eliminar fotos: " + error.message);
+    } finally {
+      setIsDeletingBatch(false);
+    }
+  };
 
   /* Rename (local only — just display name) */
   const handleRename = (deptId: string, index: number, newName: string) => {
@@ -457,6 +603,8 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
     }
   };
 
+  const activeSelectMode = isSelectMode || selectedUrls.size > 0;
+
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-slate-50">
 
@@ -479,7 +627,7 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
             return (
               <button
                 key={dept.id}
-                onClick={() => setSelectedDeptId(dept.id)}
+                onClick={() => handleSelectDept(dept.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${isActive ? "bg-indigo-50 border-r-2 border-indigo-500" : "hover:bg-slate-50"}`}
               >
                 <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 shrink-0 ring-2 ring-transparent">
@@ -498,40 +646,111 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
       {/* ── Main content ── */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Toolbar */}
-        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-3 shrink-0">
-          <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-slate-800 truncate">{selectedDept?.name ?? "Seleccioná un departamento"}</h2>
-            <p className="text-xs text-slate-400">{currentImages.length} foto{currentImages.length !== 1 ? "s" : ""} · Arrastré para reordenar · La primera foto aparece en la página pública</p>
-          </div>
+        <div className={`border-b px-6 py-3 flex items-center gap-3 shrink-0 transition-colors ${
+          activeSelectMode ? "bg-indigo-50/70 border-indigo-200" : "bg-white border-slate-200"
+        }`}>
+          {activeSelectMode ? (
+            /* ── Batch Selection Toolbar ── */
+            <div className="flex items-center justify-between w-full gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <span className="bg-indigo-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
+                  {selectedUrls.size} seleccionada{selectedUrls.size !== 1 ? "s" : ""}
+                </span>
+                <p className="text-xs text-slate-600 hidden sm:inline">
+                  Hacé clic en las fotos para agregarlas o quitarlas de la selección
+                </p>
+              </div>
 
-          {saving && <span className="text-xs text-indigo-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Guardando...</span>}
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="bg-white"
+                  onClick={handleSelectAll}
+                >
+                  <CheckCheck className="w-4 h-4 mr-1 text-indigo-600" />
+                  {selectedUrls.size === currentImages.length ? "Deseleccionar todas" : "Seleccionar todas"}
+                </Button>
 
-          {selectedDeptId && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={selectedUrls.size === 0 || isDeletingBatch}
+                  onClick={() => setBatchDeleteConfirm(true)}
+                >
+                  {isDeletingBatch ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 mr-1" />
+                  )}
+                  Eliminar ({selectedUrls.size})
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCancelSelection}
+                >
+                  <X className="w-4 h-4 mr-1" /> Cancelar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* ── Standard Toolbar ── */
             <>
-              {/* Upload */}
-              <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-                {uploading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
-                {uploading ? "Subiendo..." : "Agregar fotos"}
-              </Button>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
+              <div className="flex-1 min-w-0">
+                <h2 className="font-bold text-slate-800 truncate">{selectedDept?.name ?? "Seleccioná un departamento"}</h2>
+                <p className="text-xs text-slate-400">
+                  {currentImages.length} foto{currentImages.length !== 1 ? "s" : ""} · Arrastrá para reordenar · La primera foto aparece en la página pública
+                </p>
+              </div>
 
-              {/* Export ZIP — current dept */}
-              <Button size="sm" variant="outline" onClick={handleExportZIP} disabled={zipping || currentImages.length === 0} title="Exportar imágenes de este departamento">
-                {zipping ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Archive className="w-4 h-4 mr-1 text-amber-600" />}
-                {zipping ? "Comprimiendo..." : "Exportar ZIP"}
-              </Button>
+              {saving && (
+                <span className="text-xs text-indigo-500 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Guardando...
+                </span>
+              )}
 
-              {/* Export ZIP — all departments */}
-              <Button size="sm" variant="outline" onClick={handleExportAllZIP} disabled={zipping} title="Exportar imágenes de TODOS los departamentos">
-                {zipping ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Archive className="w-4 h-4 mr-1 text-indigo-600" />}
-                {zipping ? "Comprimiendo..." : "Exportar Todo"}
-              </Button>
+              {selectedDeptId && (
+                <>
+                  {/* Select Mode Toggle */}
+                  {currentImages.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsSelectMode(true)}
+                      title="Seleccionar varias imágenes para eliminar"
+                    >
+                      <CheckSquare className="w-4 h-4 mr-1 text-indigo-600" /> Seleccionar
+                    </Button>
+                  )}
 
-              {/* Import ZIP (auto-detects single dept vs all depts) */}
-              <Button size="sm" variant="outline" onClick={() => zipInputRef.current?.click()} disabled={uploading}>
-                <Upload className="w-4 h-4 mr-1 text-blue-600" /> Importar ZIP
-              </Button>
-              <input ref={zipInputRef} type="file" accept=".zip" className="hidden" onChange={handleImportZIP} />
+                  {/* Upload */}
+                  <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                    {uploading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
+                    {uploading ? "Subiendo..." : "Agregar fotos"}
+                  </Button>
+                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
+
+                  {/* Export ZIP — current dept */}
+                  <Button size="sm" variant="outline" onClick={handleExportZIP} disabled={zipping || currentImages.length === 0} title="Exportar imágenes de este departamento">
+                    {zipping ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Archive className="w-4 h-4 mr-1 text-amber-600" />}
+                    {zipping ? "Comprimiendo..." : "Exportar ZIP"}
+                  </Button>
+
+                  {/* Export ZIP — all departments */}
+                  <Button size="sm" variant="outline" onClick={handleExportAllZIP} disabled={zipping} title="Exportar imágenes de TODOS los departamentos">
+                    {zipping ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Archive className="w-4 h-4 mr-1 text-indigo-600" />}
+                    {zipping ? "Comprimiendo..." : "Exportar Todo"}
+                  </Button>
+
+                  {/* Import ZIP (auto-detects single dept vs all depts) */}
+                  <Button size="sm" variant="outline" onClick={() => zipInputRef.current?.click()} disabled={uploading}>
+                    <Upload className="w-4 h-4 mr-1 text-blue-600" /> Importar ZIP
+                  </Button>
+                  <input ref={zipInputRef} type="file" accept=".zip" className="hidden" onChange={handleImportZIP} />
+                </>
+              )}
             </>
           )}
         </div>
@@ -565,10 +784,13 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
                       image={img}
                       index={index}
                       isFirst={index === 0}
+                      isSelected={selectedUrls.has(img.url)}
+                      isSelectMode={activeSelectMode}
                       onLightbox={() => setLightbox({ deptId: selectedDeptId, index })}
                       onDelete={() => setDeleteConfirm({ deptId: selectedDeptId, index })}
                       onRename={name => handleRename(selectedDeptId, index, name)}
                       onCopy={() => { navigator.clipboard.writeText(img.url); }}
+                      onToggleSelect={() => toggleSelectUrl(img.url)}
                     />
                   ))}
                 </div>
@@ -587,7 +809,7 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
         />
       )}
 
-      {/* Delete confirm */}
+      {/* Single Delete confirm */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-[150] bg-black/40 flex items-center justify-center">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
@@ -597,6 +819,32 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
               <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirm(null)}>Cancelar</Button>
               <Button variant="destructive" className="flex-1" onClick={() => handleDelete(deleteConfirm.deptId, deleteConfirm.index)}>
                 <Trash2 className="w-4 h-4 mr-1" /> Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Delete confirm */}
+      {batchDeleteConfirm && (
+        <div className="fixed inset-0 z-[150] bg-black/40 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-slate-800 text-lg mb-2">
+              ¿Eliminar {selectedUrls.size} foto{selectedUrls.size !== 1 ? "s" : ""}?
+            </h3>
+            <p className="text-slate-500 text-sm mb-6">
+              Esta acción no se puede deshacer. Se eliminarán permanentemente las {selectedUrls.size} fotos seleccionadas de este departamento.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setBatchDeleteConfirm(false)} disabled={isDeletingBatch}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" className="flex-1" onClick={handleDeleteBatch} disabled={isDeletingBatch}>
+                {isDeletingBatch ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1" />}
+                {isDeletingBatch ? "Eliminando..." : `Eliminar (${selectedUrls.size})`}
               </Button>
             </div>
           </div>
