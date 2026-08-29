@@ -35,6 +35,7 @@ export function PublicFooter() {
               {[
                 { href: "/", label: "Inicio" },
                 { href: "/departamentos", label: "Departamentos" },
+                { href: "/guia", label: "Guía & Turismo" },
                 { href: "/contacto", label: "Contacto" },
               ].map(link => (
                 <li key={link.href}>
