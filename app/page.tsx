@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
 import { PublicLandingClient } from '@/components/public-landing-client'
 import { PublicNavbar } from '@/components/public-navbar'
+import { getSiteConfig } from '@/lib/site-config-loader'
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,7 @@ export default async function Home({
 }) {
   const session = await auth()
   const resolvedParams = await searchParams
+  const config = await getSiteConfig()
 
   const today = new Date()
   const next30Days = new Date(today)
@@ -58,8 +60,8 @@ export default async function Home({
 
   return (
     <>
-      <PublicNavbar />
-      <PublicLandingClient initialDepartments={departments} />
+      <PublicNavbar siteName={config.siteName} />
+      <PublicLandingClient initialDepartments={departments} config={config} />
     </>
   )
 }

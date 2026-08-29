@@ -1,10 +1,11 @@
 import { MetadataRoute } from 'next'
+import { SITE_CONFIG_DEFAULTS } from '@/lib/site.config'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Alojamientos Di'Arte",
-    short_name: "Di'Arte",
-    description: "Gestión de alojamientos temporarios en Formosa",
+    name: SITE_CONFIG_DEFAULTS.siteName,
+    short_name: SITE_CONFIG_DEFAULTS.siteName.split(" ")[0] || "Alojamientos",
+    description: SITE_CONFIG_DEFAULTS.seoDescription,
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

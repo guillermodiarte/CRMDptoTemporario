@@ -1,19 +1,25 @@
 import { PublicNavbar } from "@/components/public-navbar";
 import { PublicFooter } from "@/components/public-footer";
 import { MapPin, Phone, Mail, Clock, MessageCircle } from "lucide-react";
+import { getSiteConfig } from "@/lib/site-config-loader";
 
-export const metadata = {
-  title: "Contacto | Alojamientos Di'Arte",
-  description: "Ponete en contacto con Alojamientos Di'Arte. Estamos en Formosa, Argentina. Respondemos por WhatsApp, email y teléfono.",
-};
+export async function generateMetadata() {
+  const config = await getSiteConfig();
+  return {
+    title: `Contacto | ${config.siteName}`,
+    description: `Ponete en contacto con ${config.siteName}. Estamos en ${config.city}, ${config.country}. Respondemos por WhatsApp, email y teléfono.`,
+  };
+}
 
-export default function ContactoPage() {
-  const whatsappNumber = "5492645000000"; // Update this number
-  const whatsappMsg = encodeURIComponent("Hola! Me gustaría obtener información sobre los departamentos.");
+export default async function ContactoPage() {
+  const config = await getSiteConfig();
+
+  const whatsappNumber = config.phoneWhatsApp.replace(/\D/g, "");
+  const whatsappMsg = encodeURIComponent(config.whatsappDefaultMsg);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <PublicNavbar />
+      <PublicNavbar siteName={config.siteName} />
 
       {/* Hero */}
       <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white overflow-hidden pt-16">
@@ -51,28 +57,28 @@ export default function ContactoPage() {
                 {
                   icon: <Phone className="w-5 h-5" />,
                   title: "Teléfono / WhatsApp",
-                  value: "+54 9 351 314-6924",
-                  href: `tel:+5493513146924`,
+                  value: config.phoneDisplay,
+                  href: `tel:${config.phoneDisplay.replace(/[^\d+]/g, '')}`,
                   color: "bg-green-100 text-green-600"
                 },
                 {
                   icon: <Mail className="w-5 h-5" />,
                   title: "Email",
-                  value: "contacto@alojamientosdiarte.com",
-                  href: "mailto:contacto@alojamientosdiarte.com",
+                  value: config.email,
+                  href: `mailto:${config.email}`,
                   color: "bg-sky-100 text-sky-600"
                 },
                 {
                   icon: <MapPin className="w-5 h-5" />,
                   title: "Dirección",
-                  value: "Antártida Argentina 1035\nFormosa, Argentina",
-                  href: "https://maps.app.goo.gl/",
+                  value: `${config.address}\n${config.city}, ${config.country}`,
+                  href: config.googleMapsUrl || "https://maps.app.goo.gl/",
                   color: "bg-orange-100 text-orange-600"
                 },
                 {
                   icon: <Clock className="w-5 h-5" />,
                   title: "Horario de atención",
-                  value: "Lunes a Domingo\n8:00 – 22:00 hs",
+                  value: config.businessHours,
                   href: null,
                   color: "bg-purple-100 text-purple-600"
                 },
@@ -116,14 +122,14 @@ export default function ContactoPage() {
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 h-64">
               <iframe
-                src="https://www.google.com/maps?q=Ant%C3%A1rtida+Argentina+1035,+Formosa,+Argentina&output=embed"
+                src={config.googleMapsEmbedUrl}
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="Ubicación Alojamientos DiArte"
+                title={`Ubicación ${config.siteName}`}
               />
             </div>
 
@@ -165,7 +171,7 @@ export default function ContactoPage() {
         </div>
       </div>
 
-      <PublicFooter />
+      <PublicFooter config={config} />
     </div>
   );
 }

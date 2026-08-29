@@ -9,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 
 import { ImageCarousel, DepartmentModal, SharedDepartment } from "./shared-ui";
 import { PublicFooter } from "./public-footer";
+import { SiteConfig, SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
 
 type Reservation = {
   id: string;
@@ -96,7 +97,13 @@ const parseDeptImages = (imagesStr: any): string[] => {
   }
 };
 
-export function PublicLandingClient({ initialDepartments }: { initialDepartments: any[] }) {
+export function PublicLandingClient({
+  initialDepartments,
+  config = SITE_CONFIG_DEFAULTS,
+}: {
+  initialDepartments: any[];
+  config?: SiteConfig;
+}) {
   const [checkInDate, setCheckInDate] = useState<Date | undefined>(undefined);
   const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(undefined);
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
@@ -278,7 +285,7 @@ export function PublicLandingClient({ initialDepartments }: { initialDepartments
 
     // 1. Find direct availability
     direct = departments.filter(dept => {
-      if (peopleCount !== '' && dept.maxPeople < peopleCount) return false;
+      if (typeof peopleCount === 'number' && dept.maxPeople < peopleCount) return false;
       for (let i = 0; i < totalNights; i++) {
         if (!isDeptFreeOnDate(dept, addDays(inDate, i))) return false;
       }
@@ -377,10 +384,10 @@ export function PublicLandingClient({ initialDepartments }: { initialDepartments
 
         <div className="relative w-full max-w-[1600px] mx-auto px-4 py-24 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6">
-            Alojamientos Di'Arte
+            {config.siteName}
           </h1>
           <p className="text-lg sm:text-xl max-w-2xl mx-auto text-slate-300">
-            Encontrá el lugar perfecto para tu estadía. Departamentos temporarios premium, equipados para tu comodidad.
+            {config.siteSlogan}
           </p>
         </div>
         {/* Wave */}
@@ -684,10 +691,11 @@ export function PublicLandingClient({ initialDepartments }: { initialDepartments
           onClose={() => setReservationData(null)}
           onSelectDept={setSelectedDept}
           isHidden={!!selectedDept}
+          config={config}
         />
       )}
 
-      <PublicFooter />
+      <PublicFooter config={config} />
     </div>
   );
 }
@@ -697,13 +705,15 @@ function ReservationRequestModal({
   departments,
   onClose,
   onSelectDept,
-  isHidden
+  isHidden,
+  config = SITE_CONFIG_DEFAULTS,
 }: {
   data: { type: 'direct' | 'combination'; dept?: Department; comb?: Combination; checkIn: Date; checkOut: Date; people: number; };
   departments: Department[];
   onClose: () => void;
   onSelectDept: (data: { dept: Department, parsedImages: string[] }) => void;
   isHidden?: boolean;
+  config?: SiteConfig;
 }) {
   const [name, setName] = useState("");
   const [dni, setDni] = useState("");
@@ -769,7 +779,7 @@ function ReservationRequestModal({
       console.error('Error registering reservation request:', e);
     }
 
-    const wsNumber = "5493513146924";
+    const wsNumber = config.phoneWhatsApp.replace(/\D/g, "") || "5493513146924";
     let message = `¡Hola! Me gustaría solicitar una reserva.\n\n`;
     message += `*Datos Personales*\n`;
     message += `- Nombre: ${name}\n`;

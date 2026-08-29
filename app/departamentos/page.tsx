@@ -2,10 +2,21 @@ import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 import { PublicNavbar } from '@/components/public-navbar';
 import { DepartmentsGallery } from '@/components/departments-gallery';
+import { getSiteConfig } from '@/lib/site-config-loader';
 
 export const dynamic = 'force-dynamic';
 
+export async function generateMetadata() {
+  const config = await getSiteConfig();
+  return {
+    title: `Departamentos | ${config.siteName}`,
+    description: `Conocé todos los departamentos disponibles en ${config.siteName}. Fotos, comodidades, capacidad y precios.`,
+  };
+}
+
 export default async function DepartamentosPage() {
+  const config = await getSiteConfig();
+
   const activeDepartments = await prisma.department.findMany({
     where: {
       type: 'APARTMENT',
@@ -44,8 +55,8 @@ export default async function DepartamentosPage() {
 
   return (
     <>
-      <PublicNavbar />
-      <DepartmentsGallery departments={activeDepartments} />
+      <PublicNavbar siteName={config.siteName} />
+      <DepartmentsGallery departments={activeDepartments} config={config} />
     </>
   );
 }

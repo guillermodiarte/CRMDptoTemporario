@@ -23,8 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-// removed jsPDF
-import { CheckCircle2, AlertCircle, Plus, Trash2, Pencil, Power, PowerOff, FileSpreadsheet } from "lucide-react";
+import { CheckCircle2, AlertCircle, Plus, Trash2, Pencil, Power, PowerOff, FileSpreadsheet, Globe, MessageSquare, PhoneCall, Mail, MapPin } from "lucide-react";
 import Papa from "papaparse";
 // removed autoTable
 import { ImportPreviewModal, ImportPreviewRow, ImportStats } from "./import-preview-modal";
@@ -38,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { Switch } from "@/components/ui/switch";
+import { SiteConfig, SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
 
 interface SettingsFormProps {
   activeParkingCount?: number;
@@ -47,6 +47,14 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // SuperAdmin detection
+  const userEmail = session?.user?.email?.toLowerCase().trim();
+  const isSuperAdmin = userEmail === "guillermo.diarte@gmail.com" || (session?.user as any)?.isSuperAdmin === true;
+
+  // Site Config State (SuperAdmin only)
+  const [siteConfig, setSiteConfig] = useState<SiteConfig>(SITE_CONFIG_DEFAULTS);
+  const [savingSiteConfig, setSavingSiteConfig] = useState(false);
 
   // Settings State
   const [startYear, setStartYear] = useState<string>("2026");
@@ -80,12 +88,17 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [settingsRes, suppliesRes] = await Promise.all([
+        const promises: Promise<Response>[] = [
           fetch("/api/settings"),
-          fetch("/api/supplies")
-        ]);
+          fetch("/api/supplies"),
+        ];
+        if (isSuperAdmin) {
+          promises.push(fetch("/api/site-config"));
+        }
 
-        if (settingsRes.ok) {
+        const [settingsRes, suppliesRes, siteConfigRes] = await Promise.all(promises);
+
+        if (settingsRes && settingsRes.ok) {
           const data = await settingsRes.json();
           setStartYear(String(data.startYear || 2026));
           setEndYear(String(data.endYear || 2036));
@@ -93,9 +106,14 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
           setCleaningFee(String(data.cleaningFee || 0));
         }
 
-        if (suppliesRes.ok) {
+        if (suppliesRes && suppliesRes.ok) {
           const data = await suppliesRes.json();
           setSupplies(data.supplies || []);
+        }
+
+        if (siteConfigRes && siteConfigRes.ok) {
+          const cfgData = await siteConfigRes.json();
+          setSiteConfig(cfgData);
         }
       } catch (error) {
         console.error("Failed to fetch data", error);
@@ -104,7 +122,39 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
       }
     };
     fetchData();
-  }, []);
+  }, [isSuperAdmin]);
+
+  const handleSaveSiteConfig = async () => {
+    setSavingSiteConfig(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch("/api/site-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(siteConfig),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to save site config");
+      }
+
+      const data = await res.json();
+      if (data.config) {
+        setSiteConfig(data.config);
+      }
+      setSuccess("Configuración del sitio público guardada correctamente. Los cambios ya son visibles.");
+      router.refresh();
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Error al guardar la configuración del sitio.");
+    } finally {
+      setSavingSiteConfig(false);
+    }
+  };
 
   const handleSaveSettings = async () => {
     setSaving(true);
@@ -804,6 +854,263 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
         </div>
 
       </div>
+
+      {/* SuperAdmin Public Site Configuration Section */}
+      {isSuperAdmin && (
+        <Card className="border-sky-200 bg-gradient-to-b from-sky-50/30 to-white shadow-sm mt-6">
+          <CardHeader className="border-b border-sky-100 pb-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-sky-600" />
+                  <CardTitle className="text-xl text-slate-900">Configuración del Sitio Web Público</CardTitle>
+                  <span className="text-xs bg-sky-100 text-sky-700 font-bold px-2.5 py-0.5 rounded-full border border-sky-200">
+                    Solo SuperAdmin
+                  </span>
+                </div>
+                <CardDescription>
+                  Personaliza los datos de contacto, ubicación, WhatsApp de reservas, dominio y textos del sitio público.
+                  Al cambiar un valor aquí, se actualiza automáticamente en toda la web.
+                </CardDescription>
+              </div>
+              <Button
+                onClick={handleSaveSiteConfig}
+                disabled={savingSiteConfig}
+                className="bg-sky-600 hover:bg-sky-700 font-bold shadow-md gap-2"
+              >
+                {savingSiteConfig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Guardar Configuración del Sitio
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-8 pt-6">
+
+            {/* Bloque 1: Identidad & Dominio */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-sky-500" />
+                1. Identidad de Marca y Dominio
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-name" className="text-xs font-bold text-slate-700">Nombre del Alojamiento</Label>
+                  <Input
+                    id="sc-name"
+                    value={siteConfig.siteName}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, siteName: e.target.value })}
+                    placeholder="Ej. Alojamientos Di'Arte"
+                  />
+                  <p className="text-[11px] text-slate-400">Aparece en Navbar, Hero, Footer y títulos.</p>
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label htmlFor="sc-slogan" className="text-xs font-bold text-slate-700">Slogan / Descripción Corta</Label>
+                  <Input
+                    id="sc-slogan"
+                    value={siteConfig.siteSlogan}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, siteSlogan: e.target.value })}
+                    placeholder="Ej. Departamentos temporarios premium en Formosa..."
+                  />
+                  <p className="text-[11px] text-slate-400">Se muestra en la portada de inicio y en el pie de página.</p>
+                </div>
+                <div className="space-y-1.5 md:col-span-3">
+                  <Label htmlFor="sc-url" className="text-xs font-bold text-slate-700">Dominio / URL Web (VPN o Producción)</Label>
+                  <Input
+                    id="sc-url"
+                    value={siteConfig.siteUrl}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, siteUrl: e.target.value })}
+                    placeholder="https://tudominio.com o https://vpn.tuempresa.com"
+                  />
+                  <p className="text-[11px] text-slate-400">Utilizado para links canónicos y metadatos.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bloque 2: Contacto & WhatsApp */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500" />
+                2. Teléfonos, WhatsApp y Email
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-phone-display" className="text-xs font-bold text-slate-700">Teléfono (para mostrar)</Label>
+                  <Input
+                    id="sc-phone-display"
+                    value={siteConfig.phoneDisplay}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, phoneDisplay: e.target.value })}
+                    placeholder="Ej. +54 9 351 314-6924"
+                  />
+                  <p className="text-[11px] text-slate-400">Texto visible en Footer y Contacto.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-phone-ws" className="text-xs font-bold text-slate-700">WhatsApp para Reservas (solo números)</Label>
+                  <Input
+                    id="sc-phone-ws"
+                    value={siteConfig.phoneWhatsApp}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, phoneWhatsApp: e.target.value.replace(/[^\d]/g, "") })}
+                    placeholder="Ej. 5493513146924"
+                  />
+                  <p className="text-[11px] text-emerald-600 font-semibold">¡A este número se enviarán todas las solicitudes de reserva!</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-email" className="text-xs font-bold text-slate-700">Email de Contacto</Label>
+                  <Input
+                    id="sc-email"
+                    type="email"
+                    value={siteConfig.email}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, email: e.target.value })}
+                    placeholder="contacto@alojamientosdiarte.com"
+                  />
+                  <p className="text-[11px] text-slate-400">Email clickeable (mailto:) en Footer y Contacto.</p>
+                </div>
+                <div className="space-y-1.5 md:col-span-3">
+                  <Label htmlFor="sc-ws-msg" className="text-xs font-bold text-slate-700">Mensaje predeterminado de consulta WhatsApp</Label>
+                  <Input
+                    id="sc-ws-msg"
+                    value={siteConfig.whatsappDefaultMsg}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, whatsappDefaultMsg: e.target.value })}
+                    placeholder="Ej. Hola! Me gustaría consultar sobre la disponibilidad de departamentos."
+                  />
+                  <p className="text-[11px] text-slate-400">Texto inicial prellenado al hacer clic en 'Consultar por WhatsApp' desde Contacto.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bloque 3: Ubicación & Horarios */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-orange-500" />
+                3. Dirección, Ubicación y Horarios
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label htmlFor="sc-address" className="text-xs font-bold text-slate-700">Dirección</Label>
+                  <Input
+                    id="sc-address"
+                    value={siteConfig.address}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, address: e.target.value })}
+                    placeholder="Ej. Antártida Argentina 1035"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-city" className="text-xs font-bold text-slate-700">Ciudad</Label>
+                  <Input
+                    id="sc-city"
+                    value={siteConfig.city}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, city: e.target.value })}
+                    placeholder="Ej. Formosa"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-country" className="text-xs font-bold text-slate-700">País</Label>
+                  <Input
+                    id="sc-country"
+                    value={siteConfig.country}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, country: e.target.value })}
+                    placeholder="Ej. Argentina"
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label htmlFor="sc-hours" className="text-xs font-bold text-slate-700">Horario de Atención</Label>
+                  <Input
+                    id="sc-hours"
+                    value={siteConfig.businessHours}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, businessHours: e.target.value })}
+                    placeholder="Lunes a Domingo\n8:00 – 22:00 hs"
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label htmlFor="sc-maps-url" className="text-xs font-bold text-slate-700">Link Google Maps (Abrir en app/web)</Label>
+                  <Input
+                    id="sc-maps-url"
+                    value={siteConfig.googleMapsUrl}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, googleMapsUrl: e.target.value })}
+                    placeholder="https://maps.app.goo.gl/..."
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-4">
+                  <Label htmlFor="sc-maps-embed" className="text-xs font-bold text-slate-700">URL del Mapa Interactivo (Google Maps Embed iframe src)</Label>
+                  <Input
+                    id="sc-maps-embed"
+                    value={siteConfig.googleMapsEmbedUrl}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, googleMapsEmbedUrl: e.target.value })}
+                    placeholder="https://www.google.com/maps?q=...&output=embed"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bloque 4: Redes Sociales, Footer & SEO */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-purple-500" />
+                4. Redes Sociales, Footer y SEO
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-insta" className="text-xs font-bold text-slate-700">Instagram URL</Label>
+                  <Input
+                    id="sc-insta"
+                    value={siteConfig.instagramUrl}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, instagramUrl: e.target.value })}
+                    placeholder="https://www.instagram.com/tu_cuenta"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-fb" className="text-xs font-bold text-slate-700">Facebook URL</Label>
+                  <Input
+                    id="sc-fb"
+                    value={siteConfig.facebookUrl}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, facebookUrl: e.target.value })}
+                    placeholder="https://www.facebook.com/tu_pagina"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-copyright" className="text-xs font-bold text-slate-700">Texto Copyright Footer</Label>
+                  <Input
+                    id="sc-copyright"
+                    value={siteConfig.footerCopyright}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, footerCopyright: e.target.value })}
+                    placeholder="Alojamientos Di'Arte"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-credit" className="text-xs font-bold text-slate-700">Crédito de Diseño / Desarrollo</Label>
+                  <Input
+                    id="sc-credit"
+                    value={siteConfig.footerCredit}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, footerCredit: e.target.value })}
+                    placeholder="Diseño y desarrollo: Di'Arte"
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label htmlFor="sc-seo" className="text-xs font-bold text-slate-700">Descripción SEO (Metadatos para Google)</Label>
+                  <Input
+                    id="sc-seo"
+                    value={siteConfig.seoDescription}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, seoDescription: e.target.value })}
+                    placeholder="Descripción atractiva para los resultados de búsqueda de Google..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer action */}
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <Button
+                onClick={handleSaveSiteConfig}
+                disabled={savingSiteConfig}
+                size="lg"
+                className="bg-sky-600 hover:bg-sky-700 font-bold px-8 shadow-lg gap-2"
+              >
+                {savingSiteConfig ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                Guardar Todos los Cambios del Sitio
+              </Button>
+            </div>
+
+          </CardContent>
+        </Card>
+      )}
 
       <AlertDialog open={!!supplyToDelete} onOpenChange={(open) => !open && setSupplyToDelete(null)}>
         <AlertDialogContent>

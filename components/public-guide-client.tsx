@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { PublicNavbar } from "@/components/public-navbar";
 import { PublicFooter } from "@/components/public-footer";
+import { SiteConfig, SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface GuideItem {
@@ -616,7 +617,11 @@ function GuideCard({ item }: { item: GuideItem }) {
 }
 
 // ─── Main Client Component ────────────────────────────────────────────────────
-export function PublicGuideClient() {
+export function PublicGuideClient({
+  config = SITE_CONFIG_DEFAULTS,
+}: {
+  config?: SiteConfig;
+}) {
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -646,7 +651,7 @@ export function PublicGuideClient() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fc] flex flex-col">
-      <PublicNavbar />
+      <PublicNavbar siteName={config.siteName} />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white overflow-hidden pt-16">
@@ -854,7 +859,7 @@ export function PublicGuideClient() {
         </div>
       </div>
 
-      <PublicFooter />
+      <PublicFooter config={config} />
     </div>
   );
 }

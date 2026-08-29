@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { SharedDepartment } from "./shared-ui";
 import { PublicFooter } from "./public-footer";
+import { SiteConfig, SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
   addMonths, isBefore, startOfDay, isWithinInterval, isSameDay
@@ -392,7 +393,13 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
 }
 
 /* ─── Main export ────────────────────────────────────────────────────────── */
-export function DepartmentsGallery({ departments }: { departments: SharedDepartment[] }) {
+export function DepartmentsGallery({
+  departments,
+  config = SITE_CONFIG_DEFAULTS,
+}: {
+  departments: SharedDepartment[];
+  config?: SiteConfig;
+}) {
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [availDept, setAvailDept] = useState<SharedDepartment | null>(null);
 
@@ -406,7 +413,7 @@ export function DepartmentsGallery({ departments }: { departments: SharedDepartm
         <div className="relative max-w-4xl mx-auto px-4 py-24 sm:px-6 text-center">
           <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium text-white/80 mb-6">
             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-            Alojamientos premium en Formosa
+            Alojamientos premium en {config.city}
           </div>
           <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight mb-5 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">
             Nuestros Departamentos
@@ -458,7 +465,7 @@ export function DepartmentsGallery({ departments }: { departments: SharedDepartm
       {/* Availability Modal */}
       {availDept && <AvailabilityModal dept={availDept} onClose={() => setAvailDept(null)} />}
 
-      <PublicFooter />
+      <PublicFooter config={config} />
     </div>
   );
 }

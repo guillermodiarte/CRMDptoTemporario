@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
+import { getSiteConfig } from "@/lib/site-config-loader";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,14 +19,20 @@ export const viewport = {
   themeColor: "#ffffff",
 };
 
-export const metadata: Metadata = {
-  title: "Alojamientos Di'Arte",
-  description: "Creado por Guillermo A. Diarte",
-  icons: {
-    icon: "/icon.png?v=3",
-    apple: "/icon.png?v=3",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await getSiteConfig();
+  return {
+    title: {
+      default: config.siteName,
+      template: `%s | ${config.siteName}`,
+    },
+    description: config.seoDescription,
+    icons: {
+      icon: "/icon.png?v=3",
+      apple: "/icon.png?v=3",
+    },
+  };
+}
 
 export default function RootLayout({
   children,
@@ -33,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

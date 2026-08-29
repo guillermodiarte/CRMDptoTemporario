@@ -4,8 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2, Home, Phone, Compass, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
 
-export function PublicNavbar() {
+interface PublicNavbarProps {
+  siteName?: string;
+}
+
+export function PublicNavbar({ siteName = SITE_CONFIG_DEFAULTS.siteName }: PublicNavbarProps) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -34,7 +39,7 @@ export function PublicNavbar() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
               <Building2 className="w-6 h-6 text-sky-400" />
-              <span className="font-bold text-lg sm:text-xl tracking-tight">Alojamientos Di'Arte</span>
+              <span className="font-bold text-lg sm:text-xl tracking-tight">{siteName}</span>
             </Link>
           </div>
 
@@ -94,4 +99,3 @@ export function PublicNavbar() {
     </nav>
   );
 }
-
