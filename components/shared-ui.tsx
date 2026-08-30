@@ -36,7 +36,7 @@ export function ImageCarousel({ images, name }: { images: string[], name: string
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (images.length === 0) {
-    return <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80" alt={name} className="w-full h-full object-cover" />;
+    return <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80" alt={name} className="w-full h-full object-cover" loading="lazy" decoding="async" />;
   }
 
   const next = (e: React.MouseEvent) => {
@@ -53,7 +53,7 @@ export function ImageCarousel({ images, name }: { images: string[], name: string
 
   return (
     <div className="relative w-full h-full group">
-      <img src={images[currentIndex]} alt={`${name} - foto ${currentIndex + 1}`} className="w-full h-full object-cover transition-opacity duration-300" />
+      <img src={images[currentIndex]} alt={`${name} - foto ${currentIndex + 1}`} className="w-full h-full object-cover transition-opacity duration-300" loading="lazy" decoding="async" />
       
       {images.length > 1 && (
         <>
@@ -193,7 +193,7 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
                     className={`relative rounded-xl overflow-hidden cursor-pointer group ${idx === 0 ? 'col-span-2 row-span-2 h-64 md:h-[400px]' : 'h-32 md:h-[194px]'} ${idx === 4 && parsedImages.length > 5 ? 'opacity-90' : ''}`}
                     onClick={() => setLightboxIndex(idx)}
                   >
-                    <img src={img} alt={`${dept.name} ${idx + 1}`} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <img src={img} alt={`${dept.name} ${idx + 1}`} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" decoding="async" />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                     {idx === 4 && parsedImages.length > 5 && (
                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">

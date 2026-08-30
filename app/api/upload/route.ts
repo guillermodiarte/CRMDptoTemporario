@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { auth } from "@/auth";
+import { optimizeImageBuffer } from "@/lib/image-optimizer";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -39,14 +40,26 @@ export async function POST(req: NextRequest) {
 
     for (const file of files) {
       const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
+      const rawBuffer = Buffer.from(bytes);
+
+      // Auto-resize and compress to webp for ultra fast loading and low bandwidth
+      const { buffer: optimizedBuffer, extension } = await optimizeImageBuffer(rawBuffer, {
+        maxWidth: 1600,
+        maxHeight: 1200,
+        quality: 82,
+        format: "webp",
+      });
 
       const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-      const safeName = file.name.replace(/[^a-zA-Z0-9À-ÿ._-]/g, "_");
-      const filename = `${uniqueSuffix}-${safeName}`;
+      const baseNameWithoutExt = file.name
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[^a-zA-Z0-9À-ÿ_-]/g, "_")
+        .slice(0, 40);
+
+      const filename = `${uniqueSuffix}-${baseNameWithoutExt}.${extension}`;
       const filepath = path.join(uploadsDir, filename);
 
-      await writeFile(filepath, buffer);
+      await writeFile(filepath, optimizedBuffer);
 
       uploadedUrls.push(`/uploads/${subDir}/${filename}`);
     }

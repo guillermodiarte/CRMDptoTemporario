@@ -105,13 +105,14 @@ function Lightbox({ images, index, onClose }: { images: string[]; index: number;
       </>}
       <img src={images[current]} alt={`foto ${current + 1}`}
         className="max-w-full max-h-[88vh] object-contain rounded-xl select-none"
+        loading="lazy" decoding="async"
         onClick={e => e.stopPropagation()} />
       <div className="absolute bottom-16 left-1/2 -translate-x-1/2 text-white/50 text-sm">{current + 1} / {images.length}</div>
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2 overflow-x-auto max-w-lg px-4">
         {images.map((img, i) => (
           <button key={i} onClick={e => { e.stopPropagation(); setCurrent(i); }}
             className={`shrink-0 w-10 h-10 rounded-lg overflow-hidden border-2 transition-all ${i === current ? "border-white" : "border-transparent opacity-40 hover:opacity-70"}`}>
-            <img src={img} alt="" className="w-full h-full object-cover" />
+            <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
           </button>
         ))}
       </div>
@@ -262,7 +263,7 @@ function PhotoGallery({ images, onLightbox }: { images: string[]; onLightbox: (i
               onClick={e => { e.stopPropagation(); setCurrent(i); }}
               className={`shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${i === current ? "border-white scale-105 shadow-xl" : "border-white/30 opacity-60 hover:opacity-90"}`}
             >
-              <img src={img} alt="" className="w-full h-full object-cover" />
+              <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
             </button>
           ))}
         </div>
