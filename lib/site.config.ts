@@ -13,6 +13,9 @@ export const SITE_CONFIG_DEFAULTS = {
   siteName: "Alojamientos Di'Arte",
   siteSlogan: "Departamentos temporarios premium en Formosa, Argentina. Equipados para tu comodidad y listos para hacer de tu estadía una experiencia inigualable.",
   siteUrl: "https://alojamientosdiarte.com",
+  // Upload a custom logo from Configuración → Identidad de Marca.
+  // Leave empty to use the default Building2 icon in the navbar.
+  logoUrl: "",
 
   // Contacto principal
   phoneDisplay: "+54 9 351 314-6924",
@@ -37,10 +40,10 @@ export const SITE_CONFIG_DEFAULTS = {
 
   // SEO & Metadatos
   seoDescription: "Departamentos temporarios premium en Formosa, Argentina. Totalmente equipados para tu comodidad. Reservas directas y atención personalizada.",
-  
+
   // Footer
   footerCopyright: "Alojamientos Di'Arte",
-  footerCredit: "Diseño y desarrollo: Di'Arte",
+  footerCredit: "Diseño y desarrollo: Guillermo Diarte - Guillermo.diarte@gmail.com",
 };
 
 export type SiteConfig = typeof SITE_CONFIG_DEFAULTS;

@@ -8,9 +8,13 @@ import { SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
 
 interface PublicNavbarProps {
   siteName?: string;
+  logoUrl?: string;
 }
 
-export function PublicNavbar({ siteName = SITE_CONFIG_DEFAULTS.siteName }: PublicNavbarProps) {
+export function PublicNavbar({ 
+  siteName = SITE_CONFIG_DEFAULTS.siteName,
+  logoUrl = SITE_CONFIG_DEFAULTS.logoUrl,
+}: PublicNavbarProps) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -38,7 +42,11 @@ export function PublicNavbar({ siteName = SITE_CONFIG_DEFAULTS.siteName }: Publi
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
-              <Building2 className="w-6 h-6 text-sky-400" />
+              {logoUrl ? (
+                <img src={logoUrl} alt={siteName} className="h-8 w-8 object-contain rounded-full bg-white/10" />
+              ) : (
+                <Building2 className="w-6 h-6 text-sky-400" />
+              )}
               <span className="font-bold text-lg sm:text-xl tracking-tight">{siteName}</span>
             </Link>
           </div>

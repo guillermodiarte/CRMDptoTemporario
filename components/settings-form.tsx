@@ -155,6 +155,31 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
       setSavingSiteConfig(false);
     }
   };
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSavingSiteConfig(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("files", file);
+      
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Error al subir el logo");
+      
+      const data = await res.json();
+      if (data.urls && data.urls.length > 0) {
+        setSiteConfig(prev => ({ ...prev, logoUrl: data.urls[0] }));
+        setSuccess("Logo subido correctamente. No olvides guardar los cambios.");
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Error al subir el logo");
+    } finally {
+      setSavingSiteConfig(false);
+    }
+  };
 
   const handleSaveSettings = async () => {
     setSaving(true);
@@ -922,6 +947,36 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   />
                   <p className="text-[11px] text-slate-400">Utilizado para links canónicos y metadatos.</p>
                 </div>
+                <div className="space-y-1.5 md:col-span-3">
+                  <Label htmlFor="sc-logo" className="text-xs font-bold text-slate-700">Logo de la Página (URL)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="sc-logo"
+                      value={siteConfig.logoUrl}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, logoUrl: e.target.value })}
+                      placeholder="/logo.jpg"
+                      className="flex-1"
+                    />
+                    <Button type="button" variant="outline" className="relative cursor-pointer overflow-hidden">
+                      <span className="flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        Subir Imagen
+                      </span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                        onChange={handleLogoUpload} 
+                      />
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-slate-400">Este logo se mostrará en el menú de navegación y como icono general.</p>
+                  {siteConfig.logoUrl && (
+                    <div className="mt-2 p-2 border rounded-md bg-slate-50 w-fit">
+                      <img src={siteConfig.logoUrl} alt="Logo preview" className="h-10 w-auto object-contain rounded-md" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1080,7 +1135,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     id="sc-credit"
                     value={siteConfig.footerCredit}
                     onChange={(e) => setSiteConfig({ ...siteConfig, footerCredit: e.target.value })}
-                    placeholder="Diseño y desarrollo: Di'Arte"
+                    placeholder="Diseño y desarrollo: Guillermo Diarte - Guillermo.diarte@gmail.com"
                   />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">

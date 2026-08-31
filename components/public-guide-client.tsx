@@ -652,7 +652,7 @@ export function PublicGuideClient({
 
   return (
     <div className="min-h-screen bg-[#f8f9fc] flex flex-col">
-      <PublicNavbar siteName={config.siteName} />
+      <PublicNavbar siteName={config.siteName} logoUrl={config.logoUrl} />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white overflow-hidden pt-16">
