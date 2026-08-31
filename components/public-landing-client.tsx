@@ -194,15 +194,20 @@ export function PublicLandingClient({
             if (date > start && date < end) isInRange = true;
           }
 
-          let bgClass = "bg-white border-slate-200 text-slate-700 hover:border-sky-300 hover:shadow-sm";
+          // A full day is selectable as checkout only when checkin is set and this day is after it
+          const isSelectableAsCheckout = isFull && !isPast && checkInDate && !checkOutDate && date > checkInDate;
+
+          let bgClass = "bg-white border-slate-200 text-slate-700 hover:border-sky-300 hover:shadow-sm cursor-pointer";
           if (isSelected) {
-            bgClass = "bg-slate-900 border-slate-900 text-white shadow-md transform scale-105 z-10 relative";
+            bgClass = "bg-slate-900 border-slate-900 text-white shadow-md transform scale-105 z-10 relative cursor-pointer";
           } else if (isInRange) {
-            bgClass = "bg-sky-200 border-sky-400 text-sky-900 font-medium";
+            bgClass = "bg-sky-200 border-sky-400 text-sky-900 font-medium cursor-pointer";
           } else if (isPast) {
-            bgClass = "bg-slate-50 border-transparent text-slate-300";
+            bgClass = "bg-slate-50 border-transparent text-slate-300 cursor-default";
+          } else if (isFull && isSelectableAsCheckout) {
+            bgClass = "bg-amber-50 border-amber-200 text-amber-700 opacity-80 hover:border-amber-400 cursor-pointer";
           } else if (isFull) {
-            bgClass = "bg-red-50 border-red-100 text-red-500 opacity-60";
+            bgClass = "bg-red-50 border-red-100 text-red-400 opacity-50 cursor-not-allowed";
           }
 
           return (
@@ -212,10 +217,18 @@ export function PublicLandingClient({
                 if (!isPast && !isFull && checkInDate && !checkOutDate) {
                   setHoveredDate(date);
                 }
+                // Also hover-highlight on full days when picking checkout
+                if (!isPast && isFull && checkInDate && !checkOutDate && date > checkInDate) {
+                  setHoveredDate(date);
+                }
               }}
               className={`flex flex-col items-center justify-center p-1 h-14 rounded-lg border cursor-pointer transition-all duration-200 ${bgClass}`}
               onClick={() => {
-                if (isPast || isFull) return;
+                // Past days: always blocked
+                if (isPast) return;
+
+                // Full day with NO check-in yet: blocked (can't check IN on a full day)
+                if (isFull && !isSelectableAsCheckout) return;
 
                 // Deselect if clicking the same start date when only checkIn is set
                 if (checkInDate && isSameDay(date, checkInDate) && !checkOutDate) {

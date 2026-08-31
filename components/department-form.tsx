@@ -144,6 +144,9 @@ export function DepartmentForm({ setOpen, initialData, forcedType }: DepartmentF
         body: JSON.stringify({
           ...initialData,
           images: newUrls,
+          // Always send current pricesObj so we don't overwrite person-count pricing
+          prices: JSON.stringify(pricesObj),
+          amenities: JSON.stringify(activeAmenities),
         }),
       });
       router.refresh();
@@ -151,6 +154,7 @@ export function DepartmentForm({ setOpen, initialData, forcedType }: DepartmentF
       console.error("Error auto-saving images", e);
     }
   };
+
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
