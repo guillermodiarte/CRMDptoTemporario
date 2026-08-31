@@ -113,7 +113,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
         if (siteConfigRes && siteConfigRes.ok) {
           const cfgData = await siteConfigRes.json();
-          setSiteConfig(cfgData);
+          setSiteConfig(prev => ({ ...SITE_CONFIG_DEFAULTS, ...prev, ...cfgData }));
         }
       } catch (error) {
         console.error("Failed to fetch data", error);
@@ -143,7 +143,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
       const data = await res.json();
       if (data.config) {
-        setSiteConfig(data.config);
+        setSiteConfig(prev => ({ ...SITE_CONFIG_DEFAULTS, ...prev, ...data.config }));
       }
       setSuccess("Configuración del sitio público guardada correctamente. Los cambios ya son visibles.");
       router.refresh();
@@ -921,7 +921,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-name" className="text-xs font-bold text-slate-700">Nombre del Alojamiento</Label>
                   <Input
                     id="sc-name"
-                    value={siteConfig.siteName}
+                    value={siteConfig.siteName ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, siteName: e.target.value })}
                     placeholder="Ej. Alojamientos Di'Arte"
                   />
@@ -931,7 +931,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-slogan" className="text-xs font-bold text-slate-700">Slogan / Descripción Corta</Label>
                   <Input
                     id="sc-slogan"
-                    value={siteConfig.siteSlogan}
+                    value={siteConfig.siteSlogan ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, siteSlogan: e.target.value })}
                     placeholder="Ej. Departamentos temporarios premium en Formosa..."
                   />
@@ -941,7 +941,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-url" className="text-xs font-bold text-slate-700">Dominio / URL Web (VPN o Producción)</Label>
                   <Input
                     id="sc-url"
-                    value={siteConfig.siteUrl}
+                    value={siteConfig.siteUrl ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, siteUrl: e.target.value })}
                     placeholder="https://tudominio.com o https://vpn.tuempresa.com"
                   />
@@ -952,7 +952,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <div className="flex gap-2">
                     <Input
                       id="sc-logo"
-                      value={siteConfig.logoUrl}
+                      value={siteConfig.logoUrl ?? ""}
                       onChange={(e) => setSiteConfig({ ...siteConfig, logoUrl: e.target.value })}
                       placeholder="/logo.jpg"
                       className="flex-1"
@@ -991,7 +991,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-phone-display" className="text-xs font-bold text-slate-700">Teléfono (para mostrar)</Label>
                   <Input
                     id="sc-phone-display"
-                    value={siteConfig.phoneDisplay}
+                    value={siteConfig.phoneDisplay ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, phoneDisplay: e.target.value })}
                     placeholder="Ej. +54 9 351 314-6924"
                   />
@@ -1001,7 +1001,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-phone-ws" className="text-xs font-bold text-slate-700">WhatsApp para Reservas (solo números)</Label>
                   <Input
                     id="sc-phone-ws"
-                    value={siteConfig.phoneWhatsApp}
+                    value={siteConfig.phoneWhatsApp ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, phoneWhatsApp: e.target.value.replace(/[^\d]/g, "") })}
                     placeholder="Ej. 5493513146924"
                   />
@@ -1012,7 +1012,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Input
                     id="sc-email"
                     type="email"
-                    value={siteConfig.email}
+                    value={siteConfig.email ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, email: e.target.value })}
                     placeholder="contacto@alojamientosdiarte.com"
                   />
@@ -1022,7 +1022,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-ws-msg" className="text-xs font-bold text-slate-700">Mensaje predeterminado de consulta WhatsApp</Label>
                   <Input
                     id="sc-ws-msg"
-                    value={siteConfig.whatsappDefaultMsg}
+                    value={siteConfig.whatsappDefaultMsg ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, whatsappDefaultMsg: e.target.value })}
                     placeholder="Ej. Hola! Me gustaría consultar sobre la disponibilidad de departamentos."
                   />
@@ -1042,7 +1042,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-address" className="text-xs font-bold text-slate-700">Dirección</Label>
                   <Input
                     id="sc-address"
-                    value={siteConfig.address}
+                    value={siteConfig.address ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, address: e.target.value })}
                     placeholder="Ej. Antártida Argentina 1035"
                   />
@@ -1051,7 +1051,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-city" className="text-xs font-bold text-slate-700">Ciudad</Label>
                   <Input
                     id="sc-city"
-                    value={siteConfig.city}
+                    value={siteConfig.city ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, city: e.target.value })}
                     placeholder="Ej. Formosa"
                   />
@@ -1060,7 +1060,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-country" className="text-xs font-bold text-slate-700">País</Label>
                   <Input
                     id="sc-country"
-                    value={siteConfig.country}
+                    value={siteConfig.country ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, country: e.target.value })}
                     placeholder="Ej. Argentina"
                   />
@@ -1069,7 +1069,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-hours" className="text-xs font-bold text-slate-700">Horario de Atención</Label>
                   <Input
                     id="sc-hours"
-                    value={siteConfig.businessHours}
+                    value={siteConfig.businessHours ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, businessHours: e.target.value })}
                     placeholder="Lunes a Domingo\n8:00 – 22:00 hs"
                   />
@@ -1078,7 +1078,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-maps-url" className="text-xs font-bold text-slate-700">Link Google Maps (Abrir en app/web)</Label>
                   <Input
                     id="sc-maps-url"
-                    value={siteConfig.googleMapsUrl}
+                    value={siteConfig.googleMapsUrl ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, googleMapsUrl: e.target.value })}
                     placeholder="https://maps.app.goo.gl/..."
                   />
@@ -1087,7 +1087,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-maps-embed" className="text-xs font-bold text-slate-700">URL del Mapa Interactivo (Google Maps Embed iframe src)</Label>
                   <Input
                     id="sc-maps-embed"
-                    value={siteConfig.googleMapsEmbedUrl}
+                    value={siteConfig.googleMapsEmbedUrl ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, googleMapsEmbedUrl: e.target.value })}
                     placeholder="https://www.google.com/maps?q=...&output=embed"
                   />
@@ -1106,7 +1106,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-insta" className="text-xs font-bold text-slate-700">Instagram URL</Label>
                   <Input
                     id="sc-insta"
-                    value={siteConfig.instagramUrl}
+                    value={siteConfig.instagramUrl ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, instagramUrl: e.target.value })}
                     placeholder="https://www.instagram.com/tu_cuenta"
                   />
@@ -1115,7 +1115,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-fb" className="text-xs font-bold text-slate-700">Facebook URL</Label>
                   <Input
                     id="sc-fb"
-                    value={siteConfig.facebookUrl}
+                    value={siteConfig.facebookUrl ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, facebookUrl: e.target.value })}
                     placeholder="https://www.facebook.com/tu_pagina"
                   />
@@ -1124,7 +1124,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-copyright" className="text-xs font-bold text-slate-700">Texto Copyright Footer</Label>
                   <Input
                     id="sc-copyright"
-                    value={siteConfig.footerCopyright}
+                    value={siteConfig.footerCopyright ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, footerCopyright: e.target.value })}
                     placeholder="Alojamientos Di'Arte"
                   />
@@ -1133,7 +1133,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-credit" className="text-xs font-bold text-slate-700">Crédito de Diseño / Desarrollo</Label>
                   <Input
                     id="sc-credit"
-                    value={siteConfig.footerCredit}
+                    value={siteConfig.footerCredit ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, footerCredit: e.target.value })}
                     placeholder="Diseño y desarrollo: Guillermo Diarte - Guillermo.diarte@gmail.com"
                   />
@@ -1142,7 +1142,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   <Label htmlFor="sc-seo" className="text-xs font-bold text-slate-700">Descripción SEO (Metadatos para Google)</Label>
                   <Input
                     id="sc-seo"
-                    value={siteConfig.seoDescription}
+                    value={siteConfig.seoDescription ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, seoDescription: e.target.value })}
                     placeholder="Descripción atractiva para los resultados de búsqueda de Google..."
                   />
