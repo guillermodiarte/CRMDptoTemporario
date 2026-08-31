@@ -27,14 +27,27 @@ export async function POST(req: Request) {
           where: { name: item.name, sessionId },
         });
 
-        const data = {
+        let parsedPrices: Record<string, any> = {};
+        try {
+          parsedPrices = typeof item.prices === "string" ? JSON.parse(item.prices) : (item.prices ?? {});
+        } catch (e) {}
+
+        const basePriceToUse = Number(item.basePrice ?? 0);
+        // Sync basePrice with prices for 2 people if not already set correctly
+        if (basePriceToUse > 0 && !parsedPrices[2]) {
+          parsedPrices[2] = basePriceToUse;
+        } else if (parsedPrices[2] > 0 && basePriceToUse === 0) {
+          item.basePrice = parsedPrices[2];
+        }
+
+        const data: any = {
           type: item.type || "APARTMENT",
           name: item.name,
           description: item.description ?? null,
           address: item.address ?? null,
           bedCount: Number(item.bedCount ?? 0),
           maxPeople: Number(item.maxPeople ?? 0),
-          basePrice: Number(item.basePrice ?? 0),
+          basePrice: Number(item.basePrice ?? basePriceToUse),
           cleaningFee: Number(item.cleaningFee ?? 0),
           wifiName: item.wifiName ?? null,
           wifiPass: item.wifiPass ?? null,
@@ -55,10 +68,25 @@ export async function POST(req: Request) {
           inventoryNotes: item.inventoryNotes ?? null,
           airbnbLink: item.airbnbLink ?? null,
           bookingLink: item.bookingLink ?? null,
-          images: typeof item.images === "string" ? item.images : JSON.stringify(item.images ?? []),
-          prices: typeof item.prices === "string" ? item.prices : JSON.stringify(item.prices ?? {}),
-          amenities: typeof item.amenities === "string" ? item.amenities : JSON.stringify(item.amenities ?? []),
         };
+
+        if (item.images && (typeof item.images === "string" ? item.images !== "[]" : item.images.length > 0)) {
+          data.images = typeof item.images === "string" ? item.images : JSON.stringify(item.images);
+        } else if (!existing) {
+          data.images = "[]";
+        }
+
+        if (Object.keys(parsedPrices).length > 0) {
+          data.prices = JSON.stringify(parsedPrices);
+        } else if (!existing) {
+          data.prices = "{}";
+        }
+
+        if (item.amenities && (typeof item.amenities === "string" ? item.amenities !== "[]" : item.amenities.length > 0)) {
+          data.amenities = typeof item.amenities === "string" ? item.amenities : JSON.stringify(item.amenities);
+        } else if (!existing) {
+          data.amenities = "[]";
+        }
 
         if (existing) {
           await prisma.department.update({ where: { id: existing.id }, data });
