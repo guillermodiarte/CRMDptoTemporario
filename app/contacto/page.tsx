@@ -1,5 +1,6 @@
 import { PublicNavbar } from "@/components/public-navbar";
 import { PublicFooter } from "@/components/public-footer";
+import { PublicContactForm } from "@/components/public-contact-form";
 import { MapPin, Phone, Mail, Clock, MessageCircle } from "lucide-react";
 import { getSiteConfig } from "@/lib/site-config-loader";
 
@@ -133,39 +134,8 @@ export default async function ContactoPage() {
               />
             </div>
 
-            {/* Contact form */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
-              <h2 className="text-xl font-bold text-slate-900 mb-6">Envianos un mensaje</h2>
-              <form className="space-y-4" action={`https://wa.me/${whatsappNumber}`}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Nombre</label>
-                    <input type="text" placeholder="Tu nombre" className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Teléfono</label>
-                    <input type="tel" placeholder="+54 9 370..." className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
-                  <input type="email" placeholder="tucorreo@email.com" className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Mensaje</label>
-                  <textarea rows={4} placeholder="¿En qué podemos ayudarte? Consultá por fechas, precios, disponibilidad..." className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all resize-none" />
-                </div>
-                <a
-                  href={`https://wa.me/${whatsappNumber}?text=${whatsappMsg}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full bg-slate-900 hover:bg-slate-800 text-white text-center font-bold py-3.5 rounded-xl transition-colors"
-                >
-                  Enviar consulta
-                </a>
-                <p className="text-xs text-center text-slate-400">Al hacer clic, serás redirigido a WhatsApp para completar tu consulta.</p>
-              </form>
-            </div>
+            {/* Interactive Contact form with Email & Captcha */}
+            <PublicContactForm config={config} />
           </div>
 
         </div>

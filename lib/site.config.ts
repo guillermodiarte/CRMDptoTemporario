@@ -44,6 +44,13 @@ export const SITE_CONFIG_DEFAULTS = {
   // Footer
   footerCopyright: "Alojamientos Di'Arte",
   footerCredit: "Diseño y desarrollo: Guillermo Diarte - Guillermo.diarte@gmail.com",
+
+  // Servidor de Correo SMTP (Hostinger)
+  smtpHost: "smtp.hostinger.com",
+  smtpPort: "465",
+  smtpUser: "contacto@alojamientosdiarte.com",
+  smtpPassword: "",
+  smtpFromName: "Alojamientos Di'Arte",
 };
 
 export type SiteConfig = typeof SITE_CONFIG_DEFAULTS;

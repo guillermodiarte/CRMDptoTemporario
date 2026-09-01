@@ -53,6 +53,11 @@ export async function PUT(req: Request) {
       seoDescription: "site_seo_description",
       footerCopyright: "site_footer_copyright",
       footerCredit: "site_footer_credit",
+      smtpHost: "smtp_host",
+      smtpPort: "smtp_port",
+      smtpUser: "smtp_user",
+      smtpPassword: "smtp_password",
+      smtpFromName: "smtp_from_name",
     };
 
     const updates = [];

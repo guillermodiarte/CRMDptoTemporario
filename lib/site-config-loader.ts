@@ -22,6 +22,11 @@ const SITE_CONFIG_KEYS = [
   "site_seo_description",
   "site_footer_copyright",
   "site_footer_credit",
+  "smtp_host",
+  "smtp_port",
+  "smtp_user",
+  "smtp_password",
+  "smtp_from_name",
 ] as const;
 
 export async function getSiteConfig(): Promise<SiteConfig> {
@@ -56,6 +61,11 @@ export async function getSiteConfig(): Promise<SiteConfig> {
       seoDescription: map.get("site_seo_description") ?? SITE_CONFIG_DEFAULTS.seoDescription,
       footerCopyright: map.get("site_footer_copyright") ?? SITE_CONFIG_DEFAULTS.footerCopyright,
       footerCredit: map.get("site_footer_credit") ?? SITE_CONFIG_DEFAULTS.footerCredit,
+      smtpHost: map.get("smtp_host") ?? SITE_CONFIG_DEFAULTS.smtpHost,
+      smtpPort: map.get("smtp_port") ?? SITE_CONFIG_DEFAULTS.smtpPort,
+      smtpUser: map.get("smtp_user") ?? SITE_CONFIG_DEFAULTS.smtpUser,
+      smtpPassword: map.get("smtp_password") ?? SITE_CONFIG_DEFAULTS.smtpPassword,
+      smtpFromName: map.get("smtp_from_name") ?? SITE_CONFIG_DEFAULTS.smtpFromName,
     };
   } catch (error) {
     console.error("Error loading site config, falling back to defaults:", error);

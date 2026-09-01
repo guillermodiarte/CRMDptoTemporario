@@ -78,6 +78,8 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [testingSmtp, setTestingSmtp] = useState(false);
+  const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Import/Export State
   const [importOpen, setImportOpen] = useState(false);
@@ -178,6 +180,33 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
       setError(err?.message || "Error al subir el logo");
     } finally {
       setSavingSiteConfig(false);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    setTestingSmtp(true);
+    setSmtpTestResult(null);
+    try {
+      const res = await fetch("/api/contact/test-smtp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          host: siteConfig.smtpHost,
+          port: siteConfig.smtpPort,
+          user: siteConfig.smtpUser,
+          pass: siteConfig.smtpPassword,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSmtpTestResult({ success: true, message: data.message });
+      } else {
+        setSmtpTestResult({ success: false, message: data.error || "Error al conectar con Hostinger." });
+      }
+    } catch (e: any) {
+      setSmtpTestResult({ success: false, message: e?.message || "Error al enviar la prueba." });
+    } finally {
+      setTestingSmtp(false);
     }
   };
 
@@ -1147,6 +1176,84 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     placeholder="Descripción atractiva para los resultados de búsqueda de Google..."
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Bloque 5: Servidor de Correo SMTP (Hostinger) */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                5. Servidor de Correo SMTP (Hostinger / Envío de Consultas)
+              </h3>
+              <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-4">
+                <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg text-xs text-sky-900 leading-relaxed">
+                  <strong>ℹ️ Configuración de Hostinger Email:</strong> Estas credenciales permiten que los mensajes enviados desde el formulario público de <code className="bg-white px-1 py-0.5 rounded text-sky-800 font-mono">/contacto</code> lleguen directamente a tu casilla de correo <strong>contacto@alojamientosdiarte.com</strong>.
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label htmlFor="sc-smtp-host" className="text-xs font-bold text-slate-700">Servidor SMTP (Host)</Label>
+                    <Input
+                      id="sc-smtp-host"
+                      value={siteConfig.smtpHost ?? ""}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, smtpHost: e.target.value })}
+                      placeholder="smtp.hostinger.com"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sc-smtp-port" className="text-xs font-bold text-slate-700">Puerto SMTP</Label>
+                    <Input
+                      id="sc-smtp-port"
+                      value={siteConfig.smtpPort ?? ""}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, smtpPort: e.target.value })}
+                      placeholder="465"
+                    />
+                    <p className="text-[10px] text-slate-400">465 (SSL) o 587 (TLS)</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sc-smtp-user" className="text-xs font-bold text-slate-700">Usuario / Casilla</Label>
+                    <Input
+                      id="sc-smtp-user"
+                      value={siteConfig.smtpUser ?? ""}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, smtpUser: e.target.value })}
+                      placeholder="contacto@alojamientosdiarte.com"
+                    />
+                  </div>
+                  <div className="space-y-1.5 md:col-span-3">
+                    <Label htmlFor="sc-smtp-pass" className="text-xs font-bold text-slate-700">Contraseña de la Casilla de Correo</Label>
+                    <Input
+                      id="sc-smtp-pass"
+                      type="password"
+                      value={siteConfig.smtpPassword ?? ""}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, smtpPassword: e.target.value })}
+                      placeholder="Tu contraseña creada en Hostinger..."
+                    />
+                    <p className="text-[11px] text-slate-400">Ingresa la contraseña que creaste para la cuenta en el panel de Hostinger.</p>
+                  </div>
+                  <div className="space-y-1.5 flex flex-col justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleTestSmtp}
+                      disabled={testingSmtp || !siteConfig.smtpPassword}
+                      className="border-sky-300 text-sky-700 hover:bg-sky-50 font-semibold gap-2 w-full cursor-pointer disabled:opacity-50"
+                    >
+                      {testingSmtp ? <Loader2 className="w-4 h-4 animate-spin" /> : "⚡"}
+                      {testingSmtp ? "Probando conexión..." : "Probar Conexión SMTP"}
+                    </Button>
+                  </div>
+                </div>
+
+                {smtpTestResult && (
+                  <div className={`p-3 rounded-lg text-xs font-medium border flex items-start gap-2 animate-in fade-in duration-200 ${
+                    smtpTestResult.success
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                      : "bg-red-50 border-red-200 text-red-800"
+                  }`}>
+                    <span className="text-sm">{smtpTestResult.success ? "✅" : "⚠️"}</span>
+                    <span className="flex-1">{smtpTestResult.message}</span>
+                  </div>
+                )}
               </div>
             </div>
 
