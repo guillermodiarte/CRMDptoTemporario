@@ -801,11 +801,15 @@ function ReservationRequestModal({
 
     message += `*Detalles de la Reserva*\n`;
     if (data.type === 'direct') {
+      const dailyPrice = getPriceForPeople(data.dept!, people);
       message += `- Departamento: ${data.dept!.name}\n`;
+      message += `- Precio por día (${people} ${people === 1 ? 'persona' : 'personas'}): $${dailyPrice.toLocaleString()}\n`;
     } else {
       message += `- Tipo: Reserva Combinada\n`;
       data.comb!.segments.forEach((seg, i) => {
-        message += `  ${i + 1}. ${seg.deptName} (${format(seg.checkIn, 'dd/MM')} al ${format(seg.checkOut, 'dd/MM')})\n`;
+        const d = departments.find(dep => dep.id === seg.deptId);
+        const segDaily = d ? getPriceForPeople(d, people) : 0;
+        message += `  ${i + 1}. ${seg.deptName} (${format(seg.checkIn, 'dd/MM')} al ${format(seg.checkOut, 'dd/MM')}) - $${segDaily.toLocaleString()}/día\n`;
       });
     }
     message += `- Check-in: ${format(data.checkIn, 'dd/MM/yyyy')}\n`;
@@ -893,7 +897,7 @@ function ReservationRequestModal({
               </div>
               <div>
                 <span className="text-slate-500 dark:text-slate-400 block text-xs mb-1">Cantidad de personas</span>
-                <select value={people} onChange={e => setPeople(Number(e.target.value))} className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-sky-500 bg-white dark:bg-slate-900 text-slate-800 dark:text-white">
+                <select value={people} onChange={e => setPeople(Number(e.target.value))} className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-sky-500 bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-medium">
                   {Array.from({ length: maxPeople }).map((_, i) => (
                     <option key={i + 1} value={i + 1}>{i + 1} {i + 1 === 1 ? 'persona' : 'personas'}</option>
                   ))}
@@ -912,24 +916,38 @@ function ReservationRequestModal({
               <span className="text-slate-800 dark:text-white font-semibold mb-2 block text-sm uppercase tracking-wider">Alojamiento</span>
               {data.type === 'direct' ? (() => {
                 const parsedImages = parseDeptImages(data.dept?.images);
+                const dailyPrice = getPriceForPeople(data.dept!, people);
+                const stayPrice = dailyPrice * nights;
                 
                 return (
                   <div 
-                    className="flex justify-between items-center bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-700 cursor-pointer hover:border-sky-300 dark:hover:border-sky-500 transition-colors group"
+                    className="flex justify-between items-center bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-100 dark:border-slate-700 cursor-pointer hover:border-sky-300 dark:hover:border-sky-500 transition-colors group shadow-xs"
                     onClick={() => onSelectDept({ dept: data.dept!, parsedImages })}
                   >
                     <div className="flex items-center gap-3">
-                      {parsedImages[0] && <img src={parsedImages[0]} alt={data.dept!.name} className="w-10 h-10 rounded-lg object-cover" />}
-                      <span className="font-medium text-slate-800 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">{data.dept!.name}</span>
+                      {parsedImages[0] && <img src={parsedImages[0]} alt={data.dept!.name} className="w-12 h-12 rounded-lg object-cover" />}
+                      <div>
+                        <span className="font-semibold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors block text-sm">{data.dept!.name}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-xs font-semibold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/15 px-2 py-0.5 rounded-md">
+                            ${dailyPrice.toLocaleString()} / día
+                          </span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">({people} {people === 1 ? 'persona' : 'personas'})</span>
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-slate-600 dark:text-slate-300 text-sm font-medium">${(getPriceForPeople(data.dept!, people) * nights).toLocaleString()}</span>
+                    <div className="text-right">
+                      <span className="text-slate-900 dark:text-white text-base font-bold block">${stayPrice.toLocaleString()}</span>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500">total {nights} {nights === 1 ? 'noche' : 'noches'}</span>
+                    </div>
                   </div>
                 );
               })() : (
                 <div className="space-y-2">
                   {data.comb!.segments.map((seg, i) => {
                     const d = departments.find(dep => dep.id === seg.deptId);
-                    const segPrice = d ? getPriceForPeople(d, people) * seg.nights : 0;
+                    const segDailyPrice = d ? getPriceForPeople(d, people) : 0;
+                    const segPrice = segDailyPrice * seg.nights;
                     const parsedImages = d ? parseDeptImages(d.images) : [];
 
                     return (
@@ -942,10 +960,13 @@ function ReservationRequestModal({
                           {parsedImages[0] && <img src={parsedImages[0]} alt={seg.deptName} className="w-10 h-10 rounded-lg object-cover" />}
                           <div>
                             <span className="font-medium text-slate-800 dark:text-white block text-sm group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">{seg.deptName}</span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">{seg.nights} noche(s)</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">${segDailyPrice.toLocaleString()}/día • {seg.nights} noche(s)</span>
                           </div>
                         </div>
-                        <span className="text-slate-600 dark:text-slate-300 text-sm font-medium">${segPrice.toLocaleString()}</span>
+                        <div className="text-right">
+                          <span className="text-slate-900 dark:text-white text-sm font-bold block">${segPrice.toLocaleString()}</span>
+                          <span className="text-xs text-slate-400 dark:text-slate-500">{seg.nights} noche(s)</span>
+                        </div>
                       </div>
                     );
                   })}
@@ -953,9 +974,18 @@ function ReservationRequestModal({
               )}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex items-end justify-between">
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Precio Total</span>
-              <span className="text-2xl font-bold text-sky-600 dark:text-sky-400">${totalPrice.toLocaleString()}</span>
+            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <div>
+                <span className="text-slate-900 dark:text-white font-bold block text-sm">Precio Total</span>
+                {data.type === 'direct' && (
+                  <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5 font-medium">
+                    ${(getPriceForPeople(data.dept!, people)).toLocaleString()}/día × {nights} {nights === 1 ? 'noche' : 'noches'}
+                  </span>
+                )}
+              </div>
+              <div className="text-right">
+                <span className="text-2xl font-bold text-sky-600 dark:text-sky-400">${totalPrice.toLocaleString()}</span>
+              </div>
             </div>
           </div>
 
