@@ -80,6 +80,7 @@ export async function sendContactEmail(data: ContactMessageData) {
 
   if (!smtpConfig.pass) {
     console.warn("[EMAIL_SEND] SMTP Password is not configured yet in .env (SMTP_PASSWORD) or Settings.");
+    throw new Error("Falta configurar la contraseña del correo SMTP en el panel de Configuración o en las variables de entorno (SMTP_PASSWORD)");
   }
 
   const transporter = await createTransporter(smtpConfig);
