@@ -57,19 +57,19 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
     setSmtpError(false);
 
     if (!name.trim()) {
-      setErrorMessage("Por favor ingresa tu nombre.");
+      setErrorMessage("Por favor ingresá tu nombre.");
       return;
     }
     if (!email.trim() || !email.includes("@")) {
-      setErrorMessage("Por favor ingresa un correo electrónico válido.");
+      setErrorMessage("Por favor ingresá un correo electrónico válido.");
       return;
     }
     if (!message.trim()) {
-      setErrorMessage("Por favor escribe tu consulta o mensaje.");
+      setErrorMessage("Por favor escribí tu consulta o mensaje.");
       return;
     }
     if (!captchaAnswer.trim()) {
-      setErrorMessage("Por favor responde a la pregunta de seguridad.");
+      setErrorMessage("Por favor respondé a la pregunta de seguridad anti-spam.");
       return;
     }
 
@@ -96,11 +96,9 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
       if (!res.ok || !data.success) {
         setErrorMessage(data.error || "No se pudo enviar el mensaje.");
         setSmtpError(!!data.smtpError);
-        // Refresh captcha on failure
         loadCaptcha();
       } else {
         setSuccessMessage(data.message || "¡Tu consulta ha sido enviada con éxito!");
-        // Reset form
         setName("");
         setPhone("");
         setEmail("");
@@ -108,7 +106,7 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
         setCaptchaAnswer("");
       }
     } catch (err: any) {
-      setErrorMessage("Error de conexión al enviar el formulario. Por favor intenta nuevamente.");
+      setErrorMessage("Error de conexión al enviar el formulario. Por favor intentá nuevamente.");
       loadCaptcha();
     } finally {
       setSubmitting(false);
@@ -122,14 +120,14 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
 
   if (successMessage) {
     return (
-      <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-sm border border-slate-100 text-center space-y-6 animate-in fade-in zoom-in-95 duration-300">
-        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-10 shadow-sm border border-slate-200/80 dark:border-slate-800 text-center space-y-6 animate-in fade-in zoom-in-95 duration-300 transition-colors">
+        <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-inner">
           <CheckCircle2 className="w-9 h-9" />
         </div>
         <div className="space-y-2">
-          <h3 className="text-2xl font-bold text-slate-900">¡Mensaje Enviado con Éxito!</h3>
-          <p className="text-slate-600 max-w-md mx-auto text-sm leading-relaxed">
-            Hemos recibido tu consulta en <strong className="text-slate-800">{config.email}</strong>. Te responderemos a la brevedad a tu correo electrónico o teléfono.
+          <h3 className="text-2xl font-bold text-slate-900 dark:text-white">¡Mensaje Enviado con Éxito!</h3>
+          <p className="text-slate-600 dark:text-slate-300 max-w-md mx-auto text-sm leading-relaxed">
+            Hemos recibido tu consulta en <strong className="text-slate-900 dark:text-white font-semibold">{config.email}</strong>. Te responderemos a la brevedad a tu correo electrónico o teléfono.
           </p>
         </div>
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -139,7 +137,7 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
               setSuccessMessage(null);
               loadCaptcha();
             }}
-            className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl transition-all shadow-md"
+            className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition-all shadow-md cursor-pointer"
           >
             Enviar otro mensaje
           </button>
@@ -158,17 +156,17 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
   }
 
   return (
-    <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100">
+    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 dark:border-slate-800 transition-colors duration-300">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-slate-900">Envianos un mensaje</h2>
-        <p className="text-xs text-slate-500 mt-1">
-          Completá el formulario y nos llegará un correo directo a <strong className="text-sky-600 font-medium">{config.email}</strong>.
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Envianos un mensaje</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          Completá el formulario y nos llegará un correo directo a <strong className="text-sky-600 dark:text-sky-400 font-medium">{config.email}</strong>.
         </p>
       </div>
 
       {errorMessage && (
-        <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-3 animate-in fade-in duration-200">
-          <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+        <div className="mb-6 p-4 rounded-2xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-700/50 text-red-800 dark:text-red-300 text-sm flex items-start gap-3 animate-in fade-in duration-200">
+          <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
           <div className="space-y-2 flex-1">
             <p className="font-medium">{errorMessage}</p>
             {smtpError && (
@@ -177,7 +175,7 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 font-bold text-green-700 bg-green-100 hover:bg-green-200 px-3 py-1.5 rounded-lg text-xs transition-colors"
+                  className="inline-flex items-center gap-1.5 font-bold text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/50 hover:bg-green-200 dark:hover:bg-green-800/50 border border-green-200 dark:border-green-700/50 px-3 py-1.5 rounded-lg text-xs transition-colors"
                 >
                   <MessageCircle className="w-3.5 h-3.5" />
                   Escribirnos directamente por WhatsApp
@@ -203,8 +201,8 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Nombre <span className="text-red-500">*</span>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              Nombre <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <input
               type="text"
@@ -213,11 +211,11 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
               onChange={(e) => setName(e.target.value)}
               placeholder="Tu nombre y apellido"
               disabled={submitting}
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all placeholder:text-slate-400 disabled:bg-slate-50"
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
               Teléfono / Celular
             </label>
             <input
@@ -226,14 +224,14 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+54 9 370 4..."
               disabled={submitting}
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all placeholder:text-slate-400 disabled:bg-slate-50"
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-            Email de Contacto <span className="text-red-500">*</span>
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+            Email de Contacto <span className="text-red-500 dark:text-red-400">*</span>
           </label>
           <input
             type="email"
@@ -242,13 +240,13 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="tunombre@correo.com"
             disabled={submitting}
-            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all placeholder:text-slate-400 disabled:bg-slate-50"
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-            Mensaje o Consulta <span className="text-red-500">*</span>
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+            Mensaje o Consulta <span className="text-red-500 dark:text-red-400">*</span>
           </label>
           <textarea
             required
@@ -257,22 +255,22 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
             onChange={(e) => setMessage(e.target.value)}
             placeholder="¿En qué podemos ayudarte? Consultá por fechas, departamentos, tarifas o servicios..."
             disabled={submitting}
-            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all resize-none placeholder:text-slate-400 disabled:bg-slate-50"
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60"
           />
         </div>
 
         {/* Captcha Security Box */}
-        <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2">
+        <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 space-y-2 transition-colors">
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
-              <ShieldCheck className="w-4 h-4 text-sky-600" />
+            <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              <ShieldCheck className="w-4 h-4 text-sky-600 dark:text-sky-400" />
               Control de Seguridad Anti-Spam
             </label>
             <button
               type="button"
               onClick={loadCaptcha}
               disabled={loadingCaptcha || submitting}
-              className="text-xs text-slate-500 hover:text-sky-600 flex items-center gap-1 transition-colors disabled:opacity-50"
+              className="text-xs text-slate-500 hover:text-sky-600 dark:hover:text-sky-400 flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer"
               title="Generar otra pregunta"
             >
               <RefreshCw className={`w-3 h-3 ${loadingCaptcha ? "animate-spin" : ""}`} />
@@ -281,9 +279,9 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
-            <div className="bg-white border border-slate-300 px-4 py-2.5 rounded-xl font-mono text-sm font-bold text-slate-800 tracking-wide select-none shadow-sm flex items-center justify-center sm:justify-start min-w-[160px]">
+            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 px-4 py-2.5 rounded-xl font-mono text-sm font-bold text-slate-900 dark:text-white tracking-wide select-none shadow-sm flex items-center justify-center sm:justify-start min-w-[160px]">
               {loadingCaptcha ? (
-                <span className="flex items-center gap-2 text-xs text-slate-400 font-normal">
+                <span className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 font-normal">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando...
                 </span>
               ) : (
@@ -298,7 +296,7 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
                 onChange={(e) => setCaptchaAnswer(e.target.value)}
                 placeholder="Ingresá el resultado"
                 disabled={submitting || loadingCaptcha}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all bg-white placeholder:text-slate-400 disabled:bg-slate-100 font-medium"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60 font-medium"
               />
             </div>
           </div>
@@ -307,7 +305,7 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
         <button
           type="submit"
           disabled={submitting || loadingCaptcha}
-          className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white font-bold py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-sm cursor-pointer disabled:cursor-not-allowed"
+          className="w-full bg-sky-600 hover:bg-sky-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-md shadow-sky-600/20 hover:shadow-sky-600/30 flex items-center justify-center gap-2 text-sm cursor-pointer disabled:cursor-not-allowed"
         >
           {submitting ? (
             <>
@@ -322,7 +320,7 @@ export function PublicContactForm({ config }: PublicContactFormProps) {
           )}
         </button>
 
-        <p className="text-[11px] text-center text-slate-400">
+        <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
           Tu consulta llegará directamente a la casilla de recepción del alojamiento.
         </p>
       </form>

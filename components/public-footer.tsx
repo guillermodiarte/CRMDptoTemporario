@@ -7,7 +7,7 @@ interface PublicFooterProps {
 
 export function PublicFooter({ config = SITE_CONFIG_DEFAULTS }: PublicFooterProps) {
   return (
-    <footer className="bg-slate-900 text-white w-full shrink-0 mt-20">
+    <footer className="bg-slate-900 dark:bg-slate-950 text-white w-full shrink-0 mt-20 border-t border-slate-800 transition-colors duration-300">
       <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           {/* Brand */}

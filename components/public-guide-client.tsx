@@ -501,9 +501,9 @@ function StarRating({ rating }: { rating?: number }) {
 // ─── Guide Card ───────────────────────────────────────────────────────────────
 function GuideCard({ item }: { item: GuideItem }) {
   return (
-    <div className="group bg-white rounded-3xl overflow-hidden border border-slate-200/70 shadow-sm hover:shadow-2xl hover:shadow-slate-200 hover:-translate-y-1 transition-all duration-300 flex flex-col">
+    <div className="group bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-2xl hover:shadow-slate-300/40 dark:hover:shadow-black/50 hover:-translate-y-1 transition-all duration-300 flex flex-col">
       {/* Image */}
-      <div className="relative h-44 overflow-hidden bg-slate-100 shrink-0">
+      <div className="relative h-44 overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
         <img
           src={item.image || "https://images.unsplash.com/photo-1516738901171-8eb4fc13bd20?w=800&q=80"}
           alt={item.title}
@@ -512,11 +512,11 @@ function GuideCard({ item }: { item: GuideItem }) {
           decoding="async"
         />
         {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         {/* Badge */}
         {item.badge && (
           <div className="absolute top-3 left-3">
-            <span className={`inline-flex items-center text-[11px] font-bold px-2.5 py-1 rounded-full border backdrop-blur-sm ${item.badgeColor || "bg-white/80 text-slate-700 border-slate-200"}`}>
+            <span className={`inline-flex items-center text-[11px] font-bold px-2.5 py-1 rounded-full border backdrop-blur-sm ${item.badgeColor || "bg-white/80 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}>
               {item.badge}
             </span>
           </div>
@@ -532,19 +532,19 @@ function GuideCard({ item }: { item: GuideItem }) {
       {/* Content */}
       <div className="flex flex-col flex-1 p-5">
         <div className="mb-3">
-          <h3 className="font-bold text-base text-slate-900 group-hover:text-sky-600 transition-colors leading-tight mb-0.5">
+          <h3 className="font-bold text-base text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors leading-tight mb-0.5">
             {item.title}
           </h3>
-          <p className="text-xs font-semibold text-slate-500">{item.subtitle}</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{item.subtitle}</p>
         </div>
 
-        <p className="text-sm text-slate-600 leading-relaxed mb-4 line-clamp-3">{item.description}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-4 line-clamp-3">{item.description}</p>
 
         {/* Highlights */}
         {item.highlights && item.highlights.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-4">
             {item.highlights.map((h, i) => (
-              <span key={i} className="text-[11px] bg-slate-100 text-slate-600 font-medium px-2.5 py-1 rounded-lg">
+              <span key={i} className="text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium px-2.5 py-1 rounded-lg">
                 {h}
               </span>
             ))}
@@ -555,16 +555,16 @@ function GuideCard({ item }: { item: GuideItem }) {
         <div className="flex-1" />
 
         {/* Footer info + actions */}
-        <div className="pt-4 border-t border-slate-100 space-y-3">
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
           <div className="space-y-1.5">
             {item.address && (
-              <div className="flex items-start gap-1.5 text-xs text-slate-500">
+              <div className="flex items-start gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                 <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
                 <span>{item.address}</span>
               </div>
             )}
             {item.schedule && (
-              <div className="flex items-start gap-1.5 text-xs text-slate-500">
+              <div className="flex items-start gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                 <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
                 <span>{item.schedule}</span>
               </div>
@@ -578,16 +578,16 @@ function GuideCard({ item }: { item: GuideItem }) {
                 href={item.mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-3 py-2 rounded-xl transition-colors text-xs"
+                className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold px-3 py-2 rounded-xl transition-colors text-xs"
               >
-                <MapPin className="w-3.5 h-3.5 text-sky-600" />
+                <MapPin className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
                 Cómo llegar
               </a>
             )}
             {item.phone && (
               <a
                 href={`tel:${item.phone.replace(/[^0-9+]/g, "")}`}
-                className="inline-flex items-center gap-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 font-semibold px-3 py-2 rounded-xl transition-colors text-xs"
+                className="inline-flex items-center gap-1.5 bg-sky-50 dark:bg-sky-500/15 hover:bg-sky-100 dark:hover:bg-sky-500/25 text-sky-700 dark:text-sky-300 font-semibold px-3 py-2 rounded-xl transition-colors text-xs"
               >
                 <Phone className="w-3.5 h-3.5" />
                 {item.phone}
@@ -598,14 +598,14 @@ function GuideCard({ item }: { item: GuideItem }) {
                 href={`https://wa.me/${item.whatsapp}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 bg-green-50 hover:bg-green-100 text-green-700 font-semibold px-3 py-2 rounded-xl transition-colors text-xs"
+                className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-500/15 hover:bg-green-100 dark:hover:bg-green-500/25 text-green-700 dark:text-green-300 font-semibold px-3 py-2 rounded-xl transition-colors text-xs"
               >
                 <ShoppingBag className="w-3.5 h-3.5" />
                 WhatsApp
               </a>
             )}
             {item.pedidosYa && (
-              <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 font-semibold px-3 py-2 rounded-xl text-xs border border-amber-200/60">
+              <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold px-3 py-2 rounded-xl text-xs border border-amber-200/60 dark:border-amber-500/30">
                 <Truck className="w-3.5 h-3.5" />
                 PedidosYa
               </span>
@@ -651,7 +651,7 @@ export function PublicGuideClient({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f8f9fc] flex flex-col">
+    <div className="min-h-screen bg-[#f8f9fc] dark:bg-slate-950 flex flex-col transition-colors duration-300">
       <PublicNavbar siteName={config.siteName} logoUrl={config.logoUrl} />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
@@ -692,7 +692,7 @@ export function PublicGuideClient({
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg transition-colors cursor-pointer"
               >
                 ✕
               </button>
@@ -718,7 +718,7 @@ export function PublicGuideClient({
 
         {/* Wave */}
         <div className="absolute bottom-0 left-0 right-0 translate-y-[1px]">
-          <svg viewBox="0 0 1440 50" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full text-[#f8f9fc]">
+          <svg viewBox="0 0 1440 50" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full text-[#f8f9fc] dark:text-slate-950 transition-colors duration-300">
             <path d="M0 50L60 41.7C120 33.3 240 16.7 360 13.9C480 11.1 600 22.2 720 25C840 27.8 960 22.2 1080 19.4C1200 16.7 1320 16.7 1380 16.7L1440 16.7V50H0Z" fill="currentColor" />
           </svg>
         </div>
@@ -735,15 +735,15 @@ export function PublicGuideClient({
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold whitespace-nowrap transition-all duration-200 border ${
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold whitespace-nowrap transition-all duration-200 border cursor-pointer ${
                   isActive
                     ? `bg-gradient-to-r ${cat.color} text-white border-transparent shadow-lg shadow-black/10 scale-105`
-                    : "bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-slate-200"
+                    : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white border-slate-200 dark:border-slate-800"
                 }`}
               >
                 <span className="text-base leading-none">{cat.icon}</span>
                 {cat.label}
-                <span className={`text-[11px] font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center ${isActive ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
+                <span className={`text-[11px] font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center ${isActive ? "bg-white/25 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"}`}>
                   {counts[cat.id] || 0}
                 </span>
               </button>
@@ -753,12 +753,12 @@ export function PublicGuideClient({
 
         {/* Results info */}
         <div className="flex items-center justify-between mb-6 gap-4">
-          <p className="text-sm text-slate-500">
-            Mostrando <span className="font-bold text-slate-800">{filteredItems.length}</span>{" "}
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Mostrando <span className="font-bold text-slate-800 dark:text-white">{filteredItems.length}</span>{" "}
             {filteredItems.length === 1 ? "lugar" : "lugares"}
           </p>
           {searchQuery && (
-            <span className="text-xs text-sky-700 bg-sky-50 border border-sky-200 px-3 py-1 rounded-full font-semibold flex items-center gap-1">
+            <span className="text-xs text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-500/15 border border-sky-200 dark:border-sky-500/30 px-3 py-1 rounded-full font-semibold flex items-center gap-1">
               <Search className="w-3 h-3" />
               "{searchQuery}"
             </span>
@@ -767,15 +767,15 @@ export function PublicGuideClient({
 
         {/* Grid */}
         {filteredItems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center bg-white rounded-3xl border border-slate-200 py-20 my-10 text-center max-w-md mx-auto shadow-sm">
+          <div className="flex flex-col items-center justify-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 py-20 my-10 text-center max-w-md mx-auto shadow-sm">
             <div className="text-5xl mb-4">🔍</div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Sin resultados</h3>
-            <p className="text-sm text-slate-500 mb-6 px-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Sin resultados</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 px-6">
               Probá con términos como "costanera", "pizza", "helados" o "urgencias".
             </p>
             <button
               onClick={() => { setSearchQuery(""); setSelectedCategory("todos"); }}
-              className="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition-colors"
+              className="bg-slate-900 dark:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
               Ver todos
             </button>

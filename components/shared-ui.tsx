@@ -163,18 +163,18 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
   return (
     <>
       <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
-        <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 w-full max-w-5xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 transition-colors" onClick={e => e.stopPropagation()}>
           
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-slate-100">
+          <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">{dept.name}</h2>
-              <div className="flex gap-4 mt-2 text-sm font-medium text-slate-500">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{dept.name}</h2>
+              <div className="flex gap-4 mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
                 <span className="flex items-center gap-1.5"><Users className="w-4 h-4" /> Hasta {dept.maxPeople} {dept.maxPeople === 1 ? 'persona' : 'personas'}</span>
                 <span className="flex items-center gap-1.5"><Bed className="w-4 h-4" /> {dept.bedCount} camas</span>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+            <button onClick={onClose} className="p-2 rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -183,7 +183,7 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
           <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-10">
             {/* Gallery Grid */}
             <div>
-              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-4">
                 <Grid2X2 className="w-5 h-5 text-sky-500" /> Galería de Fotos
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -202,13 +202,13 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
                     )}
                   </div>
                 )) : (
-                  <div className="col-span-full h-64 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
+                  <div className="col-span-full h-64 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
                     No hay fotos disponibles
                   </div>
                 )}
               </div>
               {parsedImages.length > 0 && (
-                <button onClick={() => setLightboxIndex(0)} className="mt-4 text-sm font-medium text-sky-600 hover:text-sky-700 transition-colors underline underline-offset-4">
+                <button onClick={() => setLightboxIndex(0)} className="mt-4 text-sm font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 transition-colors underline underline-offset-4 cursor-pointer">
                   Ver todas las fotos ({parsedImages.length})
                 </button>
               )}
@@ -218,18 +218,18 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
               <div className="md:col-span-2 space-y-10">
                 {/* Description */}
                 <div>
-                   <h3 className="text-lg font-bold text-slate-800 mb-3">Sobre este departamento</h3>
-                   <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">{dept.description || "Un hermoso departamento completamente equipado para tu estadía. Perfecto para descansar y disfrutar con todas las comodidades."}</p>
+                   <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-3">Sobre este departamento</h3>
+                   <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{dept.description || "Un hermoso departamento completamente equipado para tu estadía. Perfecto para descansar y disfrutar con todas las comodidades."}</p>
                 </div>
 
                 {/* Amenities */}
                 {amenities.length > 0 && (
                   <div>
-                     <h3 className="text-lg font-bold text-slate-800 mb-4">Servicios Incluidos</h3>
+                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Servicios Incluidos</h3>
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-6">
                        {amenities.map((am, i) => (
-                         <div key={i} className="flex items-center gap-3 text-slate-700">
-                           <div className="p-2 rounded-xl bg-sky-50 text-sky-600">{am.icon}</div>
+                         <div key={i} className="flex items-center gap-3 text-slate-700 dark:text-slate-200">
+                           <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400">{am.icon}</div>
                            <span className="font-medium text-sm">{am.label}</span>
                          </div>
                        ))}
@@ -240,30 +240,28 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
 
               {/* Pricing & Booking */}
               <div className="space-y-6">
-                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 shadow-sm">
-                  <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <div className="bg-slate-50 dark:bg-slate-800/80 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-colors">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                     Precios por Noche
                   </h3>
                   <div className="space-y-3">
                     {Object.keys(pricesObj).length > 0 ? (
                       Object.entries(pricesObj).sort(([a],[b]) => Number(a) - Number(b)).map(([people, price]) => (
-                        <div key={people} className="flex items-center justify-between py-3 border-b border-slate-200/60 last:border-0 last:pb-0">
-                           <span className="text-slate-600 font-medium">Para {people} {Number(people) === 1 ? 'persona' : 'personas'}</span>
-                           <span className="font-bold text-slate-900">${price}</span>
+                        <div key={people} className="flex items-center justify-between py-3 border-b border-slate-200/60 dark:border-slate-700 last:border-0 last:pb-0">
+                           <span className="text-slate-600 dark:text-slate-400 font-medium">Para {people} {Number(people) === 1 ? 'persona' : 'personas'}</span>
+                           <span className="font-bold text-slate-900 dark:text-white">${price}</span>
                         </div>
                       ))
                     ) : (
                       <div className="flex items-center justify-between py-2">
-                        <span className="text-slate-600 font-medium">Precio Base</span>
-                        <span className="font-bold text-slate-900">${dept.basePrice}</span>
+                        <span className="text-slate-600 dark:text-slate-400 font-medium">Precio Base</span>
+                        <span className="font-bold text-slate-900 dark:text-white">${dept.basePrice}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
-
-
-                <button onClick={(e) => { e.stopPropagation(); setShowCalendar(true); }} className="w-full py-4 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-sm shadow-xl shadow-slate-900/20">
+                <button onClick={(e) => { e.stopPropagation(); setShowCalendar(true); }} className="w-full py-4 px-4 bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-sm shadow-xl shadow-slate-900/20 dark:shadow-sky-900/30 cursor-pointer">
                     <CalendarDays className="w-5 h-5" />
                     Ver Fechas de Disponibilidad
                 </button>
@@ -276,23 +274,23 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
       {/* Calendar Modal */}
       {showCalendar && (
         <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowCalendar(false)}>
-          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 transition-colors" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <CalendarDays className="w-5 h-5 text-sky-500" /> Disponibilidad
               </h3>
-              <button onClick={() => setShowCalendar(false)} className="p-2 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+              <button onClick={() => setShowCalendar(false)} className="p-2 rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex items-center justify-between mb-6 bg-slate-50 p-2 rounded-2xl">
-              <button onClick={(e) => { e.stopPropagation(); setMonthOffset(prev => prev - 1); }} className="p-2 bg-white hover:bg-slate-100 rounded-xl shadow-sm border border-slate-100 transition-colors">
-                <ChevronLeft className="w-5 h-5 text-slate-600" />
+            <div className="flex items-center justify-between mb-6 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl">
+              <button onClick={(e) => { e.stopPropagation(); setMonthOffset(prev => prev - 1); }} className="p-2 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-xl shadow-sm border border-slate-100 dark:border-slate-600 transition-colors cursor-pointer">
+                <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-slate-200" />
               </button>
-              <h4 className="font-bold text-slate-800 capitalize text-lg">{format(currentMonthStart, "MMMM yyyy", { locale: es })}</h4>
-              <button onClick={(e) => { e.stopPropagation(); setMonthOffset(prev => prev + 1); }} className="p-2 bg-white hover:bg-slate-100 rounded-xl shadow-sm border border-slate-100 transition-colors">
-                <ChevronRight className="w-5 h-5 text-slate-600" />
+              <h4 className="font-bold text-slate-800 dark:text-white capitalize text-lg">{format(currentMonthStart, "MMMM yyyy", { locale: es })}</h4>
+              <button onClick={(e) => { e.stopPropagation(); setMonthOffset(prev => prev + 1); }} className="p-2 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-xl shadow-sm border border-slate-100 dark:border-slate-600 transition-colors cursor-pointer">
+                <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-200" />
               </button>
             </div>
             
@@ -308,10 +306,10 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
               {days.map((date, i) => {
                 const isPast = isBefore(date, today);
                 const isFree = isDateFree(date);
-                let bgClass = "bg-white text-slate-700 border border-slate-100 hover:border-slate-300";
-                if (isPast) bgClass = "bg-slate-50 text-slate-300 opacity-50";
-                else if (!isFree) bgClass = "bg-red-50 text-red-400 line-through border-transparent";
-                else bgClass = "bg-green-50 text-green-700 font-medium border-green-200 shadow-sm";
+                let bgClass = "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 hover:border-slate-300";
+                if (isPast) bgClass = "bg-slate-50 dark:bg-slate-800/40 text-slate-300 dark:text-slate-600 opacity-50";
+                else if (!isFree) bgClass = "bg-red-50 dark:bg-red-500/15 text-red-400 line-through border-transparent";
+                else bgClass = "bg-green-50 dark:bg-green-500/15 text-green-700 dark:text-green-400 font-medium border-green-200 dark:border-green-500/30 shadow-sm";
 
                 return (
                   <div key={i} className={`h-10 flex items-center justify-center rounded-xl text-sm transition-colors ${bgClass}`}>
@@ -320,9 +318,9 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
                 );
               })}
             </div>
-            <div className="mt-8 pt-6 border-t border-slate-100 flex gap-6 font-medium justify-center">
-              <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-50 border border-green-200 rounded-full shadow-sm" /><span className="text-slate-600 text-sm">Libre</span></div>
-              <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-50 border border-red-200 rounded-full" /><span className="text-slate-600 text-sm">Ocupado</span></div>
+            <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex gap-6 font-medium justify-center">
+              <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-50 dark:bg-green-500/20 border border-green-200 dark:border-green-500/40 rounded-full shadow-sm" /><span className="text-slate-600 dark:text-slate-400 text-sm">Libre</span></div>
+              <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-50 dark:bg-red-500/20 border border-red-200 dark:border-red-500/40 rounded-full" /><span className="text-slate-600 dark:text-slate-400 text-sm">Ocupado</span></div>
             </div>
           </div>
         </div>

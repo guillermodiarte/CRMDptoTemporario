@@ -138,16 +138,14 @@ function AvailabilityModal({ dept, onClose }: { dept: SharedDepartment; onClose:
 
   return (
     <div className="fixed inset-0 z-[150] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-7 relative" onClick={e => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200 transition-colors" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <div className="bg-sky-100 p-2 rounded-xl text-sky-600">
-              <CalendarDays className="w-5 h-5" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-800">Disponibilidad</h2>
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Disponibilidad</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Próximos días del departamento</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors">
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -155,14 +153,14 @@ function AvailabilityModal({ dept, onClose }: { dept: SharedDepartment; onClose:
         {/* Month navigation */}
         <div className="flex items-center justify-between mb-5">
           <button onClick={() => setMonthOffset(p => p - 1)} disabled={monthOffset <= 0}
-            className="p-2 rounded-full hover:bg-slate-100 text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="font-bold text-slate-800 capitalize">
+          <span className="font-bold text-slate-800 dark:text-white capitalize">
             {format(currentMonthStart, "MMMM yyyy", { locale: es })}
           </span>
           <button onClick={() => setMonthOffset(p => p + 1)}
-            className="p-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors">
+            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors">
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
@@ -182,9 +180,9 @@ function AvailabilityModal({ dept, onClose }: { dept: SharedDepartment; onClose:
             const occupied = !isPast && isReserved(dept, date);
             const isFree = !isPast && !occupied;
 
-            let cls = "text-slate-300 cursor-default"; // past
-            if (isFree) cls = "bg-emerald-50 text-emerald-700 font-bold rounded-xl cursor-default hover:bg-emerald-100 transition-colors";
-            if (occupied) cls = "bg-rose-50 text-rose-400 font-bold rounded-xl line-through cursor-default";
+            let cls = "text-slate-300 dark:text-slate-600 cursor-default"; // past
+            if (isFree) cls = "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold rounded-xl cursor-default hover:bg-emerald-100 dark:hover:bg-emerald-500/25 transition-colors";
+            if (occupied) cls = "bg-rose-50 dark:bg-rose-500/15 text-rose-400 dark:text-rose-400 font-bold rounded-xl line-through cursor-default";
 
             return (
               <div key={i} className={`flex items-center justify-center h-9 text-sm ${cls}`}>
@@ -195,13 +193,13 @@ function AvailabilityModal({ dept, onClose }: { dept: SharedDepartment; onClose:
         </div>
 
         {/* Legend */}
-        <div className="border-t border-slate-100 mt-5 pt-4 flex items-center justify-center gap-6 text-sm text-slate-500">
+        <div className="border-t border-slate-100 dark:border-slate-800 mt-5 pt-4 flex items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-md bg-emerald-100 border border-emerald-300" />
+            <div className="w-4 h-4 rounded-md bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/40" />
             <span>Libre</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-md bg-rose-100 border border-rose-300" />
+            <div className="w-4 h-4 rounded-md bg-rose-100 dark:bg-rose-500/20 border border-rose-300 dark:border-rose-500/40" />
             <span>Ocupado</span>
           </div>
         </div>
@@ -308,12 +306,12 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
         <div className={`w-11 h-11 rounded-2xl ${accent.num} flex items-center justify-center font-black text-lg`}>
           {String(index + 1).padStart(2, "0")}
         </div>
-        <div className="h-px flex-1 bg-slate-200" />
+        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
         <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">Departamento</span>
       </div>
 
-      <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">{dept.name}</h2>
-      <p className="text-slate-500 leading-relaxed mb-6 text-base">
+      <h2 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3">{dept.name}</h2>
+      <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6 text-base">
         {dept.description || "Un hermoso departamento completamente equipado para tu estadía. Perfecto para descansar con todas las comodidades del hogar."}
       </p>
 
@@ -322,19 +320,19 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
         <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl ${accent.badge} text-sm font-bold`}>
           <Users className="w-4 h-4" /> Hasta {dept.maxPeople} {dept.maxPeople === 1 ? "persona" : "personas"}
         </span>
-        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-100 text-slate-600 text-sm font-bold">
+        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-bold">
           <Bed className="w-4 h-4" /> {dept.bedCount} camas
         </span>
       </div>
 
       {/* Prices */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6 shadow-sm">
+      <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 mb-6 shadow-sm transition-colors">
         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Precios por noche</p>
         {Object.keys(prices).length > 0 ? (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-700">
             {Object.entries(prices).sort(([a], [b]) => Number(a) - Number(b)).map(([ppl, price]) => (
               <div key={ppl} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
-                <span className="text-slate-500 text-sm">{Number(ppl) === 1 ? "1 persona" : `${ppl} personas`}</span>
+                <span className="text-slate-500 dark:text-slate-400 text-sm">{Number(ppl) === 1 ? "1 persona" : `${ppl} personas`}</span>
                 <span className={`font-bold text-lg ${accent.text}`}>${Number(price).toLocaleString()}</span>
               </div>
             ))}
@@ -354,7 +352,7 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
             const a = AMENITY_MAP[id];
             if (!a) return null;
             return (
-              <span key={id} className="inline-flex items-center gap-1.5 text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full font-medium">
+              <span key={id} className="inline-flex items-center gap-1.5 text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full font-medium">
                 <span className={accent.text}>{a.icon}</span> {a.label}
               </span>
             );
@@ -365,7 +363,7 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
       {/* CTA */}
       <button
         onClick={() => onAvailability(dept)}
-        className={`inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-white ${accent.btn} transition-all shadow-md hover:shadow-lg hover:scale-[1.02] self-start text-sm`}
+        className={`inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-white ${accent.btn} transition-all shadow-md hover:shadow-lg hover:scale-[1.02] self-start text-sm cursor-pointer`}
       >
         <CalendarDays className="w-5 h-5" />
         Ver Fechas de Disponibilidad
@@ -383,7 +381,7 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
   );
 
   return (
-    <section ref={ref} id={`dept-${index}`} className={`py-20 ${index % 2 === 0 ? "bg-white" : "bg-slate-50/80"}`}>
+    <section ref={ref} id={`dept-${index}`} className={`py-20 transition-colors duration-300 ${index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/80 dark:bg-slate-950"}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 lg:items-stretch">
           {flip ? <>{photos}{info}</> : <>{info}{photos}</>}
@@ -432,9 +430,9 @@ export function DepartmentsGallery({
           </div>
         </div>
         {/* Wave */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-            <path d="M0 60L60 50C120 40 240 20 360 16.7C480 13.3 600 26.7 720 30C840 33.3 960 26.7 1080 23.3C1200 20 1320 20 1380 20L1440 20V60H1380C1320 60 1200 60 1080 60C960 60 840 60 720 60C600 60 480 60 360 60C240 60 120 60 60 60H0Z" fill="white" />
+        <div className="absolute bottom-0 left-0 right-0 translate-y-[1px]">
+          <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full text-white dark:text-slate-900 transition-colors duration-300">
+            <path d="M0 60L60 50C120 40 240 20 360 16.7C480 13.3 600 26.7 720 30C840 33.3 960 26.7 1080 23.3C1200 20 1320 20 1380 20L1440 20V60H1380C1320 60 1200 60 1080 60C960 60 840 60 720 60C600 60 480 60 360 60C240 60 120 60 60 60H0Z" fill="currentColor" />
           </svg>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Building2, Home, Phone, Compass, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
+import { ThemeToggle } from "./theme-toggle";
 
 interface PublicNavbarProps {
   siteName?: string;
@@ -35,8 +36,8 @@ export function PublicNavbar({
   return (
     <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
       scrolled || mobileMenuOpen
-        ? "bg-slate-900 shadow-xl border-b border-slate-800"
-        : "bg-slate-900/60 backdrop-blur-md border-b border-white/10"
+        ? "bg-slate-900/95 dark:bg-slate-950/95 shadow-xl border-b border-slate-800"
+        : "bg-slate-900/70 dark:bg-slate-950/70 backdrop-blur-md border-b border-white/10 dark:border-white/5"
     }`}>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -51,8 +52,8 @@ export function PublicNavbar({
             </Link>
           </div>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex space-x-1">
+          {/* Desktop Nav + Theme Toggle */}
+          <div className="hidden md:flex items-center space-x-1">
             {navLinks.map((link) => {
               const isActive = pathname === link.href || (link.href === "/guia" && pathname === "/informacion");
               return (
@@ -68,10 +69,15 @@ export function PublicNavbar({
                 </Link>
               );
             })}
+
+            <div className="pl-3 border-l border-white/15 ml-2 flex items-center">
+              <ThemeToggle />
+            </div>
           </div>
 
-          {/* Mobile menu button */}
-          <div className="flex md:hidden">
+          {/* Mobile buttons: Theme Toggle + Menu Button */}
+          <div className="flex items-center gap-2 md:hidden">
+            <ThemeToggle />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
@@ -85,7 +91,7 @@ export function PublicNavbar({
 
       {/* Mobile dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-slate-900/95 backdrop-blur-lg border-b border-slate-800 px-4 pt-2 pb-4 space-y-1 animate-in slide-in-from-top-2 duration-200">
+        <div className="md:hidden bg-slate-900/98 dark:bg-slate-950/98 backdrop-blur-xl border-b border-slate-800 px-4 pt-2 pb-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
           {navLinks.map((link) => {
             const isActive = pathname === link.href || (link.href === "/guia" && pathname === "/informacion");
             return (
@@ -102,6 +108,10 @@ export function PublicNavbar({
               </Link>
             );
           })}
+          
+          <div className="pt-2 border-t border-slate-800">
+            <ThemeToggle variant="full" />
+          </div>
         </div>
       )}
     </nav>
