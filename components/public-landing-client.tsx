@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 
 import { ImageCarousel, DepartmentModal, SharedDepartment } from "./shared-ui";
 import { PublicFooter } from "./public-footer";
-import { SiteConfig, SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
+import { SiteConfig, SITE_CONFIG_DEFAULTS, HeroSlide } from "@/lib/site.config";
 
 type Reservation = {
   id: string;
@@ -469,25 +469,156 @@ export function PublicLandingClient({
     return { directDepts: direct, combinations: combs };
   }, [departments, checkInDate, checkOutDate, peopleCount]);
 
+  const parsedHeroSlides = useMemo<HeroSlide[]>(() => {
+    try {
+      if (config.heroSlides) {
+        const parsed = typeof config.heroSlides === "string" ? JSON.parse(config.heroSlides) : config.heroSlides;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter(s => s && (s.title || s.subtitle || s.image));
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing hero slides:", e);
+    }
+    return [
+      {
+        id: "default-slide",
+        image: "",
+        title: config.siteName || "Alojamientos Di'Arte",
+        subtitle: config.siteSlogan || "Departamentos temporarios premium en Formosa, Argentina. Equipados para tu comodidad y listos para hacer de tu estadía una experiencia inigualable.",
+      }
+    ];
+  }, [config.heroSlides, config.siteName, config.siteSlogan]);
+
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [isHoveringHero, setIsHoveringHero] = useState(false);
+
+  // Auto-advance slides every 6 seconds if not hovered and multiple slides exist
+  useEffect(() => {
+    if (parsedHeroSlides.length <= 1 || isHoveringHero) return;
+    const interval = setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % parsedHeroSlides.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [parsedHeroSlides.length, isHoveringHero]);
+
+  const nextSlide = () => {
+    setCurrentSlideIndex((prev) => (prev + 1) % parsedHeroSlides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlideIndex((prev) => (prev - 1 + parsedHeroSlides.length) % parsedHeroSlides.length);
+  };
+
   const globalMaxPeople = Math.max(...departments.map(d => d.maxPeople), 1);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors duration-300">
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white overflow-hidden pt-16">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+      {/* Dynamic Hero Slider Section */}
+      <div 
+        className="relative bg-slate-950 text-white overflow-hidden min-h-[420px] sm:min-h-[480px] md:min-h-[520px] flex items-center justify-center pt-16 transition-colors duration-300 group/hero"
+        onMouseEnter={() => setIsHoveringHero(true)}
+        onMouseLeave={() => setIsHoveringHero(false)}
+      >
+        {/* Background Slides */}
+        {parsedHeroSlides.map((slide, idx) => {
+          const isActive = idx === currentSlideIndex;
+          return (
+            <div
+              key={slide.id || idx}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                isActive ? "opacity-100 z-10" : "opacity-0 pointer-events-none z-0"
+              }`}
+            >
+              {slide.image ? (
+                <div className="absolute inset-0 overflow-hidden">
+                  <img
+                    src={slide.image}
+                    alt={slide.title || "Slide"}
+                    className={`w-full h-full object-cover transform transition-transform duration-7000 ease-out ${
+                      isActive ? "scale-105" : "scale-100"
+                    }`}
+                  />
+                  {/* Dark gradient overlay for text readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/75 backdrop-blur-[0.5px]" />
+                </div>
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
+                  <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+                </div>
+              )}
+            </div>
+          );
+        })}
 
-        <div className="relative w-full max-w-[1600px] mx-auto px-4 py-24 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6">
-            {config.siteName}
-          </h1>
-          <p className="text-lg sm:text-xl max-w-2xl mx-auto text-slate-300">
-            {config.siteSlogan}
-          </p>
+        {/* Content of the active slide */}
+        <div className="relative z-20 w-full max-w-[1600px] mx-auto px-4 py-20 sm:px-6 lg:px-8 text-center">
+          {parsedHeroSlides.map((slide, idx) => {
+            const isActive = idx === currentSlideIndex;
+            if (!isActive) return null;
+            return (
+              <div key={slide.id || idx} className="max-w-3xl mx-auto animate-in fade-in zoom-in-95 duration-500">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-5 text-white drop-shadow-lg">
+                  {slide.title || config.siteName}
+                </h1>
+                <p className="text-lg sm:text-xl text-slate-200 drop-shadow-md leading-relaxed mb-6 font-normal max-w-2xl mx-auto">
+                  {slide.subtitle || config.siteSlogan}
+                </p>
+                {slide.buttonText && (
+                  <div className="mt-2">
+                    <a
+                      href={slide.buttonLink || "#search-bar"}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-2xl shadow-lg shadow-sky-500/30 hover:scale-105 transition-all duration-200 cursor-pointer"
+                    >
+                      {slide.buttonText}
+                      <ChevronRight className="w-4 h-4" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-        {/* Wave */}
-        <div className="absolute bottom-0 left-0 right-0 translate-y-[1px]">
+
+        {/* Navigation Arrows (if > 1 slide) */}
+        {parsedHeroSlides.length > 1 && (
+          <>
+            <button
+              onClick={prevSlide}
+              aria-label="Slide anterior"
+              className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/40 hover:bg-black/70 text-white border border-white/20 backdrop-blur-md shadow-xl transition-all hover:scale-110 cursor-pointer opacity-80 hover:opacity-100"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={nextSlide}
+              aria-label="Siguiente slide"
+              className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/40 hover:bg-black/70 text-white border border-white/20 backdrop-blur-md shadow-xl transition-all hover:scale-110 cursor-pointer opacity-80 hover:opacity-100"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+
+            {/* Pagination Indicators / Dots */}
+            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5">
+              {parsedHeroSlides.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlideIndex(idx)}
+                  aria-label={`Ir al slide ${idx + 1}`}
+                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    idx === currentSlideIndex
+                      ? "w-8 bg-sky-400 shadow-md shadow-sky-400/50"
+                      : "w-2.5 bg-white/40 hover:bg-white/70"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Wave Divider */}
+        <div className="absolute bottom-0 left-0 right-0 translate-y-[1px] z-20 pointer-events-none">
           <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full text-slate-50 dark:text-slate-950 transition-colors duration-300">
             <path d="M0 60L60 50C120 40 240 20 360 16.7C480 13.3 600 26.7 720 30C840 33.3 960 26.7 1080 23.3C1200 20 1320 20 1380 20L1440 20V60H1380C1320 60 1200 60 1080 60C960 60 840 60 720 60C600 60 480 60 360 60C240 60 120 60 60 60H0Z" fill="currentColor" />
           </svg>

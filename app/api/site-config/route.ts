@@ -37,6 +37,7 @@ export async function PUT(req: Request) {
       siteSlogan: "site_slogan",
       siteUrl: "site_url",
       logoUrl: "site_logo_url",
+      heroSlides: "site_hero_slides",
       phoneDisplay: "site_phone_display",
       phoneWhatsApp: "site_phone_whatsapp",
       email: "site_email",

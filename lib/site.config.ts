@@ -8,6 +8,26 @@
  * desde el panel de Configuración en el Dashboard.
  */
 
+export interface HeroSlide {
+  id: string;
+  image: string;
+  title: string;
+  subtitle: string;
+  buttonText?: string;
+  buttonLink?: string;
+}
+
+export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
+  {
+    id: "slide-1",
+    image: "",
+    title: "Alojamientos Di'Arte",
+    subtitle: "Departamentos temporarios premium en Formosa, Argentina. Equipados para tu comodidad y listos para hacer de tu estadía una experiencia inigualable.",
+    buttonText: "Ver Departamentos",
+    buttonLink: "#departments",
+  }
+];
+
 export const SITE_CONFIG_DEFAULTS = {
   // Identidad & Marca
   siteName: "Alojamientos Di'Arte",
@@ -16,6 +36,9 @@ export const SITE_CONFIG_DEFAULTS = {
   // Upload a custom logo from Configuración → Identidad de Marca.
   // Leave empty to use the default Building2 icon in the navbar.
   logoUrl: "",
+
+  // Slides / Carrusel de Portada
+  heroSlides: JSON.stringify(DEFAULT_HERO_SLIDES),
 
   // Contacto principal
   phoneDisplay: "+54 9 351 314-6924",

@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, AlertCircle, Plus, Trash2, Pencil, Power, PowerOff, FileSpreadsheet, Globe, MessageSquare, PhoneCall, Mail, MapPin } from "lucide-react";
+import { CheckCircle2, AlertCircle, Plus, Trash2, Pencil, Power, PowerOff, FileSpreadsheet, Globe, MessageSquare, PhoneCall, Mail, MapPin, ArrowUp, ArrowDown, Image as ImageIcon, Layers, Eye } from "lucide-react";
 import Papa from "papaparse";
 // removed autoTable
 import { ImportPreviewModal, ImportPreviewRow, ImportStats } from "./import-preview-modal";
@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { Switch } from "@/components/ui/switch";
-import { SiteConfig, SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
+import { SiteConfig, SITE_CONFIG_DEFAULTS, HeroSlide, DEFAULT_HERO_SLIDES } from "@/lib/site.config";
 
 interface SettingsFormProps {
   activeParkingCount?: number;
@@ -178,6 +178,87 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
       }
     } catch (err: any) {
       setError(err?.message || "Error al subir el logo");
+    } finally {
+      setSavingSiteConfig(false);
+    }
+  };
+
+  // Hero Slides Helpers
+  const heroSlidesList: HeroSlide[] = (() => {
+    try {
+      if (siteConfig.heroSlides) {
+        const parsed = typeof siteConfig.heroSlides === "string" ? JSON.parse(siteConfig.heroSlides) : siteConfig.heroSlides;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_HERO_SLIDES;
+  })();
+
+  const updateHeroSlides = (slides: HeroSlide[]) => {
+    setSiteConfig(prev => ({
+      ...prev,
+      heroSlides: JSON.stringify(slides),
+    }));
+  };
+
+  const handleAddSlide = () => {
+    const newSlide: HeroSlide = {
+      id: `slide-${Date.now()}`,
+      image: "",
+      title: "Nuevo Slide",
+      subtitle: "Texto descriptivo para la portada",
+      buttonText: "",
+      buttonLink: "",
+    };
+    updateHeroSlides([...heroSlidesList, newSlide]);
+  };
+
+  const handleUpdateSlide = (id: string, updates: Partial<HeroSlide>) => {
+    const updated = heroSlidesList.map(s => s.id === id ? { ...s, ...updates } : s);
+    updateHeroSlides(updated);
+  };
+
+  const handleDeleteSlide = (id: string) => {
+    if (heroSlidesList.length <= 1) {
+      setError("Debe haber al menos 1 slide en la portada.");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    const updated = heroSlidesList.filter(s => s.id !== id);
+    updateHeroSlides(updated);
+  };
+
+  const handleMoveSlide = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= heroSlidesList.length) return;
+    const list = [...heroSlidesList];
+    const temp = list[index];
+    list[index] = list[targetIndex];
+    list[targetIndex] = temp;
+    updateHeroSlides(list);
+  };
+
+  const handleSlideImageUpload = async (slideId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSavingSiteConfig(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("files", file);
+
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Error al subir imagen");
+
+      const data = await res.json();
+      if (data.urls && data.urls.length > 0) {
+        handleUpdateSlide(slideId, { image: data.urls[0] });
+        setSuccess("Imagen subida al slide. Guardá los cambios para publicarla.");
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Error al subir imagen");
     } finally {
       setSavingSiteConfig(false);
     }
@@ -1009,11 +1090,154 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
               </div>
             </div>
 
-            {/* Bloque 2: Contacto & WhatsApp */}
+            {/* Bloque 2: Carrusel de Portada / Hero Slides */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                  2. Carrusel de Portada / Slides de Inicio ({heroSlidesList.length})
+                </h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddSlide}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border-indigo-200 gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Agregar Nuevo Slide
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                {heroSlidesList.map((slide, idx) => (
+                  <div key={slide.id || idx} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 relative">
+                    <div className="flex items-center justify-between border-b pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-indigo-100 text-indigo-700 font-extrabold text-xs px-2.5 py-1 rounded-lg">
+                          Slide #{idx + 1}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-600">
+                          {slide.title || "Sin Título"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={idx === 0}
+                          onClick={() => handleMoveSlide(idx, 'up')}
+                          className="h-8 w-8 p-0 cursor-pointer"
+                          title="Mover arriba"
+                        >
+                          <ArrowUp className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={idx === heroSlidesList.length - 1}
+                          onClick={() => handleMoveSlide(idx, 'down')}
+                          className="h-8 w-8 p-0 cursor-pointer"
+                          title="Mover abajo"
+                        >
+                          <ArrowDown className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteSlide(slide.id)}
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                          title="Eliminar slide"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Imagen */}
+                      <div className="space-y-2 md:col-span-3">
+                        <Label className="text-xs font-bold text-slate-700">Foto de Fondo del Slide (URL o Subir)</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={slide.image || ""}
+                            onChange={(e) => handleUpdateSlide(slide.id, { image: e.target.value })}
+                            placeholder="/foto-slide.jpg o URL externa"
+                            className="flex-1"
+                          />
+                          <Button type="button" variant="outline" className="relative cursor-pointer overflow-hidden text-xs">
+                            <span className="flex items-center gap-1.5">
+                              <Upload className="w-3.5 h-3.5" />
+                              Subir Imagen
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="absolute inset-0 opacity-0 cursor-pointer"
+                              onChange={(e) => handleSlideImageUpload(slide.id, e)}
+                            />
+                          </Button>
+                        </div>
+                        {slide.image && (
+                          <div className="mt-2 p-2 border rounded-xl bg-slate-50 w-fit flex items-center gap-3">
+                            <img src={slide.image} alt="Preview" className="h-16 w-28 object-cover rounded-lg border" />
+                            <span className="text-xs text-slate-500">Vista previa del fondo</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Título */}
+                      <div className="space-y-1.5 md:col-span-1">
+                        <Label className="text-xs font-bold text-slate-700">Título Principal</Label>
+                        <Input
+                          value={slide.title || ""}
+                          onChange={(e) => handleUpdateSlide(slide.id, { title: e.target.value })}
+                          placeholder="Ej. Alojamientos Di'Arte"
+                        />
+                      </div>
+
+                      {/* Subtítulo / Descripción */}
+                      <div className="space-y-1.5 md:col-span-2">
+                        <Label className="text-xs font-bold text-slate-700">Subtítulo / Texto Descriptivo</Label>
+                        <Input
+                          value={slide.subtitle || ""}
+                          onChange={(e) => handleUpdateSlide(slide.id, { subtitle: e.target.value })}
+                          placeholder="Ej. Departamentos temporarios premium en Formosa..."
+                        />
+                      </div>
+
+                      {/* Botón opcional */}
+                      <div className="space-y-1.5 md:col-span-1">
+                        <Label className="text-xs font-bold text-slate-700">Texto del Botón (Opcional)</Label>
+                        <Input
+                          value={slide.buttonText || ""}
+                          onChange={(e) => handleUpdateSlide(slide.id, { buttonText: e.target.value })}
+                          placeholder="Ej. Ver Departamentos"
+                        />
+                      </div>
+                      <div className="space-y-1.5 md:col-span-2">
+                        <Label className="text-xs font-bold text-slate-700">Enlace del Botón (Opcional)</Label>
+                        <Input
+                          value={slide.buttonLink || ""}
+                          onChange={(e) => handleUpdateSlide(slide.id, { buttonLink: e.target.value })}
+                          placeholder="Ej. #search-bar o /contacto"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bloque 3: Contacto & WhatsApp */}
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
-                2. Teléfonos, WhatsApp y Email
+                3. Teléfonos, WhatsApp y Email
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-slate-200">
                 <div className="space-y-1.5">
@@ -1060,11 +1284,11 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
               </div>
             </div>
 
-            {/* Bloque 3: Ubicación & Horarios */}
+            {/* Bloque 4: Ubicación & Horarios */}
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-orange-500" />
-                3. Dirección, Ubicación y Horarios
+                4. Dirección, Ubicación y Horarios
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-slate-200">
                 <div className="space-y-1.5 md:col-span-2">
@@ -1124,11 +1348,11 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
               </div>
             </div>
 
-            {/* Bloque 4: Redes Sociales, Footer & SEO */}
+            {/* Bloque 5: Redes Sociales, Footer & SEO */}
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-purple-500" />
-                4. Redes Sociales, Footer y SEO
+                5. Redes Sociales, Footer y SEO
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-slate-200">
                 <div className="space-y-1.5">
@@ -1179,11 +1403,11 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
               </div>
             </div>
 
-            {/* Bloque 5: Servidor de Correo SMTP (Hostinger) */}
+            {/* Bloque 6: Servidor de Correo SMTP (Hostinger) */}
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-blue-500" />
-                5. Servidor de Correo SMTP (Hostinger / Envío de Consultas)
+                6. Servidor de Correo SMTP (Hostinger / Envío de Consultas)
               </h3>
               <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-4">
                 <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg text-xs text-sky-900 leading-relaxed">
