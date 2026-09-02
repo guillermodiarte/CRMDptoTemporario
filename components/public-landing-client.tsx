@@ -268,17 +268,30 @@ export function PublicLandingClient({
           // A full day is selectable as checkout only when checkin is set and this day is after it
           const isSelectableAsCheckout = isFull && !isPast && checkInDate && !checkOutDate && date > checkInDate;
 
-          let bgClass = "bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-sky-300 dark:hover:border-sky-500 hover:shadow-sm cursor-pointer";
-          if (isSelected) {
+          let bgClass = "bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-500 hover:shadow-sm cursor-pointer";
+          let numberColor = "text-slate-900 dark:text-white";
+          let subtextColor = "text-sky-600 dark:text-sky-400 font-semibold";
+
+          if (isPast) {
+            bgClass = "bg-slate-50 dark:bg-slate-900/50 border-transparent cursor-default";
+            numberColor = "text-slate-300 dark:text-slate-600";
+            subtextColor = "text-slate-300 dark:text-slate-600";
+          } else if (isSelected) {
             bgClass = "bg-slate-900 dark:bg-sky-600 border-slate-900 dark:border-sky-600 text-white shadow-md transform scale-105 z-10 relative cursor-pointer";
+            numberColor = "text-white";
+            subtextColor = "text-sky-100 dark:text-white font-semibold";
           } else if (isInRange) {
-            bgClass = "bg-sky-200 dark:bg-sky-900/50 border-sky-400 dark:border-sky-600 text-sky-900 dark:text-sky-200 font-medium cursor-pointer";
-          } else if (isPast) {
-            bgClass = "bg-slate-50 dark:bg-slate-900/50 border-transparent text-slate-300 dark:text-slate-600 cursor-default";
+            bgClass = "bg-sky-200 dark:bg-sky-900/60 border-sky-400 dark:border-sky-600 font-medium cursor-pointer";
+            numberColor = "text-sky-950 dark:text-sky-100";
+            subtextColor = "text-sky-800 dark:text-sky-200";
           } else if (isFull && isSelectableAsCheckout) {
-            bgClass = "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700/50 text-amber-700 dark:text-amber-400 opacity-80 hover:border-amber-400 cursor-pointer";
+            bgClass = "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700/50 opacity-80 hover:border-amber-400 cursor-pointer";
+            numberColor = "text-amber-900 dark:text-amber-200";
+            subtextColor = "text-amber-700 dark:text-amber-400 font-semibold";
           } else if (isFull) {
-            bgClass = "bg-red-50 dark:bg-red-950/30 border-red-100 dark:border-red-900/30 text-red-400 dark:text-red-500/60 opacity-50 cursor-not-allowed";
+            bgClass = "bg-red-50 dark:bg-red-950/30 border-red-100 dark:border-red-900/30 opacity-50 cursor-not-allowed";
+            numberColor = "text-red-400 dark:text-red-400";
+            subtextColor = "text-red-600 dark:text-red-400 font-bold";
           }
 
           return (
@@ -329,11 +342,11 @@ export function PublicLandingClient({
                 }
               }}
             >
-              <span className={`text-sm font-bold ${isPast ? '' : isSelected ? 'text-white' : 'text-slate-800'}`}>
+              <span className={`text-sm font-bold ${numberColor}`}>
                 {format(date, 'd')}
               </span>
               {!isPast && (
-                <span className={`text-[9px] leading-tight font-medium mt-0.5 ${isSelected ? 'text-sky-200' : isFull ? 'text-red-600 font-bold' : 'text-sky-600'}`}>
+                <span className={`text-[9px] leading-tight font-medium mt-0.5 ${subtextColor}`}>
                   {isFull ? 'Sin Disp.' : `${freeCount} libres`}
                 </span>
               )}
