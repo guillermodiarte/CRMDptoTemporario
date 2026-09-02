@@ -4,29 +4,33 @@ import { getSiteConfig } from '@/lib/site-config-loader';
 import { LoginThemeWrapper } from '@/components/login-theme-wrapper';
 import { LoginCardLogo } from '@/components/login-card-logo';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Login',
 };
 
 export default async function LoginPage() {
   const config = await getSiteConfig();
-  const bgImage = config.loginBgUrl || '/images/login-bg.png';
-  const logoLight = config.loginLogoUrl || '/images/logo-diarte-vertical.png';
+  const bgImage = config.loginBgUrl;
+  const logoLight = config.loginLogoUrl;
   const logoDark = config.loginLogoUrlDark || logoLight;
   const loginLogoSize = Number(config.loginLogoSize) || 208;
 
   return (
     <LoginThemeWrapper>
       <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
-        {/* Background Image with bulletproof CSS fallback */}
-        <div
-          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: bgImage.includes('/images/login-bg.png')
-              ? `url('/images/login-bg.png')`
-              : `url('${bgImage}'), url('/images/login-bg.png')`,
-          }}
-        />
+        {/* Background Image configured in settings */}
+        {bgImage ? (
+          <div
+            className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: `url('${bgImage}')`,
+            }}
+          />
+        ) : (
+          <div className="absolute inset-0 z-0 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900" />
+        )}
 
         {/* Dark Overlay */}
         <div className="absolute inset-0 z-10 bg-slate-950/50 backdrop-blur-[2px]" />

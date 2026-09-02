@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
-
 interface LoginCardLogoProps {
-  logoLight: string;
-  logoDark: string;
+  logoLight?: string | null;
+  logoDark?: string | null;
   siteName?: string;
-  loginLogoSize: number;
+  loginLogoSize?: number;
 }
 
 export function LoginCardLogo({
@@ -15,34 +13,33 @@ export function LoginCardLogo({
   siteName = "Alojamientos Di'Arte",
   loginLogoSize = 208,
 }: LoginCardLogoProps) {
-  const [lightSrc, setLightSrc] = useState(logoLight);
-  const [darkSrc, setDarkSrc] = useState(logoDark);
+  const effectiveDark = logoDark || logoLight;
+
+  if (!logoLight) {
+    return (
+      <div className="flex justify-center items-center mb-4">
+        <span className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
+          {siteName}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex justify-center items-center mb-4">
       {/* Light mode logo */}
       <img
-        src={lightSrc}
+        src={logoLight}
         alt={siteName}
         style={{ width: `${loginLogoSize}px` }}
         className="max-w-full h-auto object-contain drop-shadow-sm transition-all duration-200 dark:hidden"
-        onError={() => {
-          if (lightSrc !== "/images/logo-diarte-vertical.png") {
-            setLightSrc("/images/logo-diarte-vertical.png");
-          }
-        }}
       />
       {/* Dark mode logo */}
       <img
-        src={darkSrc}
+        src={effectiveDark!}
         alt={siteName}
         style={{ width: `${loginLogoSize}px` }}
         className="max-w-full h-auto object-contain drop-shadow-sm transition-all duration-200 hidden dark:block"
-        onError={() => {
-          if (darkSrc !== "/images/logo-diarte-vertical.png") {
-            setDarkSrc("/images/logo-diarte-vertical.png");
-          }
-        }}
       />
     </div>
   );

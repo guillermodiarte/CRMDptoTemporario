@@ -38,11 +38,11 @@ export const SITE_CONFIG_DEFAULTS = {
   logoUrl: "",
   logoUrlDark: "",
   logoSize: "40", // px height for navbar logo
-  adminLogoUrl: "/images/logo-diarte-horizontal.png",
+  adminLogoUrl: "/uploads/logos/logo-diarte-horizontal.png",
   adminLogoUrlDark: "",
   adminLogoSize: "46", // px height for admin sidebar logo
-  loginBgUrl: "/images/login-bg.png",
-  loginLogoUrl: "/images/logo-diarte-vertical.png",
+  loginBgUrl: "",
+  loginLogoUrl: "",
   loginLogoUrlDark: "",
   loginLogoSize: "208", // px width for login card logo (w-52 = 208px)
 

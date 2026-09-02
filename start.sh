@@ -121,9 +121,10 @@ if [ -f ".next/standalone/server.js" ]; then
 
     # Seed persistent volume with built-in/default upload assets if not already present
     if [ -d "public/uploads" ]; then
-        log "Seeding default upload assets into $UPLOADS_DIR..."
-        cp -n -r public/uploads/* "$UPLOADS_DIR/" 2>/dev/null || cp -u -r public/uploads/* "$UPLOADS_DIR/" 2>/dev/null || true
+        log "Seeding default upload assets into $UPLOADS_DIR (preserving existing files)..."
+        cp -rn public/uploads/* "$UPLOADS_DIR/" 2>/dev/null || true
     fi
+    chmod -R 777 "$UPLOADS_DIR" 2>/dev/null || true
 
     mkdir -p .next/standalone/public
     rm -rf .next/standalone/public/uploads
