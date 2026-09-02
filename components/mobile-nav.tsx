@@ -29,9 +29,20 @@ interface MobileNavProps {
   user: any;
   showParking: boolean;
   isSuperAdmin?: boolean;
+  adminLogo?: string;
+  adminLogoDark?: string;
+  adminLogoSize?: number | string;
 }
 
-export function MobileNav({ role, user, showParking, isSuperAdmin }: MobileNavProps) {
+export function MobileNav({
+  role,
+  user,
+  showParking,
+  isSuperAdmin,
+  adminLogo = "/uploads/logos/logo-diarte-horizontal.png",
+  adminLogoDark,
+  adminLogoSize = 46,
+}: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -53,6 +64,8 @@ export function MobileNav({ role, user, showParking, isSuperAdmin }: MobileNavPr
     );
   }
 
+  const logoH = Math.min(Number(adminLogoSize) || 46, 60);
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
@@ -71,13 +84,22 @@ export function MobileNav({ role, user, showParking, isSuperAdmin }: MobileNavPr
         <nav className="grid gap-2 text-lg font-medium">
           <Link
             href="#"
-            className="flex items-center gap-2 mb-4 px-2"
+            className="flex items-center justify-center mb-4 px-2 py-1 transition-all"
             onClick={() => setOpen(false)}
           >
+            {/* Light mode */}
             <img
-              src="/uploads/logos/logo-diarte-horizontal.png"
+              src={adminLogo}
               alt="Alojamientos Di'Arte"
-              className="h-[40px] w-auto object-contain"
+              style={{ height: `${logoH}px`, maxHeight: `${logoH}px` }}
+              className="w-auto max-w-[210px] object-contain dark:hidden"
+            />
+            {/* Dark mode */}
+            <img
+              src={adminLogoDark || adminLogo}
+              alt="Alojamientos Di'Arte"
+              style={{ height: `${logoH}px`, maxHeight: `${logoH}px` }}
+              className="w-auto max-w-[210px] object-contain hidden dark:block"
             />
           </Link>
           <Link

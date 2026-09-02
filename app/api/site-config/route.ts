@@ -37,7 +37,17 @@ export async function PUT(req: Request) {
       siteSlogan: "site_slogan",
       siteUrl: "site_url",
       logoUrl: "site_logo_url",
+      logoUrlDark: "site_logo_url_dark",
+      logoSize: "site_logo_size",
+      adminLogoUrl: "site_admin_logo_url",
+      adminLogoUrlDark: "site_admin_logo_url_dark",
+      adminLogoSize: "site_admin_logo_size",
+      loginBgUrl: "site_login_bg_url",
+      loginLogoUrl: "site_login_logo_url",
+      loginLogoUrlDark: "site_login_logo_url_dark",
+      loginLogoSize: "site_login_logo_size",
       heroSlides: "site_hero_slides",
+      heroSlideInterval: "site_hero_slide_interval",
       phoneDisplay: "site_phone_display",
       phoneWhatsApp: "site_phone_whatsapp",
       email: "site_email",
@@ -118,12 +128,15 @@ export async function PUT(req: Request) {
 
     await Promise.all(customOperations);
 
-    // Revalidate public pages so fresh values are delivered immediately
+    // Revalidate public and admin pages so fresh values are delivered immediately
     revalidatePath("/");
     revalidatePath("/contacto");
     revalidatePath("/guia");
     revalidatePath("/departamentos");
     revalidatePath("/informacion");
+    revalidatePath("/admin");
+    revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard/settings");
 
     const updatedConfig = await getSiteConfig();
     return NextResponse.json({ success: true, config: updatedConfig });

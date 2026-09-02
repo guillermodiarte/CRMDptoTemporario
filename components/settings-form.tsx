@@ -277,20 +277,14 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
     updateHeroSlides(list);
   };
 
-  // ─── Media Picker Callback ────────────────────────────────────────
+  // --- Media Picker Callback -----------------------------------------------
   const handleMediaSelected = (url: string) => {
     if (!pickerTarget) return;
-
-    if (pickerTarget.field === "logoUrl") {
-      setSiteConfig(prev => ({ ...prev, logoUrl: url }));
-    } else if (pickerTarget.field === "adminLogoUrl") {
-      setSiteConfig(prev => ({ ...prev, adminLogoUrl: url }));
-    } else if (pickerTarget.field === "loginBgUrl") {
-      setSiteConfig(prev => ({ ...prev, loginBgUrl: url }));
-    } else if (pickerTarget.field === "loginLogoUrl") {
-      setSiteConfig(prev => ({ ...prev, loginLogoUrl: url }));
-    } else if (pickerTarget.field === "slideImage" && pickerTarget.slideId) {
+    const f = pickerTarget.field;
+    if (f === "slideImage" && pickerTarget.slideId) {
       handleUpdateSlide(pickerTarget.slideId, { image: url });
+    } else {
+      setSiteConfig(prev => ({ ...prev, [f]: url }));
     }
   };
 
@@ -300,8 +294,8 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
     setPickerOpen(true);
   };
 
-  // ─── Direct Image Uploads for Site Config ─────────────────────────
-  const handleDirectUpload = async (field: "logoUrl" | "adminLogoUrl" | "loginBgUrl" | "loginLogoUrl", folder: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  // --- Direct Image Uploads for Site Config --------------------------------
+  const handleDirectUpload = async (field: keyof SiteConfig, folder: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -318,7 +312,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
       const data = await res.json();
       if (data.urls && data.urls.length > 0) {
         setSiteConfig(prev => ({ ...prev, [field]: data.urls[0] }));
-        setSuccess("Imagen subida correctamente. Recordá guardar los cambios.");
+        setSuccess("Imagen subida correctamente. Recorda guardar los cambios.");
         setTimeout(() => setSuccess(null), 3000);
       }
     } catch (err: any) {
@@ -970,147 +964,239 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
               <hr className="border-slate-200 dark:border-slate-800 my-4" />
 
-              {/* 4 Image Pickers: Navbar Logo, Admin Sidebar Logo, Login Logo, Login Background */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* 1. Navbar Logo */}
-                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
-                      <ImageIcon className="w-4 h-4 text-sky-500" /> Logo Web / Navbar
-                    </Label>
-                    <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-2">
-                      {siteConfig.logoUrl ? (
-                        <img src={siteConfig.logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
-                      ) : (
-                        <span className="text-xs text-slate-400">Sin logo personalizado</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openPicker("logoUrl", "logos")}
-                      className="flex-1 text-xs cursor-pointer font-semibold"
-                    >
-                      <FolderOpen className="w-3.5 h-3.5 mr-1 text-sky-500" /> Galería
-                    </Button>
-                    <label className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs">
-                      <Upload className="w-3.5 h-3.5" /> Subir
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={e => handleDirectUpload("logoUrl", "logos", e)}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
+              {/* Logo Pickers - each one has a Light Mode and Dark Mode variant */}
+              {/* Helper: reusable logo picker pair */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+              {[
+                {
+                  title: "Logo Web / Navbar",
+                  iconColor: "text-sky-500",
+                  accentColor: "sky",
+                  fieldLight: "logoUrl" as const,
+                  fieldDark: "logoUrlDark" as const,
+                  sizeField: "logoSize" as const,
+                  sizeLabel: "Alto en Navbar",
+                  sizeMin: 20,
+                  sizeMax: 120,
+                  sizeStep: 2,
+                  defaultSize: "40",
+                  sizeUnit: "px",
+                  sizeDesc: "Alto en barra de navegación pública",
+                  folder: "logos",
+                  defaultLight: "Sin logo personalizado",
+                  defaultDark: "Igual que el claro si no se configura",
+                },
+                {
+                  title: "Logo Admin (Sidebar)",
+                  iconColor: "text-teal-500",
+                  accentColor: "teal",
+                  fieldLight: "adminLogoUrl" as const,
+                  fieldDark: "adminLogoUrlDark" as const,
+                  sizeField: "adminLogoSize" as const,
+                  sizeLabel: "Alto en Sidebar",
+                  sizeMin: 24,
+                  sizeMax: 120,
+                  sizeStep: 2,
+                  defaultSize: "46",
+                  sizeUnit: "px",
+                  sizeDesc: "Alto en menú lateral del panel",
+                  folder: "logos",
+                  defaultLight: "Default: Di'Arte Horizontal",
+                  defaultDark: "Igual que el claro si no se configura",
+                },
+                {
+                  title: "Logo Pantalla Login",
+                  iconColor: "text-indigo-500",
+                  accentColor: "indigo",
+                  fieldLight: "loginLogoUrl" as const,
+                  fieldDark: "loginLogoUrlDark" as const,
+                  sizeField: "loginLogoSize" as const,
+                  sizeLabel: "Ancho en Login",
+                  sizeMin: 100,
+                  sizeMax: 400,
+                  sizeStep: 4,
+                  defaultSize: "208",
+                  sizeUnit: "px",
+                  sizeDesc: "Ancho en tarjeta de inicio de sesión",
+                  folder: "logos",
+                  defaultLight: "Default: Di'Arte Vertical",
+                  defaultDark: "Igual que el claro si no se configura",
+                },
+              ].map(({
+                title,
+                iconColor,
+                fieldLight,
+                fieldDark,
+                sizeField,
+                sizeLabel,
+                sizeMin,
+                sizeMax,
+                sizeStep,
+                defaultSize,
+                sizeUnit,
+                sizeDesc,
+                folder,
+                defaultLight,
+                defaultDark,
+              }) => {
+                const currentVal = Number(siteConfig[sizeField]) || Number(defaultSize);
 
-                {/* 2. Admin Sidebar Logo */}
-                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
-                      <ImageIcon className="w-4 h-4 text-teal-500" /> Logo Admin (Sidebar)
-                    </Label>
-                    <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-2">
-                      {siteConfig.adminLogoUrl ? (
-                        <img src={siteConfig.adminLogoUrl} alt="Logo Admin" className="max-h-full max-w-full object-contain" />
-                      ) : (
-                        <span className="text-xs text-slate-400">Default: Di'Arte Horizontal</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openPicker("adminLogoUrl", "logos")}
-                      className="flex-1 text-xs cursor-pointer font-semibold"
-                    >
-                      <FolderOpen className="w-3.5 h-3.5 mr-1 text-teal-500" /> Galería
-                    </Button>
-                    <label className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs">
-                      <Upload className="w-3.5 h-3.5" /> Subir
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={e => handleDirectUpload("adminLogoUrl", "logos", e)}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
+                return (
+                  <div key={fieldLight} className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className={`font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide`}>
+                          <ImageIcon className={`w-4 h-4 ${iconColor}`} /> {title}
+                        </Label>
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                          {currentVal}{sizeUnit}
+                        </span>
+                      </div>
 
-                {/* 3. Login Logo */}
-                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
-                      <ImageIcon className="w-4 h-4 text-indigo-500" /> Logo Pantalla Login
-                    </Label>
-                    <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-2">
-                      {siteConfig.loginLogoUrl ? (
-                        <img src={siteConfig.loginLogoUrl} alt="Logo Login" className="max-h-full max-w-full object-contain" />
-                      ) : (
-                        <span className="text-xs text-slate-400">Default: Di'Arte Vertical</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openPicker("loginLogoUrl", "logos")}
-                      className="flex-1 text-xs cursor-pointer font-semibold"
-                    >
-                      <FolderOpen className="w-3.5 h-3.5 mr-1 text-indigo-500" /> Galería
-                    </Button>
-                    <label className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs">
-                      <Upload className="w-3.5 h-3.5" /> Subir
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={e => handleDirectUpload("loginLogoUrl", "logos", e)}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
+                      {/* Light Mode Logo */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-300 border border-amber-400"></span>
+                          Modo Claro
+                        </div>
+                        <div className="h-20 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white flex items-center justify-center overflow-hidden p-2">
+                          {siteConfig[fieldLight] ? (
+                            <img
+                              src={siteConfig[fieldLight]}
+                              alt={`${title} Claro`}
+                              style={
+                                sizeField === "loginLogoSize"
+                                  ? { width: `${Math.min(currentVal * 0.45, 140)}px`, maxHeight: "100%" }
+                                  : { height: `${Math.min(currentVal * 0.8, 64)}px`, maxWidth: "100%" }
+                              }
+                              className="object-contain transition-all duration-150"
+                            />
+                          ) : (
+                            <span className="text-xs text-slate-400 text-center px-2">{defaultLight}</span>
+                          )}
+                        </div>
+                        <div className="flex gap-1.5">
+                          <Button size="sm" variant="outline" onClick={() => openPicker(fieldLight, folder)}
+                            className="flex-1 text-xs cursor-pointer font-semibold h-7 px-2">
+                            <FolderOpen className={`w-3 h-3 mr-1 ${iconColor}`} /> Galería
+                          </Button>
+                          <label className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold cursor-pointer h-7">
+                            <Upload className="w-3 h-3" /> Subir
+                            <input type="file" accept="image/*" onChange={e => handleDirectUpload(fieldLight, folder, e)} className="hidden" />
+                          </label>
+                          {siteConfig[fieldLight] && (
+                            <button onClick={() => setSiteConfig(prev => ({ ...prev, [fieldLight]: "" }))}
+                              className="h-7 w-7 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg border border-red-200 dark:border-red-900/60 cursor-pointer transition-colors" title="Quitar logo">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
 
-                {/* 4. Login Background */}
-                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
-                      <ImageIcon className="w-4 h-4 text-amber-500" /> Fondo Pantalla Login
-                    </Label>
-                    <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-1">
-                      {siteConfig.loginBgUrl ? (
-                        <img src={siteConfig.loginBgUrl} alt="Fondo Login" className="w-full h-full object-cover rounded-lg" />
-                      ) : (
-                        <span className="text-xs text-slate-400">Default: Living room</span>
-                      )}
+                      {/* Dark Mode Logo */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-700 border border-slate-500"></span>
+                          Modo Oscuro
+                        </div>
+                        <div className="h-20 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-950 flex items-center justify-center overflow-hidden p-2">
+                          {siteConfig[fieldDark] ? (
+                            <img
+                              src={siteConfig[fieldDark]}
+                              alt={`${title} Oscuro`}
+                              style={
+                                sizeField === "loginLogoSize"
+                                  ? { width: `${Math.min(currentVal * 0.45, 140)}px`, maxHeight: "100%" }
+                                  : { height: `${Math.min(currentVal * 0.8, 64)}px`, maxWidth: "100%" }
+                              }
+                              className="object-contain transition-all duration-150"
+                            />
+                          ) : (
+                            <span className="text-xs text-slate-500 text-center px-2">{defaultDark}</span>
+                          )}
+                        </div>
+                        <div className="flex gap-1.5">
+                          <Button size="sm" variant="outline" onClick={() => openPicker(fieldDark, folder)}
+                            className="flex-1 text-xs cursor-pointer font-semibold h-7 px-2 border-slate-700 text-slate-300">
+                            <FolderOpen className="w-3 h-3 mr-1 text-slate-400" /> Galería
+                          </Button>
+                          <label className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold cursor-pointer h-7">
+                            <Upload className="w-3 h-3" /> Subir
+                            <input type="file" accept="image/*" onChange={e => handleDirectUpload(fieldDark, folder, e)} className="hidden" />
+                          </label>
+                          {siteConfig[fieldDark] && (
+                            <button onClick={() => setSiteConfig(prev => ({ ...prev, [fieldDark]: "" }))}
+                              className="h-7 w-7 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg border border-red-200 dark:border-red-900/60 cursor-pointer transition-colors" title="Quitar logo oscuro">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dimensiones / Control de Tamaño */}
+                    <div className="pt-3 mt-1 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                          <Sliders className="w-3 h-3 text-slate-400" /> {sizeLabel}
+                        </Label>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={sizeMin}
+                            max={sizeMax}
+                            step={sizeStep}
+                            value={siteConfig[sizeField] || defaultSize}
+                            onChange={e => setSiteConfig(prev => ({ ...prev, [sizeField]: e.target.value }))}
+                            className="w-14 h-6 text-center text-xs font-mono font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-500"
+                          />
+                          <span className="text-[10px] text-slate-400 font-semibold">{sizeUnit}</span>
+                        </div>
+                      </div>
+                      <input
+                        type="range"
+                        min={sizeMin}
+                        max={sizeMax}
+                        step={sizeStep}
+                        value={currentVal}
+                        onChange={e => setSiteConfig(prev => ({ ...prev, [sizeField]: e.target.value }))}
+                        className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                      />
+                      <div className="flex justify-between items-center text-[9px] text-slate-400">
+                        <span>{sizeMin}{sizeUnit}</span>
+                        <span className="text-[9px] text-slate-500 dark:text-slate-400 truncate max-w-[130px] text-center" title={sizeDesc}>{sizeDesc}</span>
+                        <span>{sizeMax}{sizeUnit}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openPicker("loginBgUrl", "general")}
-                      className="flex-1 text-xs cursor-pointer font-semibold"
-                    >
-                      <FolderOpen className="w-3.5 h-3.5 mr-1 text-amber-500" /> Galería
-                    </Button>
-                    <label className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs">
-                      <Upload className="w-3.5 h-3.5" /> Subir
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={e => handleDirectUpload("loginBgUrl", "general", e)}
-                        className="hidden"
-                      />
-                    </label>
+                );
+              })}
+
+              {/* Login Background (single — no dark variant) */}
+              <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                    <ImageIcon className="w-4 h-4 text-amber-500" /> Fondo Pantalla Login
+                  </Label>
+                  <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-1">
+                    {siteConfig.loginBgUrl ? (
+                      <img src={siteConfig.loginBgUrl} alt="Fondo Login" className="w-full h-full object-cover rounded-lg" />
+                    ) : (
+                      <span className="text-xs text-slate-400">Default: Living room</span>
+                    )}
                   </div>
                 </div>
+                <div className="flex gap-2 pt-2">
+                  <Button size="sm" variant="outline" onClick={() => openPicker("loginBgUrl", "general")}
+                    className="flex-1 text-xs cursor-pointer font-semibold">
+                    <FolderOpen className="w-3.5 h-3.5 mr-1 text-amber-500" /> Galería
+                  </Button>
+                  <label className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs">
+                    <Upload className="w-3.5 h-3.5" /> Subir
+                    <input type="file" accept="image/*" onChange={e => handleDirectUpload("loginBgUrl", "general", e)} className="hidden" />
+                  </label>
+                </div>
+              </div>
               </div>
 
               <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
@@ -1142,7 +1228,56 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
               </Button>
             </CardHeader>
 
-            <CardContent className="space-y-6">
+            <CardContent className="pb-4">
+              {/* Slide Speed Control */}
+              <div className="p-4 rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/20 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <label className="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Velocidad del carrusel
+                  </label>
+                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 tabular-nums bg-indigo-100 dark:bg-indigo-900/60 px-3 py-1 rounded-full">
+                    {(Number(siteConfig.heroSlideInterval) / 1000).toFixed(1)}s por slide
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-500 shrink-0">2s</span>
+                  <input
+                    type="range"
+                    min={2000}
+                    max={15000}
+                    step={500}
+                    value={Number(siteConfig.heroSlideInterval) || 6000}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, heroSlideInterval: e.target.value }))}
+                    className="flex-1 h-2 rounded-full accent-indigo-500 cursor-pointer"
+                  />
+                  <span className="text-xs text-slate-500 shrink-0">15s</span>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {[2000, 4000, 6000, 8000, 10000, 12000].map(ms => (
+                    <button
+                      key={ms}
+                      type="button"
+                      onClick={() => setSiteConfig(prev => ({ ...prev, heroSlideInterval: String(ms) }))}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
+                        Number(siteConfig.heroSlideInterval) === ms
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
+                      }`}
+                    >
+                      {ms / 1000}s
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Tiempo entre cambio automático de slides. Solo aplica si hay más de un slide y el usuario no está sobre la imagen.
+                </p>
+              </div>
+            </CardContent>
+
+            <CardContent className="space-y-6 pt-0">
               {heroSlidesList.map((slide, idx) => (
                 <div
                   key={slide.id}

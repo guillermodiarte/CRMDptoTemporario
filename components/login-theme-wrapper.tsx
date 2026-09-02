@@ -8,9 +8,11 @@ export function LoginThemeWrapper({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("crm-admin-theme-preference");
+      // Apply theme class before React hydration completes
       if (saved === "dark") {
         document.documentElement.classList.add("dark");
       } else {
+        // Explicitly remove dark class (reset to light)
         document.documentElement.classList.remove("dark");
       }
     } catch (e) {
@@ -19,5 +21,26 @@ export function LoginThemeWrapper({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  return <div className="w-full">{children}</div>;
+  // Use inline script approach to prevent flash before React hydrates
+  return (
+    <>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              try {
+                var theme = localStorage.getItem('crm-admin-theme-preference');
+                if (theme === 'dark') {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch(e) {}
+            })();
+          `,
+        }}
+      />
+      <div className="w-full">{children}</div>
+    </>
+  );
 }

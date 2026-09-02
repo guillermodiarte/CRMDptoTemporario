@@ -55,7 +55,7 @@ export default async function DepartamentosPage() {
 
   return (
     <>
-      <PublicNavbar siteName={config.siteName} logoUrl={config.logoUrl} />
+      <PublicNavbar siteName={config.siteName} logoUrl={config.logoUrl} logoUrlDark={config.logoUrlDark} logoSize={config.logoSize} />
       <DepartmentsGallery departments={activeDepartments} config={config} />
     </>
   );

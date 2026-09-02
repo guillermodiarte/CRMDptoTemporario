@@ -493,14 +493,15 @@ export function PublicLandingClient({
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isHoveringHero, setIsHoveringHero] = useState(false);
 
-  // Auto-advance slides every 6 seconds if not hovered and multiple slides exist
+  // Auto-advance slides using configured interval (default 6s)
+  const slideInterval = Math.max(2000, Math.min(15000, Number(config.heroSlideInterval) || 6000));
   useEffect(() => {
     if (parsedHeroSlides.length <= 1 || isHoveringHero) return;
     const interval = setInterval(() => {
       setCurrentSlideIndex((prev) => (prev + 1) % parsedHeroSlides.length);
-    }, 6000);
+    }, slideInterval);
     return () => clearInterval(interval);
-  }, [parsedHeroSlides.length, isHoveringHero]);
+  }, [parsedHeroSlides.length, isHoveringHero, slideInterval]);
 
   const nextSlide = () => {
     setCurrentSlideIndex((prev) => (prev + 1) % parsedHeroSlides.length);
@@ -516,7 +517,7 @@ export function PublicLandingClient({
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors duration-300">
       {/* Dynamic Hero Slider Section */}
       <div 
-        className="relative bg-slate-950 text-white overflow-hidden min-h-[420px] sm:min-h-[480px] md:min-h-[520px] flex items-center justify-center pt-16 transition-colors duration-300 group/hero"
+        className="relative bg-slate-950 text-white overflow-hidden h-[500px] sm:h-[560px] md:h-[620px] flex items-center justify-center pt-16 pb-32 transition-colors duration-300 group/hero"
         onMouseEnter={() => setIsHoveringHero(true)}
         onMouseLeave={() => setIsHoveringHero(false)}
       >
@@ -553,7 +554,7 @@ export function PublicLandingClient({
         })}
 
         {/* Content of the active slide */}
-        <div className="relative z-20 w-full max-w-[1600px] mx-auto px-4 py-20 sm:px-6 lg:px-8 text-center">
+        <div className="relative z-20 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
           {parsedHeroSlides.map((slide, idx) => {
             const isActive = idx === currentSlideIndex;
             if (!isActive) return null;
@@ -599,8 +600,8 @@ export function PublicLandingClient({
               <ChevronRight className="w-5 h-5" />
             </button>
 
-            {/* Pagination Indicators / Dots */}
-            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5">
+            {/* Pagination Indicators / Dots — positioned high enough to not overlap the search form */}
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5">
               {parsedHeroSlides.map((_, idx) => (
                 <button
                   key={idx}
@@ -617,18 +618,25 @@ export function PublicLandingClient({
           </>
         )}
 
-        {/* Wave Divider */}
-        <div className="absolute bottom-0 left-0 right-0 translate-y-[1px] z-20 pointer-events-none">
-          <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full text-slate-50 dark:text-slate-950 transition-colors duration-300">
-            <path d="M0 60L60 50C120 40 240 20 360 16.7C480 13.3 600 26.7 720 30C840 33.3 960 26.7 1080 23.3C1200 20 1320 20 1380 20L1440 20V60H1380C1320 60 1200 60 1080 60C960 60 840 60 720 60C600 60 480 60 360 60C240 60 120 60 60 60H0Z" fill="currentColor" />
-          </svg>
-        </div>
+        {/* Bottom Gradient Fade — uniform in both light and dark modes */}
+        {/* Transparent → semi → page background, so hero image fades naturally into content */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-40 z-10 pointer-events-none"
+          style={{
+            background: "linear-gradient(to bottom, transparent 0%, transparent 30%, var(--hero-fade-color, rgba(248,250,252,0)) 60%, var(--hero-fade-end) 100%)",
+          }}
+        />
+        {/* Inline CSS vars per theme: light = slate-50, dark = slate-950 */}
+        <style>{`
+          :root { --hero-fade-end: rgb(248,250,252); }
+          .dark { --hero-fade-end: rgb(2,6,23); }
+        `}</style>
       </div>
 
-      <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
+      <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-30">
 
         {/* Search / Filter Section */}
-        <div ref={searchBarRef} className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 sm:p-7 mb-8 border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-end transition-colors duration-300 relative z-20">
+        <div ref={searchBarRef} className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 sm:p-7 mb-8 border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-end transition-colors duration-300 relative z-30">
           <div className="flex-1 w-full">
             <label className="block text-sm font-bold text-slate-800 dark:text-slate-100 mb-1.5 tracking-wide">
               Check-in <span className="text-xs font-medium text-slate-500 dark:text-slate-400">(Fecha de Ingreso)</span>

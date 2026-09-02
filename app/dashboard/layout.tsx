@@ -46,6 +46,8 @@ export default async function DashboardLayout({
   const session = await auth();
   const config = await getSiteConfig();
   const adminLogo = config.adminLogoUrl || "/uploads/logos/logo-diarte-horizontal.png";
+  const adminLogoDark = config.adminLogoUrlDark || adminLogo;
+  const adminLogoSize = Number(config.adminLogoSize) || 46;
 
   // Optimización: Fetch user data server-side to avoid huge cookies
   const user = session?.user?.id ? await prisma.user.findUnique({
@@ -102,12 +104,24 @@ export default async function DashboardLayout({
       <div className="grid min-h-screen w-full md:grid-cols-[240px_1fr] lg:grid-cols-[280px_1fr]">
         <div className="hidden border-r bg-muted/40 md:block">
           <div className="flex h-full max-h-screen flex-col gap-2">
-            <div className="flex h-14 items-center justify-center border-b px-4 lg:h-[60px] lg:px-6">
-              <Link href="/" className="flex items-center">
+            <div
+              className="flex items-center justify-center border-b px-4 lg:px-6 transition-all duration-200"
+              style={{ minHeight: `${Math.max(60, adminLogoSize + 16)}px`, padding: "8px 16px" }}
+            >
+              <Link href="/" className="flex items-center justify-center w-full">
+                {/* Light mode logo */}
                 <img
                   src={adminLogo}
-                  alt="Alojamientos Di'Arte"
-                  className="h-[46px] w-auto max-w-[210px] object-contain"
+                  alt={config.siteName || "Alojamientos Di'Arte"}
+                  style={{ height: `${adminLogoSize}px`, maxHeight: `${adminLogoSize}px` }}
+                  className="w-auto max-w-[220px] object-contain transition-all duration-200 dark:hidden"
+                />
+                {/* Dark mode logo */}
+                <img
+                  src={adminLogoDark}
+                  alt={config.siteName || "Alojamientos Di'Arte"}
+                  style={{ height: `${adminLogoSize}px`, maxHeight: `${adminLogoSize}px` }}
+                  className="w-auto max-w-[220px] object-contain transition-all duration-200 hidden dark:block"
                 />
               </Link>
             </div>
@@ -229,7 +243,15 @@ export default async function DashboardLayout({
         </div>
         <div className="flex flex-col">
           <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-muted/40 px-4 backdrop-blur-md lg:h-[60px] lg:px-6">
-            <MobileNav role={role} user={userForMenu} showParking={showParking} isSuperAdmin={user?.isSuperAdmin} />
+            <MobileNav
+              role={role}
+              user={userForMenu}
+              showParking={showParking}
+              isSuperAdmin={user?.isSuperAdmin}
+              adminLogo={adminLogo}
+              adminLogoDark={adminLogoDark}
+              adminLogoSize={adminLogoSize}
+            />
             <div className="w-full flex-1">
               <form action="/dashboard/search">
                 <div className="relative">

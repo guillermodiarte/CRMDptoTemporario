@@ -36,12 +36,19 @@ export const SITE_CONFIG_DEFAULTS = {
   // Upload a custom logo from Configuración → Identidad de Marca.
   // Leave empty to use the default Building2 icon in the navbar.
   logoUrl: "",
+  logoUrlDark: "",
+  logoSize: "40", // px height for navbar logo
   adminLogoUrl: "/uploads/logos/logo-diarte-horizontal.png",
+  adminLogoUrlDark: "",
+  adminLogoSize: "46", // px height for admin sidebar logo
   loginBgUrl: "/uploads/general/login-bg.png",
   loginLogoUrl: "/uploads/logos/logo-diarte-vertical.png",
+  loginLogoUrlDark: "",
+  loginLogoSize: "208", // px width for login card logo (w-52 = 208px)
 
   // Slides / Carrusel de Portada
   heroSlides: JSON.stringify(DEFAULT_HERO_SLIDES),
+  heroSlideInterval: "6000", // ms between slides (2000-15000)
 
   // Contacto principal
   phoneDisplay: "+54 9 351 314-6924",

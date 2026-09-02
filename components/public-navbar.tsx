@@ -10,11 +10,15 @@ import { ThemeToggle } from "./theme-toggle";
 interface PublicNavbarProps {
   siteName?: string;
   logoUrl?: string;
+  logoUrlDark?: string;
+  logoSize?: string;
 }
 
 export function PublicNavbar({ 
   siteName = SITE_CONFIG_DEFAULTS.siteName,
   logoUrl = SITE_CONFIG_DEFAULTS.logoUrl,
+  logoUrlDark = SITE_CONFIG_DEFAULTS.logoUrlDark,
+  logoSize = SITE_CONFIG_DEFAULTS.logoSize,
 }: PublicNavbarProps) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -33,6 +37,8 @@ export function PublicNavbar({
     { href: "/contacto", label: "Contacto", icon: <Phone className="w-4 h-4" /> },
   ];
 
+  const currentLogoSize = Number(logoSize) || 40;
+
   return (
     <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
       scrolled || mobileMenuOpen
@@ -40,15 +46,35 @@ export function PublicNavbar({
         : "bg-slate-900/70 dark:bg-slate-950/70 backdrop-blur-md border-b border-white/10 dark:border-white/5"
     }`}>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div
+          className="flex items-center justify-between transition-all duration-200"
+          style={{ minHeight: `${Math.max(64, currentLogoSize + 16)}px`, padding: "6px 0" }}
+        >
           <div className="flex items-center">
-            <Link href="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
+          <Link href="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
               {logoUrl ? (
-                <img src={logoUrl} alt={siteName} className="h-8 w-8 object-contain rounded-full bg-white/10" />
+                <>
+                  {/* Light mode logo */}
+                  <img
+                    src={logoUrl}
+                    alt={siteName}
+                    style={{ height: `${currentLogoSize}px`, maxHeight: `${currentLogoSize}px` }}
+                    className="w-auto object-contain transition-all duration-200 dark:hidden"
+                  />
+                  {/* Dark mode logo (fallback to light if not configured) */}
+                  <img
+                    src={logoUrlDark || logoUrl}
+                    alt={siteName}
+                    style={{ height: `${currentLogoSize}px`, maxHeight: `${currentLogoSize}px` }}
+                    className="w-auto object-contain transition-all duration-200 hidden dark:block"
+                  />
+                </>
               ) : (
-                <Building2 className="w-6 h-6 text-sky-400" />
+                <>
+                  <Building2 className="w-6 h-6 text-sky-400" />
+                  <span className="font-bold text-lg sm:text-xl tracking-tight">{siteName}</span>
+                </>
               )}
-              <span className="font-bold text-lg sm:text-xl tracking-tight">{siteName}</span>
             </Link>
           </div>
 
