@@ -97,6 +97,32 @@ const parseDeptImages = (imagesStr: any): string[] => {
   }
 };
 
+// Smooth scroll helper with custom duration and easing
+function smoothScrollTo(targetY: number, duration: number = 850) {
+  if (typeof window === "undefined") return;
+  const startY = window.scrollY;
+  const diff = targetY - startY;
+  if (Math.abs(diff) < 10) return;
+  const startTime = performance.now();
+
+  function step(currentTime: number) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    // Easing: easeInOutCubic
+    const ease = progress < 0.5
+      ? 4 * progress * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+    window.scrollTo(0, startY + diff * ease);
+
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
 export function PublicLandingClient({
   initialDepartments,
   config = SITE_CONFIG_DEFAULTS,
@@ -119,22 +145,50 @@ export function PublicLandingClient({
     people: number;
   } | null>(null);
 
+  const searchBarRef = useRef<HTMLDivElement>(null);
+  const peopleSelectRef = useRef<HTMLSelectElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
-  const hasScrolledToResults = useRef(false);
 
   const isDatesSet = !!(checkInDate && checkOutDate);
   const isMissingPeople = isDatesSet && peopleCount === '';
   const isFilterComplete = isDatesSet && peopleCount !== '';
 
+  const datesKey = `${checkInDate ? checkInDate.getTime() : ''}_${checkOutDate ? checkOutDate.getTime() : ''}`;
+  const peopleKey = `${peopleCount}`;
+  const prevFilterKey = useRef('');
+
   useEffect(() => {
-    if (isFilterComplete && !hasScrolledToResults.current) {
-      hasScrolledToResults.current = true;
-      const timer = setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-      return () => clearTimeout(timer);
+    const currentKey = `${datesKey}_${peopleKey}`;
+    if (currentKey === prevFilterKey.current) return;
+    prevFilterKey.current = currentKey;
+
+    if (checkInDate && checkOutDate) {
+      if (peopleCount === '') {
+        // Missing people: scroll UP smoothly to the red alert in the search bar
+        const timer = setTimeout(() => {
+          if (searchBarRef.current) {
+            const rect = searchBarRef.current.getBoundingClientRect();
+            const targetY = rect.top + window.scrollY - 100;
+            smoothScrollTo(targetY, 800);
+            setTimeout(() => {
+              peopleSelectRef.current?.focus();
+            }, 850);
+          }
+        }, 150);
+        return () => clearTimeout(timer);
+      } else {
+        // Both dates and people selected: scroll DOWN slowly and smoothly to results
+        const timer = setTimeout(() => {
+          if (resultsRef.current) {
+            const rect = resultsRef.current.getBoundingClientRect();
+            const targetY = rect.top + window.scrollY - 80;
+            smoothScrollTo(targetY, 950);
+          }
+        }, 200);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [isFilterComplete]);
+  }, [datesKey, peopleKey, checkInDate, checkOutDate, peopleCount]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -430,7 +484,7 @@ export function PublicLandingClient({
       <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
 
         {/* Search / Filter Section */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-6 mb-8 border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-end transition-colors duration-300">
+        <div ref={searchBarRef} className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-6 mb-8 border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-end transition-colors duration-300">
           <div className="flex-1 w-full">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Check-in (Fecha de Ingreso)</label>
             <Popover>
@@ -487,6 +541,7 @@ export function PublicLandingClient({
               )}
             </div>
             <select
+              ref={peopleSelectRef}
               value={peopleCount}
               onChange={e => setPeopleCount(e.target.value === '' ? '' : Number(e.target.value))}
               className={`w-full rounded-xl px-4 py-2.5 outline-none transition-all cursor-pointer appearance-none ${
