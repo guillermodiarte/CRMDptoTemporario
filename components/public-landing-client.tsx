@@ -628,14 +628,16 @@ export function PublicLandingClient({
       <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
 
         {/* Search / Filter Section */}
-        <div ref={searchBarRef} className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-6 mb-8 border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-end transition-colors duration-300">
+        <div ref={searchBarRef} className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 sm:p-7 mb-8 border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-end transition-colors duration-300 relative z-20">
           <div className="flex-1 w-full">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Check-in (Fecha de Ingreso)</label>
+            <label className="block text-sm font-bold text-slate-800 dark:text-slate-100 mb-1.5 tracking-wide">
+              Check-in <span className="text-xs font-medium text-slate-500 dark:text-slate-400">(Fecha de Ingreso)</span>
+            </label>
             <Popover>
               <PopoverTrigger asChild>
-                <button className="w-full border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-left bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 flex items-center justify-between transition-colors cursor-pointer">
-                  {checkInDate ? format(checkInDate, 'dd/MM/yyyy') : <span className="text-slate-400 dark:text-slate-500">Seleccionar fecha</span>}
-                  <CalendarDays className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                <button className="w-full border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-left bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700/80 flex items-center justify-between transition-colors cursor-pointer shadow-xs">
+                  {checkInDate ? <span className="font-semibold">{format(checkInDate, 'dd/MM/yyyy')}</span> : <span className="text-slate-400 dark:text-slate-400 font-medium">Seleccionar fecha</span>}
+                  <CalendarDays className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -650,12 +652,14 @@ export function PublicLandingClient({
             </Popover>
           </div>
           <div className="flex-1 w-full">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Check-out (Fecha de Salida)</label>
+            <label className="block text-sm font-bold text-slate-800 dark:text-slate-100 mb-1.5 tracking-wide">
+              Check-out <span className="text-xs font-medium text-slate-500 dark:text-slate-400">(Fecha de Salida)</span>
+            </label>
             <Popover>
               <PopoverTrigger asChild>
-                <button className="w-full border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-left bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 flex items-center justify-between transition-colors cursor-pointer">
-                  {checkOutDate ? format(checkOutDate, 'dd/MM/yyyy') : <span className="text-slate-400 dark:text-slate-500">Seleccionar fecha</span>}
-                  <CalendarDays className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                <button className="w-full border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-left bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700/80 flex items-center justify-between transition-colors cursor-pointer shadow-xs">
+                  {checkOutDate ? <span className="font-semibold">{format(checkOutDate, 'dd/MM/yyyy')}</span> : <span className="text-slate-400 dark:text-slate-400 font-medium">Seleccionar fecha</span>}
+                  <CalendarDays className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -670,17 +674,17 @@ export function PublicLandingClient({
             </Popover>
           </div>
           <div className="flex-1 w-full relative">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-sm font-bold text-slate-800 dark:text-slate-100 mb-1.5 tracking-wide">
               Personas {isMissingPeople && <span className="text-red-500 font-bold">*</span>}
             </label>
             <select
               ref={peopleSelectRef}
               value={peopleCount}
               onChange={e => setPeopleCount(e.target.value === '' ? '' : Number(e.target.value))}
-              className={`w-full rounded-xl px-4 py-2.5 outline-none transition-all cursor-pointer appearance-none ${
+              className={`w-full rounded-xl px-4 py-2.5 outline-none transition-all cursor-pointer appearance-none shadow-xs ${
                 isMissingPeople
-                  ? "border-2 border-red-500 bg-red-50/40 dark:bg-red-950/20 text-red-900 dark:text-red-200 ring-4 ring-red-500/15 font-medium"
-                  : "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:border-sky-500 hover:bg-slate-50 dark:hover:bg-slate-700/80"
+                  ? "border-2 border-red-500 bg-red-50/40 dark:bg-red-950/20 text-red-900 dark:text-red-200 ring-4 ring-red-500/15 font-semibold"
+                  : "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold focus:border-sky-500 hover:bg-slate-50 dark:hover:bg-slate-700/80"
               }`}
             >
               <option value="" disabled hidden>Seleccionar cantidad</option>
@@ -701,7 +705,7 @@ export function PublicLandingClient({
           </div>
           <div className="w-full md:w-auto">
             <button
-              className="w-full md:w-auto px-8 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white rounded-xl font-medium transition-colors cursor-pointer"
+              className="w-full md:w-auto px-8 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white rounded-xl font-semibold transition-all cursor-pointer shadow-sm hover:shadow"
               onClick={() => {
                 setCheckInDate(undefined);
                 setCheckOutDate(undefined);

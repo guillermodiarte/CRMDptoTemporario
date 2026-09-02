@@ -46,23 +46,23 @@ export function SessionSelector({ sessions }: SessionSelectorProps) {
       {sessions.map((membership) => (
         <Card
           key={membership.sessionId}
-          className="cursor-pointer hover:border-primary transition-all hover:shadow-md"
+          className="cursor-pointer border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-sky-500 transition-all hover:shadow-md"
           onClick={() => !loadingId && handleSelect(membership.sessionId)}
         >
           <CardHeader>
-            <CardTitle className="text-xl flex items-center justify-between">
+            <CardTitle className="text-xl flex items-center justify-between text-slate-900 dark:text-slate-100">
               {membership.session.name}
-              {loadingId === membership.sessionId && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loadingId === membership.sessionId && <Loader2 className="h-4 w-4 animate-spin text-sky-500" />}
             </CardTitle>
-            <CardDescription>
-              Rol: <span className="font-medium text-foreground">
+            <CardDescription className="text-slate-500 dark:text-slate-400">
+              Rol: <span className="font-semibold text-slate-800 dark:text-slate-200">
                 {membership.role === "ADMIN" ? "Administrador" : membership.role === "VISUALIZER" ? "Visualizador" : membership.role}
               </span>
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button
-              className="w-full"
+              className="w-full cursor-pointer font-semibold"
               variant={loadingId === membership.sessionId ? "default" : "secondary"}
               disabled={!!loadingId}
             >

@@ -9,9 +9,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
-import { Loader2, Save, Download, Upload } from "lucide-react";
-
-
+import {
+  Loader2,
+  Save,
+  Download,
+  Upload,
+  CheckCircle2,
+  AlertCircle,
+  Plus,
+  Trash2,
+  Pencil,
+  Power,
+  PowerOff,
+  FileSpreadsheet,
+  Globe,
+  MessageSquare,
+  PhoneCall,
+  Mail,
+  MapPin,
+  ArrowUp,
+  ArrowDown,
+  Image as ImageIcon,
+  Layers,
+  Eye,
+  Settings,
+  Package,
+  Sparkles,
+  Sliders,
+  Send,
+  FolderOpen,
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -23,9 +50,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, AlertCircle, Plus, Trash2, Pencil, Power, PowerOff, FileSpreadsheet, Globe, MessageSquare, PhoneCall, Mail, MapPin, ArrowUp, ArrowDown, Image as ImageIcon, Layers, Eye } from "lucide-react";
 import Papa from "papaparse";
-// removed autoTable
 import { ImportPreviewModal, ImportPreviewRow, ImportStats } from "./import-preview-modal";
 import {
   DropdownMenu,
@@ -35,13 +60,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-
 import { Switch } from "@/components/ui/switch";
 import { SiteConfig, SITE_CONFIG_DEFAULTS, HeroSlide, DEFAULT_HERO_SLIDES } from "@/lib/site.config";
+import { MediaPickerModal } from "./media-picker-modal";
 
 interface SettingsFormProps {
   activeParkingCount?: number;
 }
+
+type TabType = "general" | "insumos" | "identidad" | "slides" | "contacto" | "smtp";
 
 export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
   const { data: session } = useSession();
@@ -51,6 +78,14 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
   // SuperAdmin detection
   const userEmail = session?.user?.email?.toLowerCase().trim();
   const isSuperAdmin = userEmail === "guillermo.diarte@gmail.com" || (session?.user as any)?.isSuperAdmin === true;
+
+  // Active Tab State
+  const [activeTab, setActiveTab] = useState<TabType>("general");
+
+  // Media Picker State
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerTarget, setPickerTarget] = useState<{ field: string; slideId?: string } | null>(null);
+  const [pickerFolder, setPickerFolder] = useState<string>("slides");
 
   // Site Config State (SuperAdmin only)
   const [siteConfig, setSiteConfig] = useState<SiteConfig>(SITE_CONFIG_DEFAULTS);
@@ -126,6 +161,35 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
     fetchData();
   }, [isSuperAdmin]);
 
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startYear: parseInt(startYear),
+          endYear: parseInt(endYear),
+          showParking,
+          cleaningFee: parseFloat(cleaningFee) || 0,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Error al guardar la configuración");
+
+      setSuccess("Configuración guardada exitosamente.");
+      router.refresh();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveSiteConfig = async () => {
     setSavingSiteConfig(true);
     setError(null);
@@ -140,14 +204,14 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
       if (!res.ok) {
         const errorText = await res.text();
-        throw new Error(errorText || "Failed to save site config");
+        throw new Error(errorText || "Error al guardar la configuración del sitio");
       }
 
       const data = await res.json();
       if (data.config) {
         setSiteConfig(prev => ({ ...SITE_CONFIG_DEFAULTS, ...prev, ...data.config }));
       }
-      setSuccess("Configuración del sitio público guardada correctamente. Los cambios ya son visibles.");
+      setSuccess("Configuración del sitio público guardada correctamente.");
       router.refresh();
       setTimeout(() => setSuccess(null), 4000);
     } catch (err: any) {
@@ -157,33 +221,8 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
       setSavingSiteConfig(false);
     }
   };
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
 
-    setSavingSiteConfig(true);
-    setError(null);
-    try {
-      const formData = new FormData();
-      formData.append("files", file);
-      
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Error al subir el logo");
-      
-      const data = await res.json();
-      if (data.urls && data.urls.length > 0) {
-        setSiteConfig(prev => ({ ...prev, logoUrl: data.urls[0] }));
-        setSuccess("Logo subido correctamente. No olvides guardar los cambios.");
-        setTimeout(() => setSuccess(null), 3000);
-      }
-    } catch (err: any) {
-      setError(err?.message || "Error al subir el logo");
-    } finally {
-      setSavingSiteConfig(false);
-    }
-  };
-
-  // Hero Slides Helpers
+  // ─── Hero Slides Helpers ──────────────────────────────────────────
   const heroSlidesList: HeroSlide[] = (() => {
     try {
       if (siteConfig.heroSlides) {
@@ -238,6 +277,56 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
     updateHeroSlides(list);
   };
 
+  // ─── Media Picker Callback ────────────────────────────────────────
+  const handleMediaSelected = (url: string) => {
+    if (!pickerTarget) return;
+
+    if (pickerTarget.field === "logoUrl") {
+      setSiteConfig(prev => ({ ...prev, logoUrl: url }));
+    } else if (pickerTarget.field === "loginBgUrl") {
+      setSiteConfig(prev => ({ ...prev, loginBgUrl: url }));
+    } else if (pickerTarget.field === "loginLogoUrl") {
+      setSiteConfig(prev => ({ ...prev, loginLogoUrl: url }));
+    } else if (pickerTarget.field === "slideImage" && pickerTarget.slideId) {
+      handleUpdateSlide(pickerTarget.slideId, { image: url });
+    }
+  };
+
+  const openPicker = (field: string, folder = "slides", slideId?: string) => {
+    setPickerTarget({ field, slideId });
+    setPickerFolder(folder);
+    setPickerOpen(true);
+  };
+
+  // ─── Direct Image Uploads for Site Config ─────────────────────────
+  const handleDirectUpload = async (field: "logoUrl" | "loginBgUrl" | "loginLogoUrl", folder: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSavingSiteConfig(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("files", file);
+      formData.append("folder", folder);
+
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Error al subir archivo");
+
+      const data = await res.json();
+      if (data.urls && data.urls.length > 0) {
+        setSiteConfig(prev => ({ ...prev, [field]: data.urls[0] }));
+        setSuccess("Imagen subida correctamente. Recordá guardar los cambios.");
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Error al subir archivo");
+    } finally {
+      setSavingSiteConfig(false);
+      e.target.value = "";
+    }
+  };
+
   const handleSlideImageUpload = async (slideId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -247,167 +336,87 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
     try {
       const formData = new FormData();
       formData.append("files", file);
+      formData.append("folder", "slides");
 
       const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Error al subir imagen");
+      if (!res.ok) throw new Error("Error al subir la imagen del slide");
 
       const data = await res.json();
       if (data.urls && data.urls.length > 0) {
         handleUpdateSlide(slideId, { image: data.urls[0] });
-        setSuccess("Imagen subida al slide. Guardá los cambios para publicarla.");
+        setSuccess("Imagen subida correctamente.");
         setTimeout(() => setSuccess(null), 3000);
       }
     } catch (err: any) {
-      setError(err?.message || "Error al subir imagen");
+      setError(err?.message || "Error al subir la imagen");
     } finally {
       setSavingSiteConfig(false);
+      e.target.value = "";
     }
   };
 
-  const handleTestSmtp = async () => {
-    setTestingSmtp(true);
-    setSmtpTestResult(null);
-    try {
-      const res = await fetch("/api/contact/test-smtp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          host: siteConfig.smtpHost,
-          port: siteConfig.smtpPort,
-          user: siteConfig.smtpUser,
-          pass: siteConfig.smtpPassword,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSmtpTestResult({ success: true, message: data.message });
-      } else {
-        setSmtpTestResult({ success: false, message: data.error || "Error al conectar con Hostinger." });
-      }
-    } catch (e: any) {
-      setSmtpTestResult({ success: false, message: e?.message || "Error al enviar la prueba." });
-    } finally {
-      setTestingSmtp(false);
-    }
-  };
-
-  const handleSaveSettings = async () => {
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-
-    const start = parseInt(startYear);
-    const end = parseInt(endYear);
-
-    if (isNaN(start) || isNaN(end) || start < 2020 || end > 2100 || end < start) {
-      setError("Años inválidos. Deben ser números entre 2020 y 2100, y fin >= inicio.");
-      setSaving(false);
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          startYear,
-          endYear,
-          showParking,
-          cleaningFee: Number(cleaningFee) || 0
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed");
-      setSuccess("Configuración de calendario guardada.");
-      router.refresh();
-      setTimeout(() => setSuccess(null), 3000);
-    } catch {
-      setError("Error al guardar.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleParkingToggle = async (val: boolean) => {
-    setShowParking(val);
-    setSaving(true);
-
-    // Optimistic UI update already happened via setShowParking
-    // Now trigger background save
-    try {
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          startYear,
-          endYear,
-          showParking: val
-        }),
-      });
-
-      if (!res.ok) {
-        // Revert on failure
-        setShowParking(!val);
-        throw new Error("Failed");
-      }
-
-      router.refresh();
-      setSuccess("Visibilidad de cocheras actualizada.");
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (e) {
-      console.error(e);
-      setError("Error al guardar preferencia.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
+  // ─── Supplies Handlers ────────────────────────────────────────────
   const handleSaveSupply = async () => {
     if (!newSupplyName || !newSupplyCost) return;
+    try {
+      const cost = parseFloat(newSupplyCost);
+      if (isNaN(cost)) return;
 
-    if (editingSupply) {
-      // Update existing
-      try {
+      if (editingSupply) {
         const res = await fetch("/api/supplies", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: editingSupply.id,
-            name: newSupplyName,
-            cost: newSupplyCost,
-            isActive: editingSupply.isActive
-          })
+          body: JSON.stringify({ id: editingSupply.id, name: newSupplyName, cost }),
         });
-
         if (res.ok) {
-          const updatedSupply = await res.json();
-          setSupplies(supplies.map(s => s.id === updatedSupply.id ? updatedSupply : s));
-          handleCancelEdit();
-          setSuccess("Insumo actualizado.");
-          setTimeout(() => setSuccess(null), 3000);
+          const updated = await res.json();
+          setSupplies(supplies.map(s => s.id === updated.id ? updated : s));
+          setEditingSupply(null);
+          setNewSupplyName("");
+          setNewSupplyCost("");
         }
-      } catch {
-        setError("Error al actualizar insumo.");
-      }
-    } else {
-      // Create new
-      try {
+      } else {
         const res = await fetch("/api/supplies", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: newSupplyName, cost: newSupplyCost })
+          body: JSON.stringify({ name: newSupplyName, cost }),
         });
         if (res.ok) {
-          const newSupply = await res.json();
-          setSupplies([newSupply, ...supplies]);
+          const created = await res.json();
+          setSupplies([...supplies, created]);
           setNewSupplyName("");
           setNewSupplyCost("");
-          setSuccess("Insumo agregado.");
-          setTimeout(() => setSuccess(null), 3000);
         }
-      } catch {
-        setError("Error al agregar insumo.");
       }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleSupply = async (supply: any) => {
+    try {
+      const res = await fetch("/api/supplies", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: supply.id, isActive: !supply.isActive }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setSupplies(supplies.map(s => s.id === updated.id ? updated : s));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteSupply = async (id: string) => {
+    try {
+      const res = await fetch(`/api/supplies?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setSupplies(supplies.filter(s => s.id !== id));
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -423,214 +432,27 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
     setNewSupplyCost("");
   };
 
-  const handleToggleSupply = async (supply: any) => {
-    try {
-      const res = await fetch("/api/supplies", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: supply.id,
-          name: supply.name,
-          cost: supply.cost,
-          isActive: !supply.isActive
-        })
-      });
+  const totalSuppliesCost = supplies
+    .filter(s => s.isActive)
+    .reduce((acc, s) => acc + (s.cost || 0), 0);
 
-      if (res.ok) {
-        const updatedSupply = await res.json();
-        setSupplies(supplies.map(s => s.id === updatedSupply.id ? updatedSupply : s));
-        setSuccess(updatedSupply.isActive ? "Insumo activado." : "Insumo desactivado.");
-        setTimeout(() => setSuccess(null), 3000);
-      }
-    } catch {
-      setError("Error al cambiar estado.");
-    }
-  };
-
-  const handleDeleteSupply = (id: string) => {
-    setSupplyToDelete(id);
-  };
-
-  const confirmDeleteSupply = async () => {
-    if (!supplyToDelete) return;
-    try {
-      await fetch(`/api/supplies?id=${supplyToDelete}`, { method: "DELETE" });
-      setSupplies(supplies.filter(s => s.id !== supplyToDelete));
-      setSuccess("Insumo eliminado.");
-      setTimeout(() => setSuccess(null), 3000);
-    } catch {
-      setError("Error al eliminar.");
-    } finally {
-      setSupplyToDelete(null);
-    }
-  };
-
-
-  // --- Supplies Import/Export Logic ---
-
-  const handleExportSupplies = () => {
-    const headers = "Nombre,Costo,Activo";
-    const rows = supplies.map(s => `"${s.name.replace(/"/g, '""')}",${s.cost},${s.isActive ? "SI" : "NO"}`);
-    const csvContent = "\uFEFF" + [headers, ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `configuracion_insumos_${format(new Date(), "MMMM_yyyy", { locale: es })}.csv`;
-    link.click();
-  };
-
-  const handleSuppliesFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setPreviewRows([]);
-    setStats({ total: 0, new: 0, updated: 0, same: 0, errors: 0 });
-
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (result) => {
-        // BOM Fix
-        const normalizedData = result.data.map((row: any) => {
-          const newRow: any = {};
-          Object.keys(row).forEach(key => {
-            const cleanKey = key.trim().replace(/^\uFEFF/, "");
-            newRow[cleanKey] = row[key];
-          });
-          return newRow;
-        });
-        validateAndSetSuppliesPreview(normalizedData);
-        setImportOpen(true);
-      },
-      error: (err) => alert("Error: " + err.message)
-    });
-    e.target.value = "";
-  };
-
-  const validateAndSetSuppliesPreview = (rows: any[]) => {
-    const preview: ImportPreviewRow[] = [];
-    let statsParams = { total: rows.length, new: 0, updated: 0, same: 0, errors: 0 };
-
-    rows.forEach(row => {
-      const entry: any = {};
-      const rowErrors: string[] = [];
-
-      // Map Keys
-      const keys = Object.keys(row);
-      const nameKey = keys.find(k => k.toLowerCase() === "nombre" || k.toLowerCase() === "name");
-      const costKey = keys.find(k => k.toLowerCase() === "costo" || k.toLowerCase() === "cost");
-      const activeKey = keys.find(k => k.toLowerCase() === "activo" || k.toLowerCase().includes("active"));
-
-      entry.name = row[nameKey || ""]?.trim();
-      entry.cost = row[costKey || ""];
-      const activeVal = row[activeKey || ""]?.toString().toLowerCase();
-      entry.isActive = ["si", "yes", "true", "1"].includes(activeVal);
-
-      if (!entry.name) rowErrors.push("Falta Nombre");
-      if (!entry.cost || isNaN(parseFloat(entry.cost))) rowErrors.push("Costo inválido");
-      else entry.cost = parseFloat(entry.cost);
-
-      if (rowErrors.length > 0) {
-        statsParams.errors++;
-        preview.push({ status: "ERROR", data: { ...entry, _errors: rowErrors } });
-      } else {
-        const existing = supplies.find(s => s.name.toLowerCase() === entry.name.toLowerCase());
-        if (existing) {
-          const costChanged = existing.cost !== entry.cost;
-          const activeChanged = existing.isActive !== entry.isActive;
-
-          if (costChanged || activeChanged) {
-            statsParams.updated++;
-            const diffs: any = {};
-            if (costChanged) diffs.cost = { old: existing.cost, new: entry.cost };
-            if (activeChanged) diffs.isActive = { old: existing.isActive, new: entry.isActive };
-
-            preview.push({
-              status: "UPDATE",
-              data: { ...entry, id: existing.id, _diff: diffs }
-            });
-          } else {
-            statsParams.same++;
-            preview.push({ status: "SAME", data: { ...entry, id: existing.id } });
-          }
-        } else {
-          statsParams.new++;
-          preview.push({ status: "NEW", data: entry });
-        }
-      }
-    });
-
-    setPreviewRows(preview);
-    setStats(statsParams);
-  };
-
-  const handleConfirmSuppliesImport = async (selectedRows: ImportPreviewRow[]) => {
-    setImporting(true);
-    let success = 0;
-    const errors: string[] = [];
-
-    const rowsToProcess = selectedRows.filter(r => r.status === "NEW" || r.status === "UPDATE" || r.status === "SAME");
-
-    for (const rowObj of rowsToProcess) {
-      const row = rowObj.data;
-      try {
-        if ((rowObj.status === "UPDATE" || rowObj.status === "SAME") && row.id) {
-          await fetch("/api/supplies", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: row.id, name: row.name, cost: row.cost, isActive: row.isActive })
-          });
-        } else {
-          await fetch("/api/supplies", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: row.name, cost: row.cost })
-          });
-        }
-        success++;
-      } catch (e: any) {
-        errors.push(`Error en ${row.name}: ${e.message}`);
-      }
-    }
-
-    // Refresh
-    const res = await fetch("/api/supplies");
-    if (res.ok) {
-      const data = await res.json();
-      setSupplies(data.supplies || []);
-    }
-
-    setImporting(false);
-    setImportOpen(false);
-    if (errors.length > 0) alert("Errores:\n" + errors.join("\n"));
-  };
-
-  // Calculate Total Active Supplies
-  const totalSuppliesCost = supplies.filter(s => s.isActive).reduce((acc, curr) => acc + curr.cost, 0);
-
-  // Backup Handlers
-  const handleExport = async () => {
+  // ─── Backup Handlers ──────────────────────────────────────────────
+  const handleExportBackup = async () => {
     setLoadingBackup(true);
     try {
       const res = await fetch("/api/backup");
-      if (!res.ok) throw new Error("Export failed");
-      const data = await res.json();
+      if (!res.ok) throw new Error("Error al exportar base de datos");
 
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `CRMDptoTemporario-BackupDatabase-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `backup_completo_${format(new Date(), "yyyyMMdd_HHmm")}.json`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      setSuccess("Backup descargado correctamente.");
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (e) {
-      console.error(e);
-      setError("Error al exportar backup.");
+      a.remove();
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoadingBackup(false);
     }
@@ -640,144 +462,400 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setBackupToRestore(file);
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        if (!json.data || !json.timestamp) throw new Error("Invalid format");
         setBackupContent(json);
-        setBackupToRestore(file);
-      } catch (e) {
-        setError("Archivo inválido.");
-        if (fileInputRef.current) fileInputRef.current.value = "";
+      } catch (err) {
+        setError("El archivo seleccionado no es un JSON válido");
+        setBackupToRestore(null);
       }
     };
     reader.readAsText(file);
   };
 
-  const confirmRestore = async () => {
+  const handleConfirmRestore = async () => {
     if (!backupContent) return;
+
     setLoadingBackup(true);
+    setError(null);
+    setSuccess(null);
+
     try {
       const res = await fetch("/api/backup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(backupContent)
+        body: JSON.stringify(backupContent),
       });
 
-      if (!res.ok) throw new Error("Import failed");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Error al restaurar");
+      }
 
-      setSuccess("Sistema restaurado correctamente. Recargando...");
+      setSuccess("Base de datos restaurada correctamente. Recargando...");
+      setBackupToRestore(null);
+      setBackupContent(null);
       setTimeout(() => {
         window.location.reload();
       }, 2000);
-    } catch (e) {
-      console.error(e);
-      setError("Error crítico al restaurar.");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
       setLoadingBackup(false);
-      setBackupToRestore(null);
+    }
+  };
+
+  // ─── SMTP Test ────────────────────────────────────────────────────
+  const handleTestSmtp = async () => {
+    setTestingSmtp(true);
+    setSmtpTestResult(null);
+    try {
+      const res = await fetch("/api/contact/test-smtp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          smtpHost: siteConfig.smtpHost,
+          smtpPort: siteConfig.smtpPort,
+          smtpUser: siteConfig.smtpUser,
+          smtpPassword: siteConfig.smtpPassword,
+          smtpFromName: siteConfig.smtpFromName,
+          recipient: siteConfig.email || siteConfig.smtpUser,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSmtpTestResult({ success: true, message: data.message || "Correo de prueba enviado con éxito." });
+      } else {
+        setSmtpTestResult({ success: false, message: data.error || "Falló la prueba SMTP." });
+      }
+    } catch (err: any) {
+      setSmtpTestResult({ success: false, message: err.message || "Error al conectar con el servidor SMTP." });
+    } finally {
+      setTestingSmtp(false);
     }
   };
 
   if (loading) {
-    return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Media Picker Modal */}
+      <MediaPickerModal
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={handleMediaSelected}
+        initialFolder={pickerFolder}
+      />
+
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>
-        <p className="text-muted-foreground">Administra los valores del sistema y los insumos globales.</p>
+        <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Configuración</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          Administra los valores del sistema, insumos globales y la web pública.
+        </p>
       </div>
 
-      {success && (
-        <Alert className="border-green-500 bg-green-50 text-green-900">
-          <CheckCircle2 className="h-4 w-4" />
-          <AlertTitle>Éxito</AlertTitle>
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
-
+      {/* Notifications */}
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="border-red-500/50 bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-200">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      {/* Layout Grid */}
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-3 items-start">
+      {success && (
+        <Alert className="border-emerald-500/50 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          <AlertTitle>Éxito</AlertTitle>
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
 
-        {/* Main Column: Supplies */}
-        <div className="md:col-span-2 space-y-6">
-          <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="space-y-1">
-                <CardTitle>Gastos de Insumos</CardTitle>
-                <CardDescription>Gestión de insumos globales.</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Download className="h-4 w-4" /> Exportar / Importar
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleExportSupplies}>
-                      <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => document.getElementById("supplies-file-upload")?.click()}>
-                      <Upload className="mr-2 h-4 w-4" /> Importar CSV
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <input
-                  id="supplies-file-upload"
-                  type="file"
-                  accept=".csv"
-                  className="hidden"
-                  onChange={handleSuppliesFileUpload}
+      {/* ── Submenu Horizontal Tabs (Like Edit Department Modal) ── */}
+      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-200/70 dark:bg-slate-800/80 rounded-2xl border border-slate-300/60 dark:border-slate-700/60 w-full overflow-x-auto shadow-xs">
+        <button
+          onClick={() => setActiveTab("general")}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
+            activeTab === "general"
+              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+          }`}
+        >
+          <Settings className="w-4 h-4 text-slate-500" /> General & Sistema
+        </button>
+
+        <button
+          onClick={() => setActiveTab("insumos")}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
+            activeTab === "insumos"
+              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+          }`}
+        >
+          <Package className="w-4 h-4 text-amber-500" /> Insumos Globales
+        </button>
+
+        {isSuperAdmin && (
+          <>
+            <button
+              onClick={() => setActiveTab("identidad")}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
+                activeTab === "identidad"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-sky-500" /> Identidad & Login
+            </button>
+
+            <button
+              onClick={() => setActiveTab("slides")}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
+                activeTab === "slides"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <ImageIcon className="w-4 h-4 text-indigo-500" /> Slides de Portada ({heroSlidesList.length})
+            </button>
+
+            <button
+              onClick={() => setActiveTab("contacto")}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
+                activeTab === "contacto"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <PhoneCall className="w-4 h-4 text-emerald-500" /> Contacto & Ubicación
+            </button>
+
+            <button
+              onClick={() => setActiveTab("smtp")}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
+                activeTab === "smtp"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <Mail className="w-4 h-4 text-violet-500" /> Correo SMTP
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* ── TAB 1: GENERAL & SISTEMA ── */}
+      {activeTab === "general" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-200">
+          {/* General Options */}
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <CardHeader>
+              <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Settings className="w-5 h-5 text-sky-500" /> Configuración General
+              </CardTitle>
+              <CardDescription className="text-slate-500 dark:text-slate-400">
+                Opciones operativas y rangos de calendario.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="cleaningFee" className="font-semibold text-slate-800 dark:text-slate-200">Gasto de Limpieza Global ($)</Label>
+                <Input
+                  id="cleaningFee"
+                  type="number"
+                  value={cleaningFee}
+                  onChange={(e) => setCleaningFee(e.target.value)}
+                  className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-medium"
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid w-full items-center gap-1.5">
+                  <Label htmlFor="startYear" className="font-semibold text-slate-800 dark:text-slate-200">Año Inicio</Label>
+                  <Input
+                    id="startYear"
+                    type="number"
+                    value={startYear}
+                    onChange={(e) => setStartYear(e.target.value)}
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+                <div className="grid w-full items-center gap-1.5">
+                  <Label htmlFor="endYear" className="font-semibold text-slate-800 dark:text-slate-200">Año Fin</Label>
+                  <Input
+                    id="endYear"
+                    type="number"
+                    value={endYear}
+                    onChange={(e) => setEndYear(e.target.value)}
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleSaveSettings} disabled={saving} className="bg-sky-600 hover:bg-sky-500 text-white font-semibold cursor-pointer">
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Guardar Configuración
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Menu Options & Backup */}
+          <div className="space-y-6">
+            {/* Menu Visibility */}
+            <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <CardHeader>
+                <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Sliders className="w-5 h-5 text-indigo-500" /> Menú del Sistema
+                </CardTitle>
+                <CardDescription className="text-slate-500 dark:text-slate-400">
+                  Visibilidad de módulos en el menú lateral.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-3.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/40">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="showParking" className="font-semibold text-slate-900 dark:text-slate-100">Módulo Cocheras</Label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Mostrar u ocultar la opción de Cocheras en el menú lateral.
+                    </p>
+                  </div>
+                  <Switch
+                    id="showParking"
+                    checked={showParking}
+                    onCheckedChange={(val) => {
+                      setShowParking(val);
+                      // Auto save on toggle
+                      fetch("/api/settings", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ showParking: val }),
+                      }).then(() => router.refresh());
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Database Backup */}
+            <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <CardHeader>
+                <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Download className="w-5 h-5 text-amber-500" /> Copia de Seguridad
+                </CardTitle>
+                <CardDescription className="text-slate-500 dark:text-slate-400">
+                  Exporta o importa la base de datos completa.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  variant="outline"
+                  onClick={handleExportBackup}
+                  disabled={loadingBackup}
+                  className="w-full justify-center font-semibold cursor-pointer border-slate-300 dark:border-slate-700"
+                >
+                  {loadingBackup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                  Exportar Base de Datos (JSON)
+                </Button>
+
+                <div className="pt-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept=".json"
+                    className="hidden"
+                  />
+                  <Button
+                    variant="destructive"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={loadingBackup}
+                    className="w-full justify-center font-semibold cursor-pointer"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Restaurar Base de Datos
+                  </Button>
+                </div>
+
+                {backupToRestore && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl mt-3 space-y-2">
+                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                      ⚠️ Atención: La restauración reemplazará los datos actuales por los del archivo.
+                    </p>
+                    <div className="flex gap-2 justify-end">
+                      <Button size="sm" variant="ghost" onClick={() => setBackupToRestore(null)}>Cancelar</Button>
+                      <Button size="sm" variant="destructive" onClick={handleConfirmRestore} disabled={loadingBackup}>
+                        {loadingBackup ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                        Confirmar Restauración
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 2: INSUMOS GLOBALES ── */}
+      {activeTab === "insumos" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Package className="w-5 h-5 text-amber-500" /> Gastos de Insumos
+                </CardTitle>
+                <CardDescription className="text-slate-500 dark:text-slate-400">
+                  Gestión de insumos globales y cálculo automático de costos.
+                </CardDescription>
+              </div>
             </CardHeader>
+
             <CardContent className="space-y-6">
-
-              <ImportPreviewModal
-                isOpen={importOpen}
-                onClose={() => setImportOpen(false)}
-                onConfirm={handleConfirmSuppliesImport}
-                isImporting={importing}
-                title="Importar Insumos"
-                rows={previewRows}
-                columns={[
-                  { header: "Nombre", accessorKey: "name" },
-                  { header: "Costo", accessorKey: "cost", cell: (val: any) => <span>${val}</span> },
-                  { header: "Activo", accessorKey: "isActive", cell: (val: any) => val ? "SI" : "NO" },
-                  { header: "Error", accessorKey: "_errors", cell: (val: any) => val ? <span className="text-red-600 font-bold text-xs">{val.join(", ")}</span> : null }
-                ]}
-                stats={stats}
-              />
-
+              {/* Form to add/edit supply */}
               <div className="flex flex-col md:flex-row gap-4 items-end bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div className="grid gap-1.5 w-full md:flex-1">
-                  <Label htmlFor="sName">{editingSupply ? "Editar Nombre" : "Nombre del Insumo"}</Label>
-                  <Input id="sName" value={newSupplyName} onChange={e => setNewSupplyName(e.target.value)} placeholder="Ej: Papel Higiénico" />
+                  <Label htmlFor="sName" className="font-semibold text-slate-800 dark:text-slate-200">{editingSupply ? "Editar Nombre" : "Nombre del Insumo"}</Label>
+                  <Input
+                    id="sName"
+                    value={newSupplyName}
+                    onChange={e => setNewSupplyName(e.target.value)}
+                    placeholder="Ej: Papel Higiénico"
+                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                  />
                 </div>
                 <div className="grid gap-1.5 w-full md:w-32">
-                  <Label htmlFor="sCost">Costo ($)</Label>
-                  <Input id="sCost" type="number" value={newSupplyCost} onChange={e => setNewSupplyCost(e.target.value)} placeholder="0" />
+                  <Label htmlFor="sCost" className="font-semibold text-slate-800 dark:text-slate-200">Costo ($)</Label>
+                  <Input
+                    id="sCost"
+                    type="number"
+                    value={newSupplyCost}
+                    onChange={e => setNewSupplyCost(e.target.value)}
+                    placeholder="0"
+                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                  />
                 </div>
 
                 <div className="flex gap-2 w-full md:w-auto">
                   {editingSupply && (
-                    <Button variant="outline" onClick={handleCancelEdit} className="flex-1 md:flex-none">
+                    <Button variant="outline" onClick={handleCancelEdit} className="flex-1 md:flex-none cursor-pointer">
                       Cancelar
                     </Button>
                   )}
-                  <Button onClick={handleSaveSupply} disabled={!newSupplyName || !newSupplyCost} className="flex-1 md:flex-none cursor-pointer">
+                  <Button onClick={handleSaveSupply} disabled={!newSupplyName || !newSupplyCost} className="flex-1 md:flex-none bg-sky-600 hover:bg-sky-500 text-white font-semibold cursor-pointer">
                     {editingSupply ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
                     {editingSupply ? "Actualizar" : "Agregar"}
                   </Button>
@@ -785,23 +863,23 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
               </div>
 
               {/* Desktop Table View */}
-              <div className="border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden hidden md:block">
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hidden md:block">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-50 dark:bg-slate-950/70 text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-800">
                     <tr>
-                      <th className="p-3 font-medium">Nombre</th>
-                      <th className="p-3 font-medium">Costo</th>
-                      <th className="p-3 font-medium">Estado</th>
-                      <th className="p-3 font-medium text-right">Acciones</th>
+                      <th className="p-3 font-semibold">Nombre</th>
+                      <th className="p-3 font-semibold">Costo</th>
+                      <th className="p-3 font-semibold">Estado</th>
+                      <th className="p-3 font-semibold text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {supplies.map(supply => (
                       <tr key={supply.id} className={`border-t border-slate-100 dark:border-slate-800/60 ${!supply.isActive ? 'bg-slate-50 dark:bg-slate-800/40 text-muted-foreground' : ''}`}>
-                        <td className="p-3 text-slate-900 dark:text-slate-100">{supply.name}</td>
-                        <td className="p-3 font-medium text-slate-900 dark:text-slate-100">${supply.cost}</td>
+                        <td className="p-3 font-medium text-slate-900 dark:text-slate-100">{supply.name}</td>
+                        <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">${supply.cost}</td>
                         <td className="p-3">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${supply.isActive ? 'bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${supply.isActive ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                             {supply.isActive ? "Activo" : "Inactivo"}
                           </span>
                         </td>
@@ -811,14 +889,14 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                             size="sm"
                             onClick={() => handleToggleSupply(supply)}
                             title={supply.isActive ? "Desactivar" : "Activar"}
-                            className={`h-8 w-8 p-0 ${supply.isActive ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}`}
+                            className={`h-8 w-8 p-0 cursor-pointer ${supply.isActive ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}
                           >
                             {supply.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleEditSupply(supply)} className="h-8 w-8 p-0">
+                          <Button variant="ghost" size="sm" onClick={() => handleEditSupply(supply)} className="h-8 w-8 p-0 cursor-pointer text-slate-500 hover:text-slate-700 dark:hover:text-slate-200">
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteSupply(supply.id)} className="text-red-600 dark:text-red-400 h-8 w-8 p-0">
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteSupply(supply.id)} className="text-red-600 dark:text-red-400 h-8 w-8 p-0 cursor-pointer">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </td>
@@ -826,719 +904,591 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     ))}
                     {supplies.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="p-4 text-center text-muted-foreground">No hay insumos cargados.</td>
+                        <td colSpan={4} className="p-6 text-center text-slate-400">No hay insumos cargados.</td>
                       </tr>
                     )}
                   </tbody>
-                  <tfoot className="bg-slate-100 dark:bg-slate-800 font-semibold text-slate-900 dark:text-slate-100">
+                  <tfoot className="bg-slate-100 dark:bg-slate-800/80 font-bold text-slate-900 dark:text-slate-100 border-t border-slate-200 dark:border-slate-700">
                     <tr>
-                      <td className="p-3">TOTAL GASTOS INSUMOS (Activos)</td>
-                      <td className="p-3 text-lg">${totalSuppliesCost}</td>
+                      <td className="p-3.5">TOTAL GASTOS INSUMOS (Activos)</td>
+                      <td className="p-3.5 text-lg font-extrabold text-sky-600 dark:text-sky-400">${totalSuppliesCost}</td>
                       <td colSpan={2}></td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
-
-              {/* Mobile Card View */}
-              <div className="md:hidden space-y-3">
-                {supplies.map(supply => (
-                  <div key={supply.id} className={`p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs ${!supply.isActive ? 'bg-slate-50 dark:bg-slate-800/40 opacity-70' : ''}`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <div className="font-bold text-base leading-tight text-slate-900 dark:text-slate-100">{supply.name}</div>
-                        <div className="text-sm font-medium mt-1 text-slate-700 dark:text-slate-300">${supply.cost}</div>
-                      </div>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${supply.isActive ? 'bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                        {supply.isActive ? "Activo" : "Inactivo"}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-end gap-2 mt-3 pt-3 border-t dark:border-slate-800">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleToggleSupply(supply)}
-                        title={supply.isActive ? "Desactivar" : "Activar"}
-                        className={`h-8 w-8 p-0 ${supply.isActive ? 'text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40' : 'text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/40'}`}
-                      >
-                        {supply.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleEditSupply(supply)} className="h-8 px-3 text-xs">
-                        Editar
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteSupply(supply.id)} className="h-8 w-8 p-0">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {supplies.length === 0 && (
-                  <div className="text-center py-6 text-muted-foreground bg-slate-50 dark:bg-slate-900 rounded-lg border border-dashed dark:border-slate-800">
-                    No hay insumos cargados.
-                  </div>
-                )}
-                {supplies.length > 0 && (
-                  <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-md font-semibold flex justify-between items-center text-sm text-slate-900 dark:text-slate-100">
-                    <span>TOTAL (Activos)</span>
-                    <span className="text-lg">${totalSuppliesCost}</span>
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
         </div>
+      )}
 
-        <div className="space-y-6">
-          {/* General Settings */}
-          <Card>
+      {/* ── TAB 3: IDENTIDAD & LOGIN ── */}
+      {isSuperAdmin && activeTab === "identidad" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
             <CardHeader>
-              <CardTitle>Configuración General</CardTitle>
-              <CardDescription>Opciones generales y rangos de calendario.</CardDescription>
+              <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-sky-500" /> Identidad de Marca y Pantalla de Login
+              </CardTitle>
+              <CardDescription className="text-slate-500 dark:text-slate-400">
+                Logotipos, nombres del sistema y personalización de la pantalla de inicio de sesión.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="cleaningFee">Gasto de Limpieza Global ($)</Label>
-                  <Input id="cleaningFee" type="number" value={cleaningFee} onChange={(e) => setCleaningFee(e.target.value)} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="startYear">Año Inicio</Label>
-                  <Input id="startYear" type="number" value={startYear} onChange={(e) => setStartYear(e.target.value)} />
-                </div>
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="endYear">Año Fin</Label>
-                  <Input id="endYear" type="number" value={endYear} onChange={(e) => setEndYear(e.target.value)} />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={handleSaveSettings} disabled={saving}>
-                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Guardar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Menu Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Menú del Sistema</CardTitle>
-              <CardDescription>Opciones de visibilidad del menú lateral.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between space-x-2 border p-3 rounded-md">
-                <div className="flex flex-col space-y-1">
-                  <span className="font-medium">Menú Cocheras</span>
-                  <span className="text-xs text-muted-foreground">
-                    {activeParkingCount > 0
-                      ? `Hay ${activeParkingCount} cocheras activas. No se puede ocultar.`
-                      : "Mostrar u ocultar 'Cocheras' en el menú."}
-                  </span>
+            <CardContent className="space-y-6">
+              {/* Site Name and Slogan */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Nombre del Sitio / Complejo</Label>
+                  <Input
+                    value={siteConfig.siteName}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, siteName: e.target.value }))}
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-medium"
+                  />
                 </div>
-                <Switch
-                  checked={showParking}
-                  onCheckedChange={handleParkingToggle}
-                  disabled={activeParkingCount > 0 && showParking}
+                <div className="space-y-1.5">
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">URL del Sitio Web</Label>
+                  <Input
+                    value={siteConfig.siteUrl}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, siteUrl: e.target.value }))}
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-slate-800 dark:text-slate-200">Eslogan / Frase Principal</Label>
+                <textarea
+                  rows={2}
+                  value={siteConfig.siteSlogan}
+                  onChange={e => setSiteConfig(prev => ({ ...prev, siteSlogan: e.target.value }))}
+                  className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Backup Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Copia de Seguridad</CardTitle>
-              <CardDescription>Exporta o importa la base de datos completa.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-2">
-                <p className="text-sm text-muted-foreground">
-                  La exportación descarga un archivo JSON con todos los datos.
-                </p>
-                <Button variant="outline" onClick={handleExport} disabled={loadingBackup}>
-                  {loadingBackup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                  Exportar Todo
-                </Button>
+              <hr className="border-slate-200 dark:border-slate-800 my-4" />
+
+              {/* 3 Image Pickers: Navbar Logo, Login Logo, Login Background */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* 1. Navbar Logo */}
+                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3">
+                  <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                    <ImageIcon className="w-4 h-4 text-sky-500" /> Logo Web / Navbar
+                  </Label>
+                  <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-2">
+                    {siteConfig.logoUrl ? (
+                      <img src={siteConfig.logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
+                    ) : (
+                      <span className="text-xs text-slate-400">Sin logo personalizado</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openPicker("logoUrl", "logos")}
+                      className="flex-1 text-xs cursor-pointer font-semibold"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5 mr-1 text-sky-500" /> Galería
+                    </Button>
+                    <label className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs">
+                      <Upload className="w-3.5 h-3.5" /> Subir
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleDirectUpload("logoUrl", "logos", e)}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* 2. Login Logo */}
+                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3">
+                  <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                    <ImageIcon className="w-4 h-4 text-indigo-500" /> Logo Pantalla Login
+                  </Label>
+                  <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-2">
+                    {siteConfig.loginLogoUrl ? (
+                      <img src={siteConfig.loginLogoUrl} alt="Logo Login" className="max-h-full max-w-full object-contain" />
+                    ) : (
+                      <span className="text-xs text-slate-400">Default: Di'Arte Vertical</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openPicker("loginLogoUrl", "logos")}
+                      className="flex-1 text-xs cursor-pointer font-semibold"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5 mr-1 text-indigo-500" /> Galería
+                    </Button>
+                    <label className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs">
+                      <Upload className="w-3.5 h-3.5" /> Subir
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleDirectUpload("loginLogoUrl", "logos", e)}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* 3. Login Background */}
+                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3">
+                  <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                    <ImageIcon className="w-4 h-4 text-amber-500" /> Fondo Pantalla Login
+                  </Label>
+                  <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-1">
+                    {siteConfig.loginBgUrl ? (
+                      <img src={siteConfig.loginBgUrl} alt="Fondo Login" className="w-full h-full object-cover rounded-lg" />
+                    ) : (
+                      <span className="text-xs text-slate-400">Default: Living room</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openPicker("loginBgUrl", "general")}
+                      className="flex-1 text-xs cursor-pointer font-semibold"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5 mr-1 text-amber-500" /> Galería
+                    </Button>
+                    <label className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs">
+                      <Upload className="w-3.5 h-3.5" /> Subir
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleDirectUpload("loginBgUrl", "general", e)}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
 
-              <hr />
-
-              <div className="flex flex-col gap-2">
-                <p className="text-sm text-muted-foreground">
-                  La importación <strong>BORRARÁ TODOS</strong> los datos actuales y los reemplazará por los del archivo.
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="file"
-                    accept=".json"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  <Button variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => fileInputRef.current?.click()} disabled={loadingBackup}>
-                    {loadingBackup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                    Importar Respaldo
-                  </Button>
-                </div>
+              <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
+                <Button onClick={handleSaveSiteConfig} disabled={savingSiteConfig} className="bg-sky-600 hover:bg-sky-500 text-white font-bold cursor-pointer">
+                  {savingSiteConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Guardar Identidad
+                </Button>
               </div>
             </CardContent>
           </Card>
         </div>
+      )}
 
-      </div>
-
-      {/* SuperAdmin Public Site Configuration Section */}
-      {isSuperAdmin && (
-        <Card className="border-sky-200 dark:border-sky-900/50 bg-gradient-to-b from-sky-50/30 dark:from-slate-900/60 to-white dark:to-slate-900 shadow-xs mt-6">
-          <CardHeader className="border-b border-sky-100 dark:border-slate-800 pb-4">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-                  <CardTitle className="text-xl text-slate-900 dark:text-slate-100">Configuración del Sitio Web Público</CardTitle>
-                  <span className="text-xs bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold px-2.5 py-0.5 rounded-full border border-sky-200 dark:border-sky-800">
-                    Solo SuperAdmin
-                  </span>
-                </div>
-                <CardDescription>
-                  Personaliza los datos de contacto, ubicación, WhatsApp de reservas, dominio y textos del sitio público.
-                  Al cambiar un valor aquí, se actualiza automáticamente en toda la web.
+      {/* ── TAB 4: SLIDES DE PORTADA ── */}
+      {isSuperAdmin && activeTab === "slides" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-indigo-500" /> Carrusel de Portada / Slides de Inicio
+                </CardTitle>
+                <CardDescription className="text-slate-500 dark:text-slate-400">
+                  Agregá, ordená y personalizá las imágenes y mensajes que verán los huéspedes en la página principal.
                 </CardDescription>
               </div>
-              <Button
-                onClick={handleSaveSiteConfig}
-                disabled={savingSiteConfig}
-                className="bg-sky-600 hover:bg-sky-700 font-bold shadow-md gap-2 cursor-pointer"
-              >
-                {savingSiteConfig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Guardar Configuración del Sitio
+              <Button onClick={handleAddSlide} className="bg-sky-600 hover:bg-sky-500 text-white font-semibold cursor-pointer shrink-0">
+                <Plus className="mr-2 h-4 w-4" /> Agregar Nuevo Slide
               </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-8 pt-6">
+            </CardHeader>
 
-            {/* Bloque 1: Identidad & Dominio */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-sky-500" />
-                1. Identidad de Marca y Dominio
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="space-y-1.5">
-                  <Label htmlFor="sc-name" className="text-xs font-bold text-slate-700 dark:text-slate-200">Nombre del Alojamiento</Label>
-                  <Input
-                    id="sc-name"
-                    value={siteConfig.siteName ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, siteName: e.target.value })}
-                    placeholder="Ej. Alojamientos Di'Arte"
-                  />
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Aparece en Navbar, Hero, Footer y títulos.</p>
-                </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="sc-slogan" className="text-xs font-bold text-slate-700 dark:text-slate-200">Slogan / Descripción Corta</Label>
-                  <Input
-                    id="sc-slogan"
-                    value={siteConfig.siteSlogan ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, siteSlogan: e.target.value })}
-                    placeholder="Ej. Departamentos temporarios premium en Formosa..."
-                  />
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Se muestra en la portada de inicio y en el pie de página.</p>
-                </div>
-                <div className="space-y-1.5 md:col-span-3">
-                  <Label htmlFor="sc-url" className="text-xs font-bold text-slate-700 dark:text-slate-200">Dominio / URL Web (VPN o Producción)</Label>
-                  <Input
-                    id="sc-url"
-                    value={siteConfig.siteUrl ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, siteUrl: e.target.value })}
-                    placeholder="https://tudominio.com o https://vpn.tuempresa.com"
-                  />
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Utilizado para links canónicos y metadatos.</p>
-                </div>
-                <div className="space-y-1.5 md:col-span-3">
-                  <Label htmlFor="sc-logo" className="text-xs font-bold text-slate-700 dark:text-slate-200">Logo de la Página (URL)</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="sc-logo"
-                      value={siteConfig.logoUrl ?? ""}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, logoUrl: e.target.value })}
-                      placeholder="/logo.jpg"
-                      className="flex-1"
-                    />
-                    <Button type="button" variant="outline" className="relative cursor-pointer overflow-hidden">
-                      <span className="flex items-center gap-2">
-                        <Upload className="w-4 h-4" />
-                        Subir Imagen
-                      </span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="absolute inset-0 opacity-0 cursor-pointer" 
-                        onChange={handleLogoUpload} 
-                      />
-                    </Button>
-                  </div>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Este logo se mostrará en el menú de navegación y como icono general.</p>
-                  {siteConfig.logoUrl && (
-                    <div className="mt-2 p-2 border border-slate-200 dark:border-slate-700 rounded-md bg-slate-50 dark:bg-slate-800 w-fit">
-                      <img src={siteConfig.logoUrl} alt="Logo preview" className="h-10 w-auto object-contain rounded-md" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Bloque 2: Carrusel de Portada / Hero Slides */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                  2. Carrusel de Portada / Slides de Inicio ({heroSlidesList.length})
-                </h3>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddSlide}
-                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 gap-1.5 cursor-pointer"
+            <CardContent className="space-y-6">
+              {heroSlidesList.map((slide, idx) => (
+                <div
+                  key={slide.id}
+                  className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-4 shadow-xs"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  Agregar Nuevo Slide
+                  {/* Top Bar of Slide */}
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-sky-700 dark:text-sky-300 bg-sky-100 dark:bg-sky-950/80 px-3 py-1 rounded-full">
+                      Slide #{idx + 1}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                        disabled={idx === 0}
+                        onClick={() => handleMoveSlide(idx, "up")}
+                        title="Mover arriba"
+                      >
+                        <ArrowUp className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                        disabled={idx === heroSlidesList.length - 1}
+                        onClick={() => handleMoveSlide(idx, "down")}
+                        title="Mover abajo"
+                      >
+                        <ArrowDown className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                        onClick={() => handleDeleteSlide(slide.id)}
+                        title="Eliminar slide"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Image Field with Gallery Picker */}
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wide">
+                      Foto de Fondo del Slide
+                    </Label>
+                    <div className="flex flex-col sm:flex-row items-center gap-3">
+                      <Input
+                        value={slide.image}
+                        onChange={e => handleUpdateSlide(slide.id, { image: e.target.value })}
+                        placeholder="/uploads/slides/foto-slide.webp o URL externa"
+                        className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 flex-1"
+                      />
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Button
+                          variant="outline"
+                          onClick={() => openPicker("slideImage", "slides", slide.id)}
+                          className="flex-1 sm:flex-none text-xs font-semibold cursor-pointer border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40"
+                        >
+                          <FolderOpen className="w-3.5 h-3.5 mr-1.5 text-sky-500" />
+                          Elegir de Galería
+                        </Button>
+                        <label className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-xs">
+                          <Upload className="w-3.5 h-3.5" /> Subir
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={e => handleSlideImageUpload(slide.id, e)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                    {/* Thumbnail preview */}
+                    {slide.image && (
+                      <div className="relative h-28 max-w-sm rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 mt-2">
+                        <img src={slide.image} alt={slide.title} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Title & Subtitle */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="font-semibold text-slate-800 dark:text-slate-200 text-xs">Título Principal</Label>
+                      <Input
+                        value={slide.title}
+                        onChange={e => handleUpdateSlide(slide.id, { title: e.target.value })}
+                        className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="font-semibold text-slate-800 dark:text-slate-200 text-xs">Subtítulo / Texto Descriptivo</Label>
+                      <Input
+                        value={slide.subtitle}
+                        onChange={e => handleUpdateSlide(slide.id, { subtitle: e.target.value })}
+                        className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Optional Button */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div className="space-y-1">
+                      <Label className="font-semibold text-slate-800 dark:text-slate-200 text-xs">Texto del Botón (Opcional)</Label>
+                      <Input
+                        value={slide.buttonText || ""}
+                        onChange={e => handleUpdateSlide(slide.id, { buttonText: e.target.value })}
+                        placeholder="Ej: Ver Departamentos"
+                        className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="font-semibold text-slate-800 dark:text-slate-200 text-xs">Enlace del Botón (Opcional)</Label>
+                      <Input
+                        value={slide.buttonLink || ""}
+                        onChange={e => handleUpdateSlide(slide.id, { buttonLink: e.target.value })}
+                        placeholder="Ej: #departments o /contacto"
+                        className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
+                <Button onClick={handleSaveSiteConfig} disabled={savingSiteConfig} className="bg-sky-600 hover:bg-sky-500 text-white font-bold cursor-pointer">
+                  {savingSiteConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Guardar Slides
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-              <div className="space-y-4">
-                {heroSlidesList.map((slide, idx) => (
-                  <div key={slide.id || idx} className="bg-white dark:bg-slate-900/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 relative">
-                    <div className="flex items-center justify-between border-b dark:border-slate-800 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-extrabold text-xs px-2.5 py-1 rounded-lg">
-                          Slide #{idx + 1}
-                        </span>
-                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                          {slide.title || "Sin Título"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={idx === 0}
-                          onClick={() => handleMoveSlide(idx, 'up')}
-                          className="h-8 w-8 p-0 cursor-pointer"
-                          title="Mover arriba"
-                        >
-                          <ArrowUp className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={idx === heroSlidesList.length - 1}
-                          onClick={() => handleMoveSlide(idx, 'down')}
-                          className="h-8 w-8 p-0 cursor-pointer"
-                          title="Mover abajo"
-                        >
-                          <ArrowDown className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteSlide(slide.id)}
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
-                          title="Eliminar slide"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Imagen */}
-                      <div className="space-y-2 md:col-span-3">
-                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-200">Foto de Fondo del Slide (URL o Subir)</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            value={slide.image || ""}
-                            onChange={(e) => handleUpdateSlide(slide.id, { image: e.target.value })}
-                            placeholder="/foto-slide.jpg o URL externa"
-                            className="flex-1"
-                          />
-                          <Button type="button" variant="outline" className="relative cursor-pointer overflow-hidden text-xs">
-                            <span className="flex items-center gap-1.5">
-                              <Upload className="w-3.5 h-3.5" />
-                              Subir Imagen
-                            </span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="absolute inset-0 opacity-0 cursor-pointer"
-                              onChange={(e) => handleSlideImageUpload(slide.id, e)}
-                            />
-                          </Button>
-                        </div>
-                        {slide.image && (
-                          <div className="mt-2 p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 w-fit flex items-center gap-3">
-                            <img src={slide.image} alt="Preview" className="h-16 w-28 object-cover rounded-lg border dark:border-slate-700" />
-                            <span className="text-xs text-slate-500 dark:text-slate-400">Vista previa del fondo</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Título */}
-                      <div className="space-y-1.5 md:col-span-1">
-                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-200">Título Principal</Label>
-                        <Input
-                          value={slide.title || ""}
-                          onChange={(e) => handleUpdateSlide(slide.id, { title: e.target.value })}
-                          placeholder="Ej. Alojamientos Di'Arte"
-                        />
-                      </div>
-
-                      {/* Subtítulo / Descripción */}
-                      <div className="space-y-1.5 md:col-span-2">
-                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-200">Subtítulo / Texto Descriptivo</Label>
-                        <Input
-                          value={slide.subtitle || ""}
-                          onChange={(e) => handleUpdateSlide(slide.id, { subtitle: e.target.value })}
-                          placeholder="Ej. Departamentos temporarios premium en Formosa..."
-                        />
-                      </div>
-
-                      {/* Botón opcional */}
-                      <div className="space-y-1.5 md:col-span-1">
-                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-200">Texto del Botón (Opcional)</Label>
-                        <Input
-                          value={slide.buttonText || ""}
-                          onChange={(e) => handleUpdateSlide(slide.id, { buttonText: e.target.value })}
-                          placeholder="Ej. Ver Departamentos"
-                        />
-                      </div>
-                      <div className="space-y-1.5 md:col-span-2">
-                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-200">Enlace del Botón (Opcional)</Label>
-                        <Input
-                          value={slide.buttonLink || ""}
-                          onChange={(e) => handleUpdateSlide(slide.id, { buttonLink: e.target.value })}
-                          placeholder="Ej. #search-bar o /contacto"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Bloque 3: Contacto & WhatsApp */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500" />
-                3. Teléfonos, WhatsApp y Email
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+      {/* ── TAB 5: CONTACTO & UBICACIÓN ── */}
+      {isSuperAdmin && activeTab === "contacto" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Phones & Social */}
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <CardHeader>
+              <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <PhoneCall className="w-5 h-5 text-emerald-500" /> Teléfonos, WhatsApp y Redes Sociales
+              </CardTitle>
+              <CardDescription className="text-slate-500 dark:text-slate-400">
+                Canales de contacto directo para consultas y reservas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-phone-display" className="text-xs font-bold text-slate-700 dark:text-slate-200">Teléfono (para mostrar)</Label>
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Teléfono Visible</Label>
                   <Input
-                    id="sc-phone-display"
-                    value={siteConfig.phoneDisplay ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, phoneDisplay: e.target.value })}
-                    placeholder="Ej. +54 9 351 314-6924"
-                  />
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Texto visible en Footer y Contacto.</p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="sc-phone-ws" className="text-xs font-bold text-slate-700 dark:text-slate-200">WhatsApp para Reservas (solo números)</Label>
-                  <Input
-                    id="sc-phone-ws"
-                    value={siteConfig.phoneWhatsApp ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, phoneWhatsApp: e.target.value.replace(/[^\d]/g, "") })}
-                    placeholder="Ej. 5493513146924"
-                  />
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">¡A este número se enviarán todas las solicitudes de reserva!</p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="sc-email" className="text-xs font-bold text-slate-700 dark:text-slate-200">Email de Contacto</Label>
-                  <Input
-                    id="sc-email"
-                    type="email"
-                    value={siteConfig.email ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, email: e.target.value })}
-                    placeholder="contacto@alojamientosdiarte.com"
-                  />
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Email clickeable (mailto:) en Footer y Contacto.</p>
-                </div>
-                <div className="space-y-1.5 md:col-span-3">
-                  <Label htmlFor="sc-ws-msg" className="text-xs font-bold text-slate-700 dark:text-slate-200">Mensaje predeterminado de consulta WhatsApp</Label>
-                  <Input
-                    id="sc-ws-msg"
-                    value={siteConfig.whatsappDefaultMsg ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, whatsappDefaultMsg: e.target.value })}
-                    placeholder="Ej. Hola! Me gustaría consultar sobre la disponibilidad de departamentos."
-                  />
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Texto inicial prellenado al hacer clic en 'Consultar por WhatsApp' desde Contacto.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bloque 4: Ubicación & Horarios */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-orange-500" />
-                4. Dirección, Ubicación y Horarios
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="sc-address" className="text-xs font-bold text-slate-700 dark:text-slate-200">Dirección</Label>
-                  <Input
-                    id="sc-address"
-                    value={siteConfig.address ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, address: e.target.value })}
-                    placeholder="Ej. Antártida Argentina 1035"
+                    value={siteConfig.phoneDisplay}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, phoneDisplay: e.target.value }))}
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-city" className="text-xs font-bold text-slate-700 dark:text-slate-200">Ciudad</Label>
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">WhatsApp (Solo Números)</Label>
                   <Input
-                    id="sc-city"
-                    value={siteConfig.city ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, city: e.target.value })}
-                    placeholder="Ej. Formosa"
+                    value={siteConfig.phoneWhatsApp}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, phoneWhatsApp: e.target.value }))}
+                    placeholder="5493513146924"
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-country" className="text-xs font-bold text-slate-700 dark:text-slate-200">País</Label>
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Email de Contacto</Label>
                   <Input
-                    id="sc-country"
-                    value={siteConfig.country ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, country: e.target.value })}
-                    placeholder="Ej. Argentina"
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="sc-hours" className="text-xs font-bold text-slate-700 dark:text-slate-200">Horario de Atención</Label>
-                  <Input
-                    id="sc-hours"
-                    value={siteConfig.businessHours ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, businessHours: e.target.value })}
-                    placeholder="Lunes a Domingo\n8:00 – 22:00 hs"
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="sc-maps-url" className="text-xs font-bold text-slate-700 dark:text-slate-200">Link Google Maps (Abrir en app/web)</Label>
-                  <Input
-                    id="sc-maps-url"
-                    value={siteConfig.googleMapsUrl ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, googleMapsUrl: e.target.value })}
-                    placeholder="https://maps.app.goo.gl/..."
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-4">
-                  <Label htmlFor="sc-maps-embed" className="text-xs font-bold text-slate-700 dark:text-slate-200">URL del Mapa Interactivo (Google Maps Embed iframe src)</Label>
-                  <Input
-                    id="sc-maps-embed"
-                    value={siteConfig.googleMapsEmbedUrl ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, googleMapsEmbedUrl: e.target.value })}
-                    placeholder="https://www.google.com/maps?q=...&output=embed"
+                    value={siteConfig.email}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, email: e.target.value }))}
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Bloque 5: Redes Sociales, Footer & SEO */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-purple-500" />
-                5. Redes Sociales, Footer y SEO
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-slate-800 dark:text-slate-200">Mensaje por Defecto de WhatsApp</Label>
+                <Input
+                  value={siteConfig.whatsappDefaultMsg}
+                  onChange={e => setSiteConfig(prev => ({ ...prev, whatsappDefaultMsg: e.target.value }))}
+                  className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-insta" className="text-xs font-bold text-slate-700 dark:text-slate-200">Instagram URL</Label>
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Instagram URL</Label>
                   <Input
-                    id="sc-insta"
-                    value={siteConfig.instagramUrl ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, instagramUrl: e.target.value })}
-                    placeholder="https://www.instagram.com/tu_cuenta"
+                    value={siteConfig.instagramUrl}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, instagramUrl: e.target.value }))}
+                    placeholder="https://www.instagram.com/..."
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-fb" className="text-xs font-bold text-slate-700 dark:text-slate-200">Facebook URL</Label>
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Facebook URL</Label>
                   <Input
-                    id="sc-fb"
-                    value={siteConfig.facebookUrl ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, facebookUrl: e.target.value })}
-                    placeholder="https://www.facebook.com/tu_pagina"
+                    value={siteConfig.facebookUrl}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, facebookUrl: e.target.value }))}
+                    placeholder="https://www.facebook.com/..."
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Location & Maps */}
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <CardHeader>
+              <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-red-500" /> Ubicación y Google Maps
+              </CardTitle>
+              <CardDescription className="text-slate-500 dark:text-slate-400">
+                Dirección física e integración con mapas interactivos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="sm:col-span-2 space-y-1.5">
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Dirección</Label>
+                  <Input
+                    value={siteConfig.address}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, address: e.target.value }))}
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-copyright" className="text-xs font-bold text-slate-700 dark:text-slate-200">Texto Copyright Footer</Label>
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Ciudad</Label>
                   <Input
-                    id="sc-copyright"
-                    value={siteConfig.footerCopyright ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, footerCopyright: e.target.value })}
+                    value={siteConfig.city}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, city: e.target.value }))}
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Provincia / País</Label>
+                  <Input
+                    value={`${siteConfig.province}, ${siteConfig.country}`}
+                    onChange={e => {
+                      const parts = e.target.value.split(",");
+                      setSiteConfig(prev => ({
+                        ...prev,
+                        province: parts[0]?.trim() || "",
+                        country: parts[1]?.trim() || "Argentina",
+                      }));
+                    }}
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-slate-800 dark:text-slate-200">Google Maps Embed URL</Label>
+                <Input
+                  value={siteConfig.googleMapsEmbedUrl}
+                  onChange={e => setSiteConfig(prev => ({ ...prev, googleMapsEmbedUrl: e.target.value }))}
+                  className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
+                <Button onClick={handleSaveSiteConfig} disabled={savingSiteConfig} className="bg-sky-600 hover:bg-sky-500 text-white font-bold cursor-pointer">
+                  {savingSiteConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Guardar Contacto y Ubicación
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ── TAB 6: CORREO SMTP ── */}
+      {isSuperAdmin && activeTab === "smtp" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <CardHeader>
+              <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Mail className="w-5 h-5 text-violet-500" /> Servidor de Correo SMTP
+              </CardTitle>
+              <CardDescription className="text-slate-500 dark:text-slate-400">
+                Credenciales para el envío de notificaciones por email de reservas y contacto.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Servidor SMTP (Host)</Label>
+                  <Input
+                    value={siteConfig.smtpHost}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, smtpHost: e.target.value }))}
+                    placeholder="smtp.hostinger.com"
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Puerto SMTP</Label>
+                  <Input
+                    type="number"
+                    value={siteConfig.smtpPort}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, smtpPort: e.target.value }))}
+                    placeholder="465"
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Nombre del Remitente</Label>
+                  <Input
+                    value={siteConfig.smtpFromName}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, smtpFromName: e.target.value }))}
                     placeholder="Alojamientos Di'Arte"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="sc-credit" className="text-xs font-bold text-slate-700 dark:text-slate-200">Crédito de Diseño / Desarrollo</Label>
-                  <Input
-                    id="sc-credit"
-                    value={siteConfig.footerCredit ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, footerCredit: e.target.value })}
-                    placeholder="Diseño y desarrollo: Guillermo Diarte - Guillermo.diarte@gmail.com"
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="sc-seo" className="text-xs font-bold text-slate-700 dark:text-slate-200">Descripción SEO (Metadatos para Google)</Label>
-                  <Input
-                    id="sc-seo"
-                    value={siteConfig.seoDescription ?? ""}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, seoDescription: e.target.value })}
-                    placeholder="Descripción atractiva para los resultados de búsqueda de Google..."
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Bloque 6: Servidor de Correo SMTP (Hostinger) */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500" />
-                6. Servidor de Correo SMTP (Hostinger / Envío de Consultas)
-              </h3>
-              <div className="bg-white dark:bg-slate-900/80 p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
-                <div className="p-3 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 rounded-lg text-xs text-sky-900 dark:text-sky-200 leading-relaxed">
-                  <strong>ℹ️ Configuración de Hostinger Email:</strong> Estas credenciales permiten que los mensajes enviados desde el formulario público de <code className="bg-white dark:bg-slate-800 px-1 py-0.5 rounded text-sky-800 dark:text-sky-300 font-mono">/contacto</code> lleguen directamente a tu casilla de correo <strong>contacto@alojamientosdiarte.com</strong>.
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Usuario / Email SMTP</Label>
+                  <Input
+                    type="email"
+                    value={siteConfig.smtpUser}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, smtpUser: e.target.value }))}
+                    placeholder="contacto@alojamientosdiarte.com"
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                  />
                 </div>
+                <div className="space-y-1.5">
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Contraseña SMTP</Label>
+                  <Input
+                    type="password"
+                    value={siteConfig.smtpPassword}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, smtpPassword: e.target.value }))}
+                    placeholder="••••••••••••"
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono"
+                  />
+                </div>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="space-y-1.5 md:col-span-2">
-                    <Label htmlFor="sc-smtp-host" className="text-xs font-bold text-slate-700 dark:text-slate-200">Servidor SMTP (Host)</Label>
-                    <Input
-                      id="sc-smtp-host"
-                      value={siteConfig.smtpHost ?? ""}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, smtpHost: e.target.value })}
-                      placeholder="smtp.hostinger.com"
-                    />
+              {/* SMTP Live Test Box */}
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 space-y-3 mt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h5 className="font-bold text-sm text-slate-900 dark:text-slate-100">Prueba de Envío en Vivo</h5>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Envía un correo de prueba a <strong>{siteConfig.email || siteConfig.smtpUser}</strong> para verificar la conexión.
+                    </p>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="sc-smtp-port" className="text-xs font-bold text-slate-700 dark:text-slate-200">Puerto SMTP</Label>
-                    <Input
-                      id="sc-smtp-port"
-                      value={siteConfig.smtpPort ?? ""}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, smtpPort: e.target.value })}
-                      placeholder="465"
-                    />
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500">465 (SSL) o 587 (TLS)</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="sc-smtp-user" className="text-xs font-bold text-slate-700 dark:text-slate-200">Usuario / Casilla</Label>
-                    <Input
-                      id="sc-smtp-user"
-                      value={siteConfig.smtpUser ?? ""}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, smtpUser: e.target.value })}
-                      placeholder="contacto@alojamientosdiarte.com"
-                    />
-                  </div>
-                  <div className="space-y-1.5 md:col-span-3">
-                    <Label htmlFor="sc-smtp-pass" className="text-xs font-bold text-slate-700 dark:text-slate-200">Contraseña de la Casilla de Correo</Label>
-                    <Input
-                      id="sc-smtp-pass"
-                      type="password"
-                      value={siteConfig.smtpPassword ?? ""}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, smtpPassword: e.target.value })}
-                      placeholder="Tu contraseña creada en Hostinger..."
-                    />
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500">Ingresa la contraseña que creaste para la cuenta en el panel de Hostinger.</p>
-                  </div>
-                  <div className="space-y-1.5 flex flex-col justify-end">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleTestSmtp}
-                      disabled={testingSmtp || !siteConfig.smtpPassword}
-                      className="border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 font-semibold gap-2 w-full cursor-pointer disabled:opacity-50"
-                    >
-                      {testingSmtp ? <Loader2 className="w-4 h-4 animate-spin" /> : "⚡"}
-                      {testingSmtp ? "Probando conexión..." : "Probar Conexión SMTP"}
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTestSmtp}
+                    disabled={testingSmtp || !siteConfig.smtpHost || !siteConfig.smtpUser}
+                    className="font-semibold cursor-pointer border-slate-300 dark:border-slate-700"
+                  >
+                    {testingSmtp ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Send className="w-3.5 h-3.5 mr-1.5 text-sky-500" />}
+                    {testingSmtp ? "Probando..." : "Enviar Correo de Prueba"}
+                  </Button>
                 </div>
 
                 {smtpTestResult && (
-                  <div className={`p-3 rounded-lg text-xs font-medium border flex items-start gap-2 animate-in fade-in duration-200 ${
-                    smtpTestResult.success
-                      ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
-                      : "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300"
-                  }`}>
-                    <span className="text-sm">{smtpTestResult.success ? "✅" : "⚠️"}</span>
-                    <span className="flex-1">{smtpTestResult.message}</span>
+                  <div
+                    className={`p-3 rounded-lg text-xs font-semibold ${
+                      smtpTestResult.success
+                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900"
+                        : "bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-900"
+                    }`}
+                  >
+                    {smtpTestResult.success ? "✅ " : "❌ "}
+                    {smtpTestResult.message}
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Footer action */}
-            <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
-              <Button
-                onClick={handleSaveSiteConfig}
-                disabled={savingSiteConfig}
-                size="lg"
-                className="bg-sky-600 hover:bg-sky-700 font-bold px-8 shadow-lg gap-2 cursor-pointer"
-              >
-                {savingSiteConfig ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
-                Guardar Todos los Cambios del Sitio
-              </Button>
-            </div>
-
-          </CardContent>
-        </Card>
+              <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
+                <Button onClick={handleSaveSiteConfig} disabled={savingSiteConfig} className="bg-sky-600 hover:bg-sky-500 text-white font-bold cursor-pointer">
+                  {savingSiteConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Guardar Configuración SMTP
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
-
-      <AlertDialog open={!!supplyToDelete} onOpenChange={(open) => !open && setSupplyToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará el insumo permanentemente. No afectará a las reservas pasadas que ya tienen guardado su costo histórico.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700 font-bold" onClick={confirmDeleteSupply}>
-              Sí, Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!backupToRestore} onOpenChange={(open) => !open && setBackupToRestore(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-600 font-bold">⚠️ PELIGRO: Restauración Destructiva</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción <strong>ELIMINARÁ TODOS LOS DATOS ACTUALES</strong> de la base de datos (Reservas, Departamentos, Usuarios, etc.) y los reemplazará por los del archivo seleccionado.
-              <br /><br />
-              <strong>Archivo:</strong> {backupToRestore?.name}
-              <br /><br />
-              Esta acción no se puede deshacer. ¿Está completamente seguro?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 font-bold"
-              onClick={confirmRestore}
-            >
-              {loadingBackup ? "Restaurando..." : "Sí, Reemplazar Todo"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
     </div>
   );
 }

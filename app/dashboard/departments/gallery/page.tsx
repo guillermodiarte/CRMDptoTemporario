@@ -11,14 +11,16 @@ export const dynamic = 'force-dynamic';
 
 export default async function DepartmentGalleryPage() {
   const session = await auth();
-  if (!session?.user) redirect("/auth/login");
+  if (!session?.user) redirect("/admin");
 
   const sessionId = (session.user as any)?.sessionId;
+  const isSuperAdmin = (session.user as any)?.isSuperAdmin === true;
+  const role = (session.user as any)?.role || "ADMIN";
 
   const departments = await prisma.department.findMany({
     where: {
       type: "APARTMENT",
-      sessionId,
+      sessionId: isSuperAdmin ? undefined : sessionId,
       isArchived: false,
       isActive: true,
     },
@@ -31,5 +33,11 @@ export default async function DepartmentGalleryPage() {
     },
   });
 
-  return <DepartmentGalleryClient initialDepartments={departments} />;
+  return (
+    <DepartmentGalleryClient
+      initialDepartments={departments}
+      isSuperAdmin={isSuperAdmin}
+      role={role}
+    />
+  );
 }
