@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { format, addDays, isSameDay, isWithinInterval, startOfDay, endOfDay, differenceInDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, isBefore, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarDays, MapPin, Users, Bed, ChevronRight, AlertTriangle, ChevronLeft, X } from "lucide-react";
@@ -118,6 +118,23 @@ export function PublicLandingClient({
     checkOut: Date;
     people: number;
   } | null>(null);
+
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToResults = useRef(false);
+
+  const isDatesSet = !!(checkInDate && checkOutDate);
+  const isMissingPeople = isDatesSet && peopleCount === '';
+  const isFilterComplete = isDatesSet && peopleCount !== '';
+
+  useEffect(() => {
+    if (isFilterComplete && !hasScrolledToResults.current) {
+      hasScrolledToResults.current = true;
+      const timer = setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isFilterComplete]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -454,18 +471,40 @@ export function PublicLandingClient({
               </PopoverContent>
             </Popover>
           </div>
-          <div className="flex-1 w-full">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Personas</label>
+          <div className="flex-1 w-full relative">
+            <div className="flex items-center justify-between mb-1">
+              <label className={`block text-sm font-medium transition-colors ${
+                isMissingPeople 
+                  ? "text-red-600 dark:text-red-400 font-bold" 
+                  : "text-slate-700 dark:text-slate-300"
+              }`}>
+                Personas {isMissingPeople && <span className="text-red-500 font-bold">*</span>}
+              </label>
+              {isMissingPeople && (
+                <span className="text-xs font-bold text-red-500 dark:text-red-400 animate-pulse">
+                  * Obligatorio
+                </span>
+              )}
+            </div>
             <select
               value={peopleCount}
               onChange={e => setPeopleCount(e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:border-sky-500 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors cursor-pointer appearance-none"
+              className={`w-full rounded-xl px-4 py-2.5 outline-none transition-all cursor-pointer appearance-none ${
+                isMissingPeople
+                  ? "border-2 border-red-500 bg-red-50/50 dark:bg-red-950/20 text-red-900 dark:text-red-200 ring-2 ring-red-500/20 font-medium"
+                  : "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:border-sky-500 hover:bg-slate-50 dark:hover:bg-slate-700/80"
+              }`}
             >
               <option value="" disabled hidden>Seleccionar cantidad</option>
               {Array.from({ length: globalMaxPeople }).map((_, i) => (
                 <option key={i + 1} value={i + 1}>{i + 1} {i + 1 === 1 ? 'persona' : 'personas'}</option>
               ))}
             </select>
+            {isMissingPeople && (
+              <p className="text-xs font-semibold text-red-500 dark:text-red-400 mt-1 flex items-center gap-1">
+                <span>* Obligatorio seleccionar cantidad para continuar</span>
+              </p>
+            )}
           </div>
           <div className="w-full md:w-auto">
             <button
@@ -475,6 +514,7 @@ export function PublicLandingClient({
                 setCheckOutDate(undefined);
                 setHoveredDate(null);
                 setPeopleCount('');
+                hasScrolledToResults.current = false;
               }}
             >
               Limpiar
@@ -530,7 +570,7 @@ export function PublicLandingClient({
         </div>
 
         {/* Results Section */}
-        <div className="space-y-8">
+        <div ref={resultsRef} className="space-y-8 scroll-mt-6">
           <div className="flex items-center justify-between">
             <h2 className="text-3xl font-bold text-slate-900 dark:text-white">
               {checkInDate && checkOutDate
@@ -540,23 +580,7 @@ export function PublicLandingClient({
             </h2>
           </div>
 
-          {checkInDate && checkOutDate && peopleCount === '' ? (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center shadow-sm border border-slate-100 dark:border-slate-800 max-w-md mx-auto transition-colors">
-              <Users className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-200 mb-2">Falta indicar la cantidad de personas</h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-6">Por favor, seleccioná cuántas personas van a alojarse para buscar disponibilidad.</p>
-              <select
-                value={peopleCount}
-                onChange={e => setPeopleCount(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:border-sky-500 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors cursor-pointer appearance-none text-center font-medium"
-              >
-                <option value="" disabled hidden>Seleccionar cantidad</option>
-                {Array.from({ length: globalMaxPeople }).map((_, i) => (
-                  <option key={i + 1} value={i + 1}>{i + 1} {i + 1 === 1 ? 'persona' : 'personas'}</option>
-                ))}
-              </select>
-            </div>
-          ) : checkInDate && checkOutDate && directDepts.length === 0 && combinations.length > 0 && peopleCount !== '' ? (
+          {checkInDate && checkOutDate && directDepts.length === 0 && combinations.length > 0 && peopleCount !== '' ? (
             <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-700/50 rounded-xl p-6 flex flex-col md:flex-row items-start md:items-center gap-4 shadow-sm">
               <div className="bg-amber-100 dark:bg-amber-900/50 p-3 rounded-full text-amber-600 dark:text-amber-400">
                 <AlertTriangle className="w-6 h-6" />
