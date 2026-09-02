@@ -761,7 +761,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                 stats={stats}
               />
 
-              <div className="flex flex-col md:flex-row gap-4 items-end bg-slate-50 p-4 rounded-md border">
+              <div className="flex flex-col md:flex-row gap-4 items-end bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div className="grid gap-1.5 w-full md:flex-1">
                   <Label htmlFor="sName">{editingSupply ? "Editar Nombre" : "Nombre del Insumo"}</Label>
                   <Input id="sName" value={newSupplyName} onChange={e => setNewSupplyName(e.target.value)} placeholder="Ej: Papel Higiénico" />
@@ -777,9 +777,9 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                       Cancelar
                     </Button>
                   )}
-                  <Button onClick={handleSaveSupply} disabled={!newSupplyName || !newSupplyCost} className="flex-1 md:flex-none">
+                  <Button onClick={handleSaveSupply} disabled={!newSupplyName || !newSupplyCost} className="flex-1 md:flex-none cursor-pointer">
                     {editingSupply ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-            {editingSupply ? "Actualizar" : "Agregar"}
+                    {editingSupply ? "Actualizar" : "Agregar"}
                   </Button>
                 </div>
               </div>

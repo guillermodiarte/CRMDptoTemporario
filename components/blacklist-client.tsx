@@ -118,9 +118,9 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
         )}
       </div>
 
-      <div className="flex gap-4 items-center bg-white p-4 rounded-lg shadow-sm border">
+      <div className="flex gap-4 items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-xs border border-slate-200 dark:border-slate-800">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
           <Input
             placeholder="Buscar por nombre, teléfono o motivo..."
             className="pl-9"
@@ -132,22 +132,22 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
       </div>
 
       {/* Desktop Table */}
-      <div className="hidden md:block rounded-md border bg-white">
+      <div className="hidden md:block rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Huésped</TableHead>
-              <TableHead>Teléfono</TableHead>
-              <TableHead>Motivo</TableHead>
-              <TableHead>Reportado Por</TableHead>
-              {isAdmin && <TableHead className="text-right">Acciones</TableHead>}
+            <TableRow className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800">
+              <TableHead className="text-slate-700 dark:text-slate-200">Huésped</TableHead>
+              <TableHead className="text-slate-700 dark:text-slate-200">Teléfono</TableHead>
+              <TableHead className="text-slate-700 dark:text-slate-200">Motivo</TableHead>
+              <TableHead className="text-slate-700 dark:text-slate-200">Reportado Por</TableHead>
+              {isAdmin && <TableHead className="text-right text-slate-700 dark:text-slate-200">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.map((entry) => (
-              <TableRow key={entry.id}>
+              <TableRow key={entry.id} className="border-b border-slate-100 dark:border-slate-800/60">
                 <TableCell>
-                  <div className="font-medium">{entry.guestName}</div>
+                  <div className="font-medium text-slate-900 dark:text-slate-100">{entry.guestName}</div>
                   <div className="text-xs text-muted-foreground">
                     {entry.checkIn
                       ? `Reserva: ${format(new Date(entry.checkIn), "dd/MM/yyyy")}`
@@ -155,14 +155,14 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
                     }
                   </div>
                 </TableCell>
-                <TableCell className="font-mono text-sm">
+                <TableCell className="font-mono text-sm text-slate-800 dark:text-slate-200">
                   {entry.guestPhone}
                 </TableCell>
-                <TableCell className="max-w-[300px] truncate" title={entry.reason}>
+                <TableCell className="max-w-[300px] truncate text-slate-700 dark:text-slate-300" title={entry.reason}>
                   {entry.reason}
                 </TableCell>
                 <TableCell>
-                  <div className="text-sm">{entry.reportedBy?.name || "Desconocido"}</div>
+                  <div className="text-sm text-slate-700 dark:text-slate-300">{entry.reportedBy?.name || "Desconocido"}</div>
                 </TableCell>
                 {isAdmin && (
                   <TableCell className="text-right space-x-2">
@@ -190,10 +190,10 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
       {/* Mobile Card View */}
       <div className="md:hidden space-y-3">
         {filteredData.map((entry) => (
-          <div key={entry.id} className="p-4 rounded-lg border bg-white shadow-sm border-l-4 border-l-red-500">
+          <div key={entry.id} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs border-l-4 border-l-red-500">
             <div className="flex justify-between items-start gap-2">
               <div className="min-w-0">
-                <div className="font-bold text-base text-red-700 whitespace-normal break-words leading-tight flex items-center gap-1">
+                <div className="font-bold text-base text-red-700 dark:text-red-400 whitespace-normal break-words leading-tight flex items-center gap-1">
                   <ShieldAlert className="h-4 w-4 shrink-0" />
                   {entry.guestName}
                 </div>
@@ -211,7 +211,7 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
               )}
             </div>
 
-            <div className="mt-3 text-sm bg-red-50 p-2 rounded text-red-900 whitespace-normal break-words">
+            <div className="mt-3 text-sm bg-red-50 dark:bg-red-900/20 p-2 rounded text-red-900 dark:text-red-200 whitespace-normal break-words">
               <span className="font-semibold block text-xs uppercase tracking-wide text-red-400 mb-0.5">Motivo:</span>
               {entry.reason}
             </div>

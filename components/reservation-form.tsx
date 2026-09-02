@@ -505,7 +505,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
             control={form.control}
             name="hasParking"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm bg-blue-50/50 border-blue-100">
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-xl border p-4 shadow-xs bg-blue-50/50 dark:bg-slate-800/80 border-blue-100 dark:border-slate-700">
                 <FormControl>
                   <Checkbox
                     checked={field.value}
@@ -513,10 +513,10 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
-                  <FormLabel>
+                  <FormLabel className="text-slate-900 dark:text-slate-100 font-semibold">
                     ¿Requiere Cochera?
                   </FormLabel>
-                  <FormDescription>
+                  <FormDescription className="text-slate-500 dark:text-slate-400">
                     Marcar si el huésped solicita lugar en la cochera.
                   </FormDescription>
                 </div>

@@ -122,15 +122,15 @@ export default async function ApprovalsPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center gap-3 mb-8">
-        <ClipboardCheck className="w-8 h-8 text-sky-600" />
-        <h1 className="text-3xl font-bold text-slate-800">Aprobaciones Pendientes</h1>
+        <ClipboardCheck className="w-8 h-8 text-sky-600 dark:text-sky-400" />
+        <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Aprobaciones Pendientes</h1>
       </div>
 
       {approvals.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <ClipboardCheck className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h2 className="text-xl font-medium text-slate-600">No hay reservas pendientes de aprobación</h2>
-          <p className="text-slate-500 mt-2">Las nuevas solicitudes web aparecerán aquí.</p>
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xs border border-slate-200 dark:border-slate-800 p-12 text-center">
+          <ClipboardCheck className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-100">No hay reservas pendientes de aprobación</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">Las nuevas solicitudes web aparecerán aquí.</p>
         </div>
       ) : (
         <ApprovalsClient initialApprovals={approvals} currentSessionId={sessionId} />

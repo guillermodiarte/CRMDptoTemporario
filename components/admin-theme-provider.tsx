@@ -13,7 +13,8 @@ interface AdminThemeContextType {
 
 const AdminThemeContext = createContext<AdminThemeContextType | undefined>(undefined);
 
-const STORAGE_KEY = "crm-admin-theme-preference";
+const ADMIN_STORAGE_KEY = "crm-admin-theme-preference";
+const PUBLIC_STORAGE_KEY = "crm-theme-preference";
 
 export function AdminThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<AdminTheme>("light");
@@ -21,7 +22,7 @@ export function AdminThemeProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY) as AdminTheme | null;
+      const saved = localStorage.getItem(ADMIN_STORAGE_KEY) as AdminTheme | null;
       if (saved === "light" || saved === "dark") {
         setThemeState(saved);
       }
@@ -31,10 +32,31 @@ export function AdminThemeProvider({ children }: { children: React.ReactNode }) 
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!mounted) return;
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+
+    return () => {
+      // When unmounting dashboard (e.g. navigating to public site), restore public theme
+      try {
+        const publicSaved = localStorage.getItem(PUBLIC_STORAGE_KEY);
+        if (publicSaved === "dark") {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      } catch (e) {}
+    };
+  }, [theme, mounted]);
+
   const setTheme = (newTheme: AdminTheme) => {
     setThemeState(newTheme);
     try {
-      localStorage.setItem(STORAGE_KEY, newTheme);
+      localStorage.setItem(ADMIN_STORAGE_KEY, newTheme);
     } catch (e) {
       console.error("Error saving admin theme preference:", e);
     }
@@ -48,7 +70,7 @@ export function AdminThemeProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <AdminThemeContext.Provider value={{ theme, setTheme, toggleTheme, isDark }}>
-      <div className={`min-h-screen transition-colors duration-200 ${isDark ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
+      <div className={`min-h-screen transition-colors duration-150 ${isDark ? "dark bg-slate-950 text-slate-100" : "bg-slate-50/50 text-slate-900"}`}>
         {children}
       </div>
     </AdminThemeContext.Provider>
