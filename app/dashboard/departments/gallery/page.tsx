@@ -17,13 +17,21 @@ export default async function DepartmentGalleryPage() {
   const isSuperAdmin = (session.user as any)?.isSuperAdmin === true;
   const role = (session.user as any)?.role || "ADMIN";
 
-  const departments = await prisma.department.findMany({
-    where: {
-      type: "APARTMENT",
-      sessionId: isSuperAdmin ? undefined : sessionId,
-      isArchived: false,
+  const whereClause: any = {
+    type: "APARTMENT",
+    isArchived: false,
+    isActive: true,
+    session: {
       isActive: true,
     },
+  };
+
+  if (!isSuperAdmin) {
+    whereClause.sessionId = sessionId;
+  }
+
+  const departments = await prisma.department.findMany({
+    where: whereClause,
     orderBy: { name: "asc" },
     select: {
       id: true,

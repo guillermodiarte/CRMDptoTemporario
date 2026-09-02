@@ -283,6 +283,8 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
     if (pickerTarget.field === "logoUrl") {
       setSiteConfig(prev => ({ ...prev, logoUrl: url }));
+    } else if (pickerTarget.field === "adminLogoUrl") {
+      setSiteConfig(prev => ({ ...prev, adminLogoUrl: url }));
     } else if (pickerTarget.field === "loginBgUrl") {
       setSiteConfig(prev => ({ ...prev, loginBgUrl: url }));
     } else if (pickerTarget.field === "loginLogoUrl") {
@@ -299,7 +301,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
   };
 
   // ─── Direct Image Uploads for Site Config ─────────────────────────
-  const handleDirectUpload = async (field: "logoUrl" | "loginBgUrl" | "loginLogoUrl", folder: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDirectUpload = async (field: "logoUrl" | "adminLogoUrl" | "loginBgUrl" | "loginLogoUrl", folder: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -548,7 +550,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 w-full">
       {/* Media Picker Modal */}
       <MediaPickerModal
         open={pickerOpen}
@@ -968,21 +970,23 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
               <hr className="border-slate-200 dark:border-slate-800 my-4" />
 
-              {/* 3 Image Pickers: Navbar Logo, Login Logo, Login Background */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* 4 Image Pickers: Navbar Logo, Admin Sidebar Logo, Login Logo, Login Background */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* 1. Navbar Logo */}
-                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3">
-                  <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
-                    <ImageIcon className="w-4 h-4 text-sky-500" /> Logo Web / Navbar
-                  </Label>
-                  <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-2">
-                    {siteConfig.logoUrl ? (
-                      <img src={siteConfig.logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
-                    ) : (
-                      <span className="text-xs text-slate-400">Sin logo personalizado</span>
-                    )}
+                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                      <ImageIcon className="w-4 h-4 text-sky-500" /> Logo Web / Navbar
+                    </Label>
+                    <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-2">
+                      {siteConfig.logoUrl ? (
+                        <img src={siteConfig.logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <span className="text-xs text-slate-400">Sin logo personalizado</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 pt-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -1003,19 +1007,56 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   </div>
                 </div>
 
-                {/* 2. Login Logo */}
-                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3">
-                  <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
-                    <ImageIcon className="w-4 h-4 text-indigo-500" /> Logo Pantalla Login
-                  </Label>
-                  <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-2">
-                    {siteConfig.loginLogoUrl ? (
-                      <img src={siteConfig.loginLogoUrl} alt="Logo Login" className="max-h-full max-w-full object-contain" />
-                    ) : (
-                      <span className="text-xs text-slate-400">Default: Di'Arte Vertical</span>
-                    )}
+                {/* 2. Admin Sidebar Logo */}
+                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                      <ImageIcon className="w-4 h-4 text-teal-500" /> Logo Admin (Sidebar)
+                    </Label>
+                    <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-2">
+                      {siteConfig.adminLogoUrl ? (
+                        <img src={siteConfig.adminLogoUrl} alt="Logo Admin" className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <span className="text-xs text-slate-400">Default: Di'Arte Horizontal</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openPicker("adminLogoUrl", "logos")}
+                      className="flex-1 text-xs cursor-pointer font-semibold"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5 mr-1 text-teal-500" /> Galería
+                    </Button>
+                    <label className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs">
+                      <Upload className="w-3.5 h-3.5" /> Subir
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleDirectUpload("adminLogoUrl", "logos", e)}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* 3. Login Logo */}
+                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                      <ImageIcon className="w-4 h-4 text-indigo-500" /> Logo Pantalla Login
+                    </Label>
+                    <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-2">
+                      {siteConfig.loginLogoUrl ? (
+                        <img src={siteConfig.loginLogoUrl} alt="Logo Login" className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <span className="text-xs text-slate-400">Default: Di'Arte Vertical</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -1036,19 +1077,21 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   </div>
                 </div>
 
-                {/* 3. Login Background */}
-                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3">
-                  <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
-                    <ImageIcon className="w-4 h-4 text-amber-500" /> Fondo Pantalla Login
-                  </Label>
-                  <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-1">
-                    {siteConfig.loginBgUrl ? (
-                      <img src={siteConfig.loginBgUrl} alt="Fondo Login" className="w-full h-full object-cover rounded-lg" />
-                    ) : (
-                      <span className="text-xs text-slate-400">Default: Living room</span>
-                    )}
+                {/* 4. Login Background */}
+                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                      <ImageIcon className="w-4 h-4 text-amber-500" /> Fondo Pantalla Login
+                    </Label>
+                    <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-1">
+                      {siteConfig.loginBgUrl ? (
+                        <img src={siteConfig.loginBgUrl} alt="Fondo Login" className="w-full h-full object-cover rounded-lg" />
+                      ) : (
+                        <span className="text-xs text-slate-400">Default: Living room</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 pt-2">
                     <Button
                       size="sm"
                       variant="outline"

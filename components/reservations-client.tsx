@@ -468,7 +468,20 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         <div className="flex flex-col text-left">
                           <div className={isNoShow || isCancelled ? "line-through text-muted-foreground" : ""}>{res.guestName}</div>
                           <div className={`text-xs text-muted-foreground ${isCancelled ? "line-through" : ""}`}>{res.guestPhone}</div>
-                          <div className={`text-xs text-muted-foreground font-semibold ${isCancelled ? "line-through" : ""}`}>{res.source === 'DIRECT' ? 'DIRECTO' : res.source}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`text-xs text-muted-foreground font-semibold inline-block min-w-[70px] ${isCancelled ? "line-through" : ""}`}>
+                              {res.source === 'DIRECT' ? 'DIRECTO' : res.source}
+                            </span>
+                            {res.notes && (
+                              <button
+                                onClick={() => setViewNotesRes(res)}
+                                className="text-amber-500 hover:text-amber-600 dark:text-amber-400 p-0.5 rounded cursor-pointer transition-transform hover:scale-110 shrink-0"
+                                title="Ver nota"
+                              >
+                                <NotepadText className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
                           {isBlacklisted && <Badge variant="destructive" className="mt-1 text-[10px] w-fit">Lista Negra</Badge>}
                         </div>
                       </div>
@@ -579,16 +592,27 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           ) : '-')
                       }
                     </TableCell>
-                    <TableCell className="text-right flex justify-end gap-1">
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {!isVisualizer && res.department.isActive && !res.department.isArchived && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(res)}
+                            className="h-8 w-8 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 shadow-xs border border-blue-200 dark:border-blue-800/60 rounded-lg cursor-pointer"
+                            title="Editar Reserva"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
                         {(() => {
                           const actions = [];
 
                           if (res.notes) {
                             actions.push({
                               label: "Ver Nota",
-                              icon: <NotepadText className="h-4 w-4" />,
+                              icon: <NotepadText className="h-4 w-4 text-blue-500" />,
                               onClick: () => setViewNotesRes(res),
-                              className: "text-blue-500 dark:text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 shadow-xs border border-blue-200 dark:border-blue-800/60 rounded-full",
                               title: "Ver nota"
                             });
                           }
@@ -597,9 +621,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             if (!isPaid && !isNoShow && (res.paymentStatus as any) !== 'CANCELLED') {
                               actions.push({
                                 label: "Marcar Pagado",
-                                icon: <DollarSign className="h-4 w-4" />,
+                                icon: <DollarSign className="h-4 w-4 text-emerald-600" />,
                                 onClick: () => handleMarkPaidClick(res.id, res.totalAmount),
-                                className: "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 shadow-xs border border-emerald-200 dark:border-emerald-800/60 rounded-full",
                                 title: "Marcar Pagado"
                               });
                             }
@@ -607,9 +630,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             if (canMarkNoShow) {
                               actions.push({
                                 label: "Marcar No Presentado",
-                                icon: <UserX className="h-4 w-4" />,
+                                icon: <UserX className="h-4 w-4 text-orange-500" />,
                                 onClick: () => handleNoShowClick(res.id),
-                                className: "text-orange-500 dark:text-orange-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/50 shadow-xs border border-orange-200 dark:border-orange-800/60 rounded-full",
                                 title: "Marcar No Presentado"
                               });
                             }
@@ -617,31 +639,17 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             if (isBlacklisted) {
                               actions.push({
                                 label: "En Lista Negra",
-                                icon: <Ban className="h-4 w-4" />,
+                                icon: <Ban className="h-4 w-4 text-red-500" />,
                                 onClick: () => { },
                                 disabled: true,
-                                className: "text-red-500 dark:text-red-400 opacity-70 cursor-not-allowed shadow-xs border border-red-200 dark:border-red-800/60 rounded-full",
                                 title: "Huésped ya en lista negra"
                               });
                             } else {
                               actions.push({
                                 label: "Reportar",
-                                icon: <ShieldAlert className="h-4 w-4" />,
+                                icon: <ShieldAlert className="h-4 w-4 text-red-500" />,
                                 onClick: () => setReportBlacklistData(res),
-                                className: "text-red-500 dark:text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 shadow-xs border border-red-200 dark:border-red-800/60 rounded-full",
                                 title: "Reportar a Lista Negra"
-                              });
-                            }
-
-                            const canEdit = res.department.isActive && !res.department.isArchived;
-
-                            if (canEdit) {
-                              actions.push({
-                                label: "Editar",
-                                icon: <Pencil className="h-4 w-4" />,
-                                onClick: () => handleEdit(res),
-                                className: "text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 shadow-xs border border-blue-200 dark:border-blue-800/60 rounded-full",
-                                title: "Editar"
                               });
                             }
 
@@ -650,18 +658,16 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             if (canCancel) {
                               actions.push({
                                 label: "Cancelar Reserva",
-                                icon: <XCircle className="h-4 w-4" />,
+                                icon: <XCircle className="h-4 w-4 text-red-600" />,
                                 onClick: () => handleCancelReservationClick(res.id),
-                                className: "text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 shadow-xs border border-red-200 dark:border-red-800/60 rounded-full",
                                 title: "Cancelar Reserva"
                               });
                             }
 
                             actions.push({
                               label: "Eliminar",
-                              icon: <Trash className="h-4 w-4" />,
+                              icon: <Trash className="h-4 w-4 text-red-600" />,
                               onClick: () => handleDeleteClick(res.id),
-                              className: "text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 shadow-xs border border-red-200 dark:border-red-800/60 rounded-full",
                               title: "Eliminar"
                             });
                           }
@@ -669,19 +675,19 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           return (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg cursor-pointer border border-slate-200 dark:border-slate-800">
                                   <span className="sr-only">Abrir menú</span>
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                              <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
                                 <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                 {actions.map((action, idx) => (
                                   <DropdownMenuItem
                                     key={idx}
                                     onClick={action.onClick}
                                     disabled={action.disabled}
-                                    className="cursor-pointer flex items-center gap-2"
+                                    className="cursor-pointer flex items-center gap-2 text-xs py-2"
                                   >
                                     {action.icon}
                                     <span>{action.label}</span>
@@ -691,7 +697,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             </DropdownMenu>
                           );
                         })()}
-                      </TableCell>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })}

@@ -58,7 +58,7 @@ const GUIDE_ITEMS: GuideItem[] = [
     badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
     highlights: ["Mirador al Río Paraguay", "Ferias artesanales fines de semana", "Ciclovía y pista de salud", "Gastronomía nocturna"],
     schedule: "Abierto 24 hs · Más concurrido al atardecer",
-    image: "/guia/formosa_costanera_1787964811650.jpg",
+    image: "/uploads/guia/formosa_costanera_1787964811650.jpg",
     rating: 5,
   },
   {
@@ -74,7 +74,7 @@ const GUIDE_ITEMS: GuideItem[] = [
     badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
     highlights: ["Avistaje de aves", "Senderismo y senderos naturales", "Kayak y deportes acuáticos", "Área de picnic"],
     schedule: "Todos los días 07:00 – 20:00 hs",
-    image: "/guia/formosa_laguna_oca_1787964854398.jpg",
+    image: "/uploads/guia/formosa_laguna_oca_1787964854398.jpg",
     rating: 5,
   },
   {
@@ -89,7 +89,7 @@ const GUIDE_ITEMS: GuideItem[] = [
     badge: "🦜 Maravilla Natural",
     badgeColor: "bg-teal-50 text-teal-700 border-teal-200",
     highlights: ["Safari en piragua/canoa", "Yacarés y nutrias gigantes", "Espátulas rosadas", "Guías locales disponibles"],
-    image: "/guia/formosa_banado_estrella_1787964924869.jpg",
+    image: "/uploads/guia/formosa_banado_estrella_1787964924869.jpg",
     rating: 5,
   },
   {
@@ -187,7 +187,7 @@ const GUIDE_ITEMS: GuideItem[] = [
     badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
     highlights: ["Pacú y Surubí a la parrilla", "Vista al Río Paraguay", "Cerveza artesanal y tragos"],
     schedule: "Mar–Dom 19:30 – 02:00 hs",
-    image: "/guia/formosa_ribera_resto_1787964873289.jpg",
+    image: "/uploads/guia/formosa_ribera_resto_1787964873289.jpg",
     rating: 5,
   },
   {
@@ -237,7 +237,7 @@ const GUIDE_ITEMS: GuideItem[] = [
     badge: "🍕 Pizza Top",
     badgeColor: "bg-orange-50 text-orange-700 border-orange-200",
     highlights: ["Horno a leña", "Masa de fermentación lenta", "Ingredientes importados"],
-    image: "/guia/formosa_pizza_artesanal_1787965047450.jpg",
+    image: "/uploads/guia/formosa_pizza_artesanal_1787965047450.jpg",
     rating: 5,
   },
   {
@@ -336,7 +336,7 @@ const GUIDE_ITEMS: GuideItem[] = [
     badge: "☕ Café Premium",
     badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
     highlights: ["Cafés de especialidad", "Medialunas recién horneadas", "Chocolates y tortas artesanales"],
-    image: "/guia/formosa_cafe_bonafide_1787965123868.jpg",
+    image: "/uploads/guia/formosa_cafe_bonafide_1787965123868.jpg",
     rating: 4,
   },
   {

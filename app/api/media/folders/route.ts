@@ -10,6 +10,7 @@ const STANDARD_FOLDERS = [
   { id: "slides", name: "Slides de Portada", isCustom: false, icon: "Images" },
   { id: "logos", name: "Logos & Marcas", isCustom: false, icon: "Tag" },
   { id: "guia", name: "Guía y Turismo", isCustom: false, icon: "MapPin" },
+  { id: "avatars", name: "Avatares de Usuarios", isCustom: false, icon: "User" },
   { id: "general", name: "General / Login", isCustom: false, icon: "Folder" },
 ];
 
@@ -39,7 +40,7 @@ export async function GET() {
       } catch {}
     }
 
-    // Also scan public/uploads directory for any folders not in list (excluding depts)
+    // Also scan public/uploads directory for any folders not in list (excluding depts and system folders)
     try {
       const uploadsDir = path.join(process.cwd(), "public", "uploads");
       const dirEntries = await readdir(uploadsDir, { withFileTypes: true });
@@ -47,7 +48,7 @@ export async function GET() {
 
       const knownIds = new Set([...STANDARD_FOLDERS.map(f => f.id), ...customFolders.map(f => f.id)]);
       for (const name of existingFolderNames) {
-        if (!knownIds.has(name) && !name.startsWith("dept_") && name !== "temp") {
+        if (!knownIds.has(name) && !name.startsWith("dept_") && name !== "temp" && name !== "departamentos" && !name.startsWith("Departamento_")) {
           customFolders.push({ id: name, name: name.replace(/_/g, " "), isCustom: true });
           knownIds.add(name);
         }

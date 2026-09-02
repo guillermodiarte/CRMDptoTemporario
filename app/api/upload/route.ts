@@ -21,8 +21,13 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const files = formData.getAll("files") as File[];
-    // Can receive either folder or department
-    const folderParam = (formData.get("folder") as string | null) || (formData.get("department") as string | null) || "general";
+    const deptParam = formData.get("department") as string | null;
+    const folderParam = formData.get("folder") as string | null;
+
+    let targetFolder = folderParam || "general";
+    if (deptParam) {
+      targetFolder = `departamentos/${deptParam}`;
+    }
 
     if (!files || files.length === 0) {
       return NextResponse.json({ error: "No se subieron archivos" }, { status: 400 });
@@ -30,8 +35,8 @@ export async function POST(req: NextRequest) {
 
     const uploadedUrls: string[] = [];
 
-    // Sanitize folder path (e.g. 'slides', 'logos', 'guia', 'general', or department subfolders)
-    const sanitized = folderParam
+    // Sanitize folder path (e.g. 'slides', 'logos', 'guia', 'general', 'avatars', or 'departamentos/...')
+    const sanitized = targetFolder
       .trim()
       .replace(/[^a-zA-Z0-9À-ÿ _\/-]/g, "")
       .replace(/\s+/g, "_")

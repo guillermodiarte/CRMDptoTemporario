@@ -34,6 +34,8 @@ import { AdminThemeProvider } from "@/components/admin-theme-provider";
 import { AdminThemeToggle } from "@/components/admin-theme-toggle";
 import Image from "next/image";
 
+import { getSiteConfig } from "@/lib/site-config-loader";
+
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardLayout({
@@ -42,6 +44,8 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const session = await auth();
+  const config = await getSiteConfig();
+  const adminLogo = config.adminLogoUrl || "/uploads/logos/logo-diarte-horizontal.png";
 
   // Optimización: Fetch user data server-side to avoid huge cookies
   const user = session?.user?.id ? await prisma.user.findUnique({
@@ -100,16 +104,14 @@ export default async function DashboardLayout({
           <div className="flex h-full max-h-screen flex-col gap-2">
             <div className="flex h-14 items-center justify-center border-b px-4 lg:h-[60px] lg:px-6">
               <Link href="/" className="flex items-center">
-                <Image
-                  src="/logo-diarte-horizontal.png"
+                <img
+                  src={adminLogo}
                   alt="Alojamientos Di'Arte"
-                  width={250}
-                  height={75}
-                  className="h-[50px] w-auto object-contain"
+                  className="h-[46px] w-auto max-w-[210px] object-contain"
                 />
               </Link>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 flex flex-col justify-between overflow-y-auto">
               <nav className="grid items-start px-2 text-base font-medium lg:px-4">
                 <Link
                   href="/dashboard"
@@ -151,48 +153,52 @@ export default async function DashboardLayout({
                     href="/dashboard/parking"
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                   >
-                    <Car className="h-5 w-5 text-orange-500" />
+                    <Car className="h-5 w-5 text-indigo-500" />
                     Cocheras
                   </Link>
                 )}
-                <Link
-                  href="/dashboard/finance"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                >
-                  <LineChart className="h-5 w-5 text-green-500" />
-                  Finanzas
-                </Link>
-                {role === 'ADMIN' && (
+                {role === "ADMIN" && (
+                  <Link
+                    href="/dashboard/finance"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                  >
+                    <LineChart className="h-5 w-5 text-green-500" />
+                    Finanzas
+                  </Link>
+                )}
+                {role === "ADMIN" && (
                   <Link
                     href="/dashboard/users"
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                   >
-                    <UserCog className="h-5 w-5 text-pink-500" />
+                    <Users className="h-5 w-5 text-pink-500" />
                     Usuarios
                   </Link>
                 )}
-                {role === 'ADMIN' && (
+                {role === "ADMIN" && (
                   <Link
                     href="/dashboard/settings"
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                   >
-                    <Settings className="h-5 w-5 text-slate-500" />
+                    <Settings className="h-5 w-5 text-gray-500" />
                     Configuración
                   </Link>
                 )}
-                <Link
-                  href="/dashboard/blacklist"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                >
-                  <ShieldAlert className="h-5 w-5 text-red-500" />
-                  Lista Negra
-                </Link>
+                {role === "ADMIN" && (
+                  <Link
+                    href="/dashboard/blacklist"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                  >
+                    <ShieldAlert className="h-5 w-5 text-red-500" />
+                    Lista Negra
+                  </Link>
+                )}
                 {user?.isSuperAdmin && (
                   <Link
                     href="/dashboard/admin/sessions"
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                   >
-                    <ShieldAlert className="h-5 w-5 text-indigo-500" />
+                    <UserCog className="h-5 w-5 text-cyan-500" />
                     Gestión de Sesiones
                   </Link>
                 )}
@@ -213,6 +219,11 @@ export default async function DashboardLayout({
                   Ver Sitio Público
                 </Link>
               </nav>
+
+              {/* Version Indicator */}
+              <div className="p-3 border-t text-center text-xs text-muted-foreground font-semibold">
+                Versión 2.0
+              </div>
             </div>
           </div>
         </div>

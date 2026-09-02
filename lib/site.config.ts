@@ -36,8 +36,9 @@ export const SITE_CONFIG_DEFAULTS = {
   // Upload a custom logo from Configuración → Identidad de Marca.
   // Leave empty to use the default Building2 icon in the navbar.
   logoUrl: "",
-  loginBgUrl: "/login-bg.png",
-  loginLogoUrl: "/logo-diarte-vertical.png",
+  adminLogoUrl: "/uploads/logos/logo-diarte-horizontal.png",
+  loginBgUrl: "/uploads/general/login-bg.png",
+  loginLogoUrl: "/uploads/logos/logo-diarte-vertical.png",
 
   // Slides / Carrusel de Portada
   heroSlides: JSON.stringify(DEFAULT_HERO_SLIDES),

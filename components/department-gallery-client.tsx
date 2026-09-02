@@ -659,14 +659,49 @@ export function DepartmentGalleryClient({
     }
   };
 
+  // Export All Folder Selection Modal
+  const [isExportAllOpen, setIsExportAllOpen] = useState(false);
+  const [selectedExportCategories, setSelectedExportCategories] = useState<string[]>([
+    "departamentos",
+    "slides",
+    "logos",
+    "guia",
+    "avatars",
+    "general",
+  ]);
+
   // ─── ZIP Export Handlers ──────────────────────────────────────────
-  const handleExportZip = async (type: "contextual" | "all") => {
+  const handleExportZip = async () => {
     setExporting(true);
     try {
+      // 1. If in select mode and specific images are selected, export those
+      if (isSelectMode && selectedUrls.length > 0) {
+        const res = await fetch("/api/media/export-zip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            urls: selectedUrls,
+            filename: "Fotos_Seleccionadas.zip",
+          }),
+        });
+
+        if (!res.ok) throw new Error("Error en descarga");
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Fotos_Seleccionadas.zip";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success("Descarga de fotos seleccionadas iniciada");
+        return;
+      }
+
+      // 2. Otherwise export current folder or current department
       let endpoint = "/api/media/export-zip";
-      if (type === "all") {
-        endpoint += "?category=all";
-      } else if (activeSection === "dept") {
+      if (activeSection === "dept") {
         endpoint += `?departmentId=${selectedDeptId}`;
       } else if (activeSection === "web") {
         endpoint += `?category=${encodeURIComponent(selectedFolderId)}`;
@@ -680,9 +715,7 @@ export function DepartmentGalleryClient({
       const a = document.createElement("a");
       a.href = url;
       a.download =
-        type === "all"
-          ? "Multimedia_Completo.zip"
-          : activeSection === "dept"
+        activeSection === "dept"
           ? `${selectedDept?.name || "depto"}_fotos.zip`
           : `${selectedFolderId}_imagenes.zip`;
       document.body.appendChild(a);
@@ -692,6 +725,42 @@ export function DepartmentGalleryClient({
       toast.success("Descarga iniciada");
     } catch {
       toast.error("Error al exportar archivo ZIP");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportSelectedFolders = async () => {
+    if (selectedExportCategories.length === 0) {
+      toast.error("Seleccioná al menos una carpeta para exportar");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const res = await fetch("/api/media/export-zip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          categories: selectedExportCategories,
+          filename: "Multimedia_Personalizado.zip",
+        }),
+      });
+
+      if (!res.ok) throw new Error("Error en descarga");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Multimedia_Personalizado.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Descarga personalizada iniciada");
+      setIsExportAllOpen(false);
+    } catch {
+      toast.error("Error al exportar carpetas seleccionadas");
     } finally {
       setExporting(false);
     }
@@ -718,6 +787,17 @@ export function DepartmentGalleryClient({
     }
   };
 
+  const toggleExportCategory = (cat: string) => {
+    setSelectedExportCategories(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
+  };
+
+  const allAvailableExportCategories = [
+    { id: "departamentos", name: "Departamentos (Todos)" },
+    ...webFolders.map(f => ({ id: f.id, name: f.name })),
+  ];
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)] bg-slate-50 dark:bg-slate-950 transition-colors duration-150 -m-4 lg:-m-6">
       {/* Lightbox Modal */}
@@ -728,6 +808,84 @@ export function DepartmentGalleryClient({
           onClose={() => setLightboxIndex(null)}
         />
       )}
+
+      {/* Export All Selection Modal */}
+      <Dialog open={isExportAllOpen} onOpenChange={setIsExportAllOpen}>
+        <DialogContent className="sm:max-w-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <Download className="w-5 h-5 text-indigo-500" />
+              Seleccionar Carpetas para Exportar a ZIP
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-3 space-y-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Elegí las carpetas que querés incluir en el archivo ZIP comprimido:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1">
+              {allAvailableExportCategories.map(cat => {
+                const checked = selectedExportCategories.includes(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => toggleExportCategory(cat.id)}
+                    className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
+                      checked
+                        ? "bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 shadow-xs"
+                        : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <div className={`p-1 rounded-md ${checked ? "bg-indigo-600 text-white" : "border border-slate-300 dark:border-slate-600"}`}>
+                      {checked ? <Check className="w-3.5 h-3.5" /> : <div className="w-3.5 h-3.5" />}
+                    </div>
+                    <span className="truncate">{cat.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-between items-center pt-2 text-xs">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedExportCategories(allAvailableExportCategories.map(c => c.id))}
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer"
+                >
+                  Seleccionar Todo
+                </button>
+                <span className="text-slate-300 dark:text-slate-700">|</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedExportCategories([])}
+                  className="text-slate-500 hover:underline cursor-pointer"
+                >
+                  Deseleccionar Todo
+                </button>
+              </div>
+              <span className="text-slate-400 font-medium">
+                {selectedExportCategories.length} seleccionada(s)
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsExportAllOpen(false)} className="cursor-pointer">
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleExportSelectedFolders}
+              disabled={exporting || selectedExportCategories.length === 0}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold cursor-pointer"
+            >
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Download className="w-4 h-4 mr-1.5" />}
+              Descargar ZIP ({selectedExportCategories.length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* New Folder Modal */}
       <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
@@ -985,16 +1143,16 @@ export function DepartmentGalleryClient({
                 </label>
               )}
 
-              {/* Export Contextual ZIP */}
+              {/* Export Contextual or Selected ZIP */}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleExportZip("contextual")}
-                disabled={exporting || currentImages.length === 0}
+                onClick={handleExportZip}
+                disabled={exporting || (isSelectMode ? selectedUrls.length === 0 : currentImages.length === 0)}
                 className="text-xs cursor-pointer font-semibold"
               >
                 {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Archive className="w-3.5 h-3.5 mr-1.5 text-amber-500" />}
-                Exportar ZIP
+                {isSelectMode && selectedUrls.length > 0 ? `Exportar (${selectedUrls.length})` : "Exportar ZIP"}
               </Button>
 
               {/* Export ALL Multimedia (SuperAdmin only) */}
@@ -1002,13 +1160,13 @@ export function DepartmentGalleryClient({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleExportZip("all")}
+                  onClick={() => setIsExportAllOpen(true)}
                   disabled={exporting}
                   className="text-xs cursor-pointer font-semibold border-indigo-200 dark:border-indigo-900 text-indigo-700 dark:text-indigo-300 bg-indigo-50/50 dark:bg-indigo-950/40"
-                  title="Exporta todo el árbol multimedia en ZIP"
+                  title="Seleccionar carpetas a exportar"
                 >
                   <Download className="w-3.5 h-3.5 mr-1.5 text-indigo-500" />
-                  Exportar Todo
+                  Exportar Todo...
                 </Button>
               )}
             </div>

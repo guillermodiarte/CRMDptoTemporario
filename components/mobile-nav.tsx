@@ -74,11 +74,9 @@ export function MobileNav({ role, user, showParking, isSuperAdmin }: MobileNavPr
             className="flex items-center gap-2 mb-4 px-2"
             onClick={() => setOpen(false)}
           >
-            <Image
-              src="/logo-diarte-horizontal.png"
+            <img
+              src="/uploads/logos/logo-diarte-horizontal.png"
               alt="Alojamientos Di'Arte"
-              width={180}
-              height={50}
               className="h-[40px] w-auto object-contain"
             />
           </Link>
