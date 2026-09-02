@@ -248,7 +248,7 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
         "flex flex-col bg-white overflow-hidden select-none font-sans",
         isForceLandscape 
           ? "fixed top-0 left-0 w-[100vh] h-[100vw] z-50 rounded-none shadow-2xl" 
-          : "h-full border border-slate-200 rounded-xl shadow-sm"
+          : "h-full border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs bg-white dark:bg-slate-900"
       )}
       style={isForceLandscape ? {
         transform: 'rotate(90deg) translateY(-100%)',
@@ -256,29 +256,29 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
       } : {}}
     >
       {/* Controls Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-white z-20 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-20 shrink-0">
         <div className="flex items-center gap-4">
           {/* Navigation */}
-          <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border">
-            <Button variant="ghost" size="icon" onClick={handlePrevMonth} className="h-8 w-8 hover:bg-white hover:shadow-sm">
+          <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+            <Button variant="ghost" size="icon" onClick={handlePrevMonth} className="h-8 w-8 hover:bg-white dark:hover:bg-slate-700 hover:shadow-xs">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="px-3 font-semibold text-sm capitalize min-w-[140px] text-center select-none">
+            <div className="px-3 font-semibold text-sm capitalize min-w-[140px] text-center select-none text-slate-800 dark:text-slate-100">
               {format(currentDate, "MMMM yyyy", { locale: es })}
             </div>
-            <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8 hover:bg-white hover:shadow-sm">
+            <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8 hover:bg-white dark:hover:bg-slate-700 hover:shadow-xs">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Half Selector (Desktop) */}
           {isDesktop ? (
-            <div className="flex bg-slate-100 p-0.5 rounded-lg border">
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
               <button
                 onClick={() => setViewHalf('first')}
                 className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                  viewHalf === 'first' ? "bg-white shadow text-slate-900" : "text-slate-500 hover:text-slate-700"
+                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer",
+                  viewHalf === 'first' ? "bg-white dark:bg-slate-700 shadow text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 )}
               >
                 1ra Quincena
@@ -286,8 +286,8 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
               <button
                 onClick={() => setViewHalf('middle')}
                 className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                  viewHalf === 'middle' ? "bg-white shadow text-slate-900" : "text-slate-500 hover:text-slate-700"
+                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer",
+                  viewHalf === 'middle' ? "bg-white dark:bg-slate-700 shadow text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 )}
               >
                 7 al 22
@@ -295,8 +295,8 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
               <button
                 onClick={() => setViewHalf('second')}
                 className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                  viewHalf === 'second' ? "bg-white shadow text-slate-900" : "text-slate-500 hover:text-slate-700"
+                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer",
+                  viewHalf === 'second' ? "bg-white dark:bg-slate-700 shadow text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 )}
               >
                 2da Quincena
@@ -304,26 +304,26 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
             </div>
           ) : (
             /* Mobile 5-Day Navigation */
-            <div className="flex bg-slate-100 p-0.5 rounded-lg border">
-              <button onClick={handlePrevChunk} className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900">
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+              <button onClick={handlePrevChunk} className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer">
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <div className="px-2 py-1.5 text-xs font-medium text-slate-800 border-x border-slate-200">
+              <div className="px-2 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 border-x border-slate-200 dark:border-slate-700">
                 {getDate(intervalStart)}-{getDate(intervalEnd)}
               </div>
-              <button onClick={handleNextChunk} className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900">
+              <button onClick={handleNextChunk} className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           )}
 
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" onClick={handleToday}>Hoy</Button>
+            <Button variant="outline" size="sm" onClick={handleToday} className="cursor-pointer">Hoy</Button>
           </div>
         </div>
 
-        {/* Legend (Restored for context since Zoom is gone) */}
-        <div className="hidden lg:flex items-center gap-4 text-xs text-slate-500 font-medium">
+        {/* Legend */}
+        <div className="hidden lg:flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 font-medium">
           <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#008489]"></span>Confirmada</div>
           <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#FFB400]"></span>Parcial</div>
           <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#FF5A5F]"></span>Pendiente</div>
@@ -331,7 +331,7 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
       </div>
 
       {/* Calendar Grid */}
-      <div ref={viewportRef} className="flex-1 w-full overflow-hidden bg-white relative flex flex-col">
+      <div ref={viewportRef} className="flex-1 w-full overflow-hidden bg-white dark:bg-slate-900 relative flex flex-col">
         {/* Floating Landscape Toggle Button (Mobile Only) */}
         {!isDesktop && (
           <Button
@@ -345,9 +345,9 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
         )}
         
         {/* Header Row */}
-        <div className="flex border-b h-10 shrink-0 shadow-sm z-40 bg-white">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 h-10 shrink-0 shadow-xs z-40 bg-white dark:bg-slate-900">
           {/* Corner */}
-          <div className="shrink-0 bg-white border-r z-50 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.05)]" style={{ width: deptWidthPx }}></div>
+          <div className="shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.05)]" style={{ width: deptWidthPx }}></div>
 
           {/* Days Header */}
           <div className="flex-1 flex overflow-hidden">
@@ -357,13 +357,15 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
               return (
                 <div key={day.toISOString()}
                   className={cn(
-                    "flex flex-col items-center justify-center border-r border-slate-100 text-xs overflow-hidden",
-                    isToday ? "bg-blue-50 text-blue-600 font-bold" : (isWeekend ? "bg-slate-50 text-slate-500" : "text-slate-600")
+                    "flex flex-col items-center justify-center border-r border-slate-100 dark:border-slate-800/80 text-xs overflow-hidden",
+                    isToday 
+                      ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold" 
+                      : (isWeekend ? "bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400" : "text-slate-600 dark:text-slate-300")
                   )}
                   style={{ width: `${dayWidthPct}%` }}
                 >
                   <span className="text-[10px] uppercase opacity-70">{format(day, "EEE", { locale: es }).slice(0, 1)}</span>
-                  <span>{format(day, "d")}</span>
+                  <span className="font-semibold">{format(day, "d")}</span>
                 </div>
               )
             })}
@@ -383,9 +385,9 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
                 return (
                   <div key={`bg-${day.toISOString()}`}
                     className={cn(
-                      "border-r border-slate-100 h-full relative",
-                      isPastDay ? "bg-slate-100/60" : (isWeekendFn(day) ? "bg-slate-50/30" : ""),
-                      isToday ? "bg-blue-50/10" : ""
+                      "border-r border-slate-100 dark:border-slate-800/80 h-full relative",
+                      isPastDay ? "bg-slate-100/60 dark:bg-slate-800/30" : (isWeekendFn(day) ? "bg-slate-50/30 dark:bg-slate-800/20" : ""),
+                      isToday ? "bg-blue-50/10 dark:bg-blue-950/20" : ""
                     )}
                     style={{ width: `${dayWidthPct}%` }}
                   >
@@ -415,18 +417,18 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
               if (!dept.isActive && deptReservations.length === 0) return null;
 
               return (
-                <div key={dept.id} className="flex group relative border-b hover:bg-slate-50/40 transition-colors isolate" style={{ height: rowHeight }}>
+                <div key={dept.id} className="flex group relative border-b border-slate-200 dark:border-slate-800/80 hover:bg-slate-50/40 dark:hover:bg-slate-800/40 transition-colors isolate" style={{ height: rowHeight }}>
                   {/* Sticky Sidebar */}
-                  <div className="sticky left-0 z-30 bg-white border-r flex p-3 gap-3 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.05)] transition-colors group-hover:bg-slate-50/40" style={{ width: deptWidthPx, minWidth: deptWidthPx }}>
+                  <div className="sticky left-0 z-30 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex p-3 gap-3 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.05)] transition-colors group-hover:bg-slate-50/40 dark:group-hover:bg-slate-800/40" style={{ width: deptWidthPx, minWidth: deptWidthPx }}>
                     {isDesktop && (
                       <DepartmentImage src={imageUrl} name={dept.name} type={dept.type} />
                     )}
                     <div className="flex flex-col justify-center min-w-0 flex-1">
-                      <div className="font-bold text-sm text-slate-800 truncate leading-tight">{dept.name}</div>
-                      <div className="text-xs text-slate-500 truncate mt-0.5">{dept.address || "Sin dirección"}</div>
+                      <div className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate leading-tight">{dept.name}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{dept.address || "Sin dirección"}</div>
                       <div className="flex items-center gap-2 mt-2">
                         <div className={cn("w-2 h-2 rounded-full", dept.isActive ? "bg-emerald-400" : "bg-rose-400")} />
-                        <span className="text-[10px] text-slate-400 font-medium">{dept.bedCount} huéspedes</span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{dept.bedCount} huéspedes</span>
                       </div>
                     </div>
                   </div>

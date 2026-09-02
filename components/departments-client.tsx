@@ -161,42 +161,42 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
       </div>
       <div className="mt-4 space-y-4">
         <div>
-          <h3 className="text-lg font-medium">Propiedades</h3>
+          <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">Propiedades</h3>
           <p className="text-sm text-muted-foreground">Gestiona tus unidades de alquiler temporal. Los inactivos no aparecen en nuevas reservas.</p>
         </div>
         {/* Desktop Table */}
-        <div className="hidden md:block rounded-md border bg-white">
+        <div className="hidden md:block rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-[300px]">Nombre</TableHead>
-                {defaultType !== 'PARKING' && <TableHead>Cap./Camas</TableHead>}
-                {defaultType !== 'PARKING' && <TableHead>Wifi</TableHead>}
-                <TableHead>Cód. Locker</TableHead>
-                <TableHead>Links</TableHead>
+              <TableRow className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800">
+                <TableHead className="w-[300px] text-slate-700 dark:text-slate-200">Nombre</TableHead>
+                {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Cap./Camas</TableHead>}
+                {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Wifi</TableHead>}
+                <TableHead className="text-slate-700 dark:text-slate-200">Cód. Locker</TableHead>
+                <TableHead className="text-slate-700 dark:text-slate-200">Links</TableHead>
                 {defaultType === 'PARKING' ? (
                   <>
-                    <TableHead>Precio</TableHead>
-                    <TableHead>Limpieza</TableHead>
+                    <TableHead className="text-slate-700 dark:text-slate-200">Precio</TableHead>
+                    <TableHead className="text-slate-700 dark:text-slate-200">Limpieza</TableHead>
                   </>
                 ) : (
-                  <TableHead>Precios (Base/Limp)</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-200">Precios (Base/Limp)</TableHead>
                 )}
-                {defaultType !== 'PARKING' && <TableHead>Insumos (Global)</TableHead>}
-                <TableHead>Estado</TableHead>
-                {!isVisualizer && <TableHead className="text-right">Acciones</TableHead>}
+                {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Insumos (Global)</TableHead>}
+                <TableHead className="text-slate-700 dark:text-slate-200">Estado</TableHead>
+                {!isVisualizer && <TableHead className="text-right text-slate-700 dark:text-slate-200">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {visibleData.map((dept) => (
-                <TableRow key={dept.id} className={cn(!dept.isActive && "opacity-60 bg-muted/50")}>
+                <TableRow key={dept.id} className={cn("border-b border-slate-100 dark:border-slate-800/60", !dept.isActive && "opacity-60 bg-muted/50")}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {dept.color && (
                         <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dept.color }} title="Color distintivo" />
                       )}
                       <div className="min-w-0">
-                        <div className="truncate font-semibold">
+                        <div className="truncate font-semibold text-slate-900 dark:text-slate-100">
                           {dept.name}
                           {dept.alias && <span className="text-muted-foreground font-normal ml-1">({dept.alias})</span>}
                         </div>
@@ -205,9 +205,9 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                     </div>
                   </TableCell>
                   {defaultType !== 'PARKING' && (
-                    <TableCell>
+                    <TableCell className="text-slate-800 dark:text-slate-200">
                       {dept.type === 'PARKING' ? (
-                        <Badge variant="outline" className="text-xs bg-slate-50">Cochera</Badge>
+                        <Badge variant="outline" className="text-xs bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200">Cochera</Badge>
                       ) : (
                         <>{dept.maxPeople}p / {dept.bedCount}c</>
                       )}
@@ -217,7 +217,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                     <TableCell className="text-xs">
                       {dept.wifiName ? (
                         <div className="flex flex-col gap-0.5 max-w-[150px]">
-                          <div className="flex items-center gap-1 font-medium truncate"><Wifi className="h-3 w-3 shrink-0" /> {dept.wifiName}</div>
+                          <div className="flex items-center gap-1 font-medium truncate text-slate-800 dark:text-slate-200"><Wifi className="h-3 w-3 shrink-0" /> {dept.wifiName}</div>
                           <div className="text-muted-foreground select-all truncate">{dept.wifiPass}</div>
                         </div>
                       ) : "-"}
@@ -290,7 +290,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                       <Badge variant={dept.isActive ? "default" : "secondary"}>
                         {dept.isActive ? "Activo" : "Inactivo"}
                       </Badge>
-                      <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white">
+                      <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 dark:border-slate-700">
                         {dept.showOnPublic ? "Público" : "Oculto"}
                       </Badge>
                     </div>
@@ -337,7 +337,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
               ))}
               {visibleData.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={!isVisualizer ? 9 : 8} className="text-center h-24">
+                  <TableCell colSpan={!isVisualizer ? 9 : 8} className="text-center h-24 text-muted-foreground">
                     No se encontraron {entityName.toLowerCase()}s.
                   </TableCell>
                 </TableRow>
@@ -349,7 +349,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
         {/* Mobile Card View */}
         <div className="md:hidden space-y-3">
           {visibleData.map((dept) => (
-            <Card key={dept.id} className={cn("overflow-hidden", !dept.isActive && "opacity-60 bg-muted/50")}>
+            <Card key={dept.id} className={cn("overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900", !dept.isActive && "opacity-60 bg-muted/50")}>
               <CardContent className="p-3 space-y-3">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-start justify-between gap-2">
@@ -358,7 +358,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                         <div className="w-3 h-3 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: dept.color }} />
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="font-bold text-base whitespace-normal break-words leading-tight">
+                        <div className="font-bold text-base whitespace-normal break-words leading-tight text-slate-900 dark:text-slate-100">
                           {dept.name}
                           {dept.alias && <span className="text-muted-foreground font-normal ml-1">({dept.alias})</span>}
                         </div>
@@ -369,7 +369,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                       <Badge variant={dept.isActive ? "default" : "secondary"}>
                         {dept.isActive ? "Activo" : "Inactivo"}
                       </Badge>
-                      <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white">
+                      <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 dark:border-slate-700">
                         {dept.showOnPublic ? "Público" : "Oculto"}
                       </Badge>
                     </div>
@@ -416,35 +416,35 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
 
         {/* Other Sessions Departments (SuperAdmin only) */}
         {otherSessionsDepts && otherSessionsDepts.length > 0 && (
-          <div className="mt-12 space-y-8 border-t pt-8">
+          <div className="mt-12 space-y-8 border-t dark:border-slate-800 pt-8">
             <div>
-              <h3 className="text-2xl font-bold tracking-tight text-slate-800">Departamentos de otras Sesiones</h3>
+              <h3 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Departamentos de otras Sesiones</h3>
               <p className="text-sm text-muted-foreground">Como SuperAdmin, puedes ver y editar los departamentos de las demás sesiones.</p>
             </div>
             
             {otherSessionsDepts.map(sessionData => (
               <div key={sessionData.sessionName} className="space-y-4">
-                <h4 className="text-lg font-semibold border-b pb-2 text-indigo-700">{sessionData.sessionName}</h4>
-                <div className="rounded-md border bg-white overflow-hidden">
+                <h4 className="text-lg font-semibold border-b dark:border-slate-800 pb-2 text-indigo-700 dark:text-indigo-400">{sessionData.sessionName}</h4>
+                <div className="rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[300px]">Nombre</TableHead>
-                        {defaultType !== 'PARKING' && <TableHead>Cap./Camas</TableHead>}
-                        <TableHead>Estado</TableHead>
-                        {!isVisualizer && <TableHead className="text-right">Acciones</TableHead>}
+                      <TableRow className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800">
+                        <TableHead className="w-[300px] text-slate-700 dark:text-slate-200">Nombre</TableHead>
+                        {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Cap./Camas</TableHead>}
+                        <TableHead className="text-slate-700 dark:text-slate-200">Estado</TableHead>
+                        {!isVisualizer && <TableHead className="text-right text-slate-700 dark:text-slate-200">Acciones</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {sessionData.departments.map(dept => (
-                        <TableRow key={dept.id} className={cn(!dept.isActive && "opacity-60 bg-muted/50")}>
+                        <TableRow key={dept.id} className={cn("border-b border-slate-100 dark:border-slate-800/60", !dept.isActive && "opacity-60 bg-muted/50")}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
                               {dept.color && (
                                 <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dept.color }} />
                               )}
                               <div>
-                                <div>{dept.name}</div>
+                                <div className="text-slate-900 dark:text-slate-100 font-semibold">{dept.name}</div>
                                 {dept.alias && <div className="text-xs text-muted-foreground">{dept.alias}</div>}
                                 {dept.address && <div className="text-xs text-muted-foreground font-normal">{dept.address}</div>}
                               </div>
@@ -452,7 +452,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                           </TableCell>
                           {defaultType !== 'PARKING' && (
                             <TableCell>
-                              <div className="text-sm">
+                              <div className="text-sm text-slate-800 dark:text-slate-200">
                                 {dept.maxPeople}p / {dept.bedCount}c
                               </div>
                             </TableCell>
@@ -462,7 +462,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                               <Badge variant={dept.isActive ? "default" : "secondary"}>
                                 {dept.isActive ? "Activo" : "Inactivo"}
                               </Badge>
-                              <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white">
+                              <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 dark:border-slate-700">
                                 {dept.showOnPublic ? "Público" : "Oculto"}
                               </Badge>
                             </div>

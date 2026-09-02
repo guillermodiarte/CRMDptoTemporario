@@ -167,9 +167,9 @@ export function UsersClient({ data, currentUserId, availableSessions = [] }: Use
         )}
       </div>
 
-      <div className="flex gap-4 items-center bg-white p-4 rounded-lg shadow-sm border">
+      <div className="flex gap-4 items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-xs border border-slate-200 dark:border-slate-800">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
           <Input
             placeholder="Buscar por nombre, email o teléfono..."
             className="pl-9"
@@ -193,25 +193,25 @@ export function UsersClient({ data, currentUserId, availableSessions = [] }: Use
         )}
       </div>
 
-      <div className="rounded-md border bg-white hidden md:block">
+      <div className="rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hidden md:block overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Usuario</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Sesiones</TableHead>
-              <TableHead>Teléfono</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+            <TableRow className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800">
+              <TableHead className="text-slate-700 dark:text-slate-200">Usuario</TableHead>
+              <TableHead className="text-slate-700 dark:text-slate-200">Rol</TableHead>
+              <TableHead className="text-slate-700 dark:text-slate-200">Sesiones</TableHead>
+              <TableHead className="text-slate-700 dark:text-slate-200">Teléfono</TableHead>
+              <TableHead className="text-slate-700 dark:text-slate-200">Estado</TableHead>
+              <TableHead className="text-right text-slate-700 dark:text-slate-200">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.map((user) => {
               const isCurrentUser = user.id === currentUserId;
               return (
-                <TableRow key={user.id}>
+                <TableRow key={user.id} className="border-b border-slate-100 dark:border-slate-800/60">
                   <TableCell>
-                    <div className="font-medium">{user.name || "Sin nombre"}</div>
+                    <div className="font-medium text-slate-900 dark:text-slate-100">{user.name || "Sin nombre"}</div>
                     <div className="text-xs text-muted-foreground">{user.email}</div>
                   </TableCell>
                   <TableCell>
@@ -223,7 +223,7 @@ export function UsersClient({ data, currentUserId, availableSessions = [] }: Use
                     <div className="flex flex-wrap gap-1">
                       {user.allSessions && user.allSessions.length > 0 ? (
                         user.allSessions.map((s: any) => (
-                          <Badge key={s.sessionId} variant="outline" className="bg-slate-50 text-xs">
+                          <Badge key={s.sessionId} variant="outline" className="bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 dark:border-slate-700 text-xs">
                             {s.session.name}
                           </Badge>
                         ))
@@ -232,12 +232,12 @@ export function UsersClient({ data, currentUserId, availableSessions = [] }: Use
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-slate-800 dark:text-slate-200">
                     {user.phone || "-"}
                   </TableCell>
                   <TableCell>
                     {user.isActive ? (
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100 shadow-none border-0">Activo</Badge>
+                      <Badge className="bg-green-100 dark:bg-green-950/60 text-green-800 dark:text-green-300 hover:bg-green-100 shadow-none border-0">Activo</Badge>
                     ) : (
                       <Badge variant="destructive">Inactivo</Badge>
                     )}

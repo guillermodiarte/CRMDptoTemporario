@@ -173,11 +173,11 @@ function SortableCard({
       ref={setNodeRef}
       style={style}
       onClick={isSelectMode ? handleCardClick : undefined}
-      className={`group relative bg-white rounded-2xl overflow-hidden shadow-sm border transition-all
+      className={`group relative bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-xs border transition-all
         ${ isSelectMode ? "cursor-pointer" : "" }
         ${ isSelected
             ? "border-indigo-500 ring-2 ring-indigo-400 shadow-md"
-            : "border-slate-100 hover:shadow-md"
+            : "border-slate-200 dark:border-slate-800 hover:shadow-md"
         }
       `}
     >
@@ -188,7 +188,7 @@ function SortableCard({
         }`}
         onClick={e => { e.stopPropagation(); onToggleSelect(); }}
       >
-        <div className={`rounded-lg p-0.5 ${ isSelected ? "bg-indigo-600" : "bg-white/90" }`}>
+        <div className={`rounded-lg p-0.5 ${ isSelected ? "bg-indigo-600" : "bg-white/90 dark:bg-slate-800/90" }`}>
           {isSelected
             ? <CheckSquare2 className="w-5 h-5 text-white" />
             : <Square className="w-5 h-5 text-slate-400" />
@@ -198,8 +198,8 @@ function SortableCard({
 
       {/* Drag handle — hidden in select mode */}
       {!isSelectMode && (
-        <div {...attributes} {...listeners} className="absolute top-2 left-8 z-20 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 rounded-lg p-1 cursor-grab active:cursor-grabbing">
-          <GripVertical className="w-4 h-4 text-slate-500" />
+        <div {...attributes} {...listeners} className="absolute top-2 left-8 z-20 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-slate-800/80 rounded-lg p-1 cursor-grab active:cursor-grabbing">
+          <GripVertical className="w-4 h-4 text-slate-500 dark:text-slate-400" />
         </div>
       )}
 
@@ -212,7 +212,7 @@ function SortableCard({
 
       {/* Image */}
       <div
-        className={`aspect-square overflow-hidden bg-slate-100 ${ isSelectMode ? "" : "cursor-zoom-in" }`}
+        className={`aspect-square overflow-hidden bg-slate-100 dark:bg-slate-800 ${ isSelectMode ? "" : "cursor-zoom-in" }`}
         onClick={isSelectMode ? undefined : onLightbox}
       >
         <img
@@ -251,14 +251,14 @@ function SortableCard({
               value={draft}
               onChange={e => setDraft(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setEditing(false); }}
-              className="flex-1 text-xs border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              className="flex-1 text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400"
             />
-            <button onClick={commitRename} className="text-indigo-600 hover:text-indigo-800 p-1">
+            <button onClick={commitRename} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 p-1">
               <Check className="w-4 h-4" />
             </button>
           </div>
         ) : (
-          <p className={`text-xs truncate px-1 ${ isSelected ? "text-indigo-600 font-medium" : "text-slate-500" }`}>{image.name}</p>
+          <p className={`text-xs truncate px-1 ${ isSelected ? "text-indigo-600 dark:text-indigo-400 font-medium" : "text-slate-500 dark:text-slate-400" }`}>{image.name}</p>
         )}
       </div>
     </div>
@@ -608,18 +608,18 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-slate-50">
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-slate-50 dark:bg-slate-950">
 
       {/* ── Sidebar ── */}
-      <aside className="w-64 shrink-0 bg-white border-r border-slate-200 flex flex-col">
-        <div className="p-4 border-b border-slate-100">
+      <aside className="w-64 shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800">
           <Button variant="ghost" size="sm" asChild className="mb-3 -ml-1">
             <Link href="/dashboard/departments">
               <ArrowLeft className="w-4 h-4 mr-1" /> Volver a Departamentos
             </Link>
           </Button>
-          <h1 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
-            <Images className="w-5 h-5 text-indigo-600" /> Galería
+          <h1 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-lg">
+            <Images className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> Galería
           </h1>
         </div>
         <div className="flex-1 overflow-y-auto py-2">
@@ -630,14 +630,18 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
               <button
                 key={dept.id}
                 onClick={() => setSelectedDeptId(dept.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${isActive ? "bg-indigo-50 border-r-2 border-indigo-500" : "hover:bg-slate-50"}`}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${
+                  isActive 
+                    ? "bg-indigo-50 dark:bg-indigo-950/50 border-r-2 border-indigo-500" 
+                    : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                }`}
               >
-                <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 shrink-0 ring-2 ring-transparent">
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 ring-2 ring-transparent">
                   {imgs[0] ? <img src={imgs[0].url} alt="" className="w-full h-full object-cover" /> : <FolderOpen className="w-5 h-5 m-auto mt-2.5 text-slate-400" />}
                 </div>
                 <div className="min-w-0">
-                  <p className={`font-semibold text-sm truncate ${isActive ? "text-indigo-700" : "text-slate-700"}`}>{dept.name}</p>
-                  <p className="text-xs text-slate-400">{imgs.length} foto{imgs.length !== 1 ? "s" : ""}</p>
+                  <p className={`font-semibold text-sm truncate ${isActive ? "text-indigo-700 dark:text-indigo-300" : "text-slate-700 dark:text-slate-200"}`}>{dept.name}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">{imgs.length} foto{imgs.length !== 1 ? "s" : ""}</p>
                 </div>
               </button>
             );
@@ -648,10 +652,10 @@ export function DepartmentGalleryClient({ initialDepartments }: { initialDepartm
       {/* ── Main content ── */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Toolbar */}
-        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-3 shrink-0 flex-wrap">
+        <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center gap-3 shrink-0 flex-wrap">
           <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-slate-800 truncate">{selectedDept?.name ?? "Seleccioná un departamento"}</h2>
-            <p className="text-xs text-slate-400">
+            <h2 className="font-bold text-slate-800 dark:text-slate-100 truncate">{selectedDept?.name ?? "Seleccioná un departamento"}</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
               {currentImages.length} foto{currentImages.length !== 1 ? "s" : ""}
               {selectMode
                 ? ` · ${selectedUrls.size} seleccionada${selectedUrls.size !== 1 ? "s" : ""} · Hacé click en las fotos para seleccionar`

@@ -394,22 +394,22 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
           </div>
         </div>
         {/* Desktop Table */}
-        <div className="hidden md:block rounded-md border bg-white">
+        <div className="hidden md:block rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Huésped</TableHead>
-                <TableHead className="text-center">Dpto / Cochera</TableHead>
-                <TableHead className="text-center">Fechas</TableHead>
-                <TableHead className="text-center">Noches</TableHead>
-                <TableHead className="text-center">Ocupación</TableHead>
-                <TableHead className="text-center">Cochera</TableHead>
+              <TableRow className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800">
+                <TableHead className="text-slate-700 dark:text-slate-200">Huésped</TableHead>
+                <TableHead className="text-center text-slate-700 dark:text-slate-200">Dpto / Cochera</TableHead>
+                <TableHead className="text-center text-slate-700 dark:text-slate-200">Fechas</TableHead>
+                <TableHead className="text-center text-slate-700 dark:text-slate-200">Noches</TableHead>
+                <TableHead className="text-center text-slate-700 dark:text-slate-200">Ocupación</TableHead>
+                <TableHead className="text-center text-slate-700 dark:text-slate-200">Cochera</TableHead>
                 {/* Merged Status Column */}
-                <TableHead className="text-center">Estado</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Gastos (Limp+Ins)</TableHead>
-                <TableHead className="text-right">Deuda</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead className="text-center text-slate-700 dark:text-slate-200">Estado</TableHead>
+                <TableHead className="text-right text-slate-700 dark:text-slate-200">Total</TableHead>
+                <TableHead className="text-right text-slate-700 dark:text-slate-200">Gastos (Limp+Ins)</TableHead>
+                <TableHead className="text-right text-slate-700 dark:text-slate-200">Deuda</TableHead>
+                <TableHead className="text-right text-slate-700 dark:text-slate-200">Acciones</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -427,20 +427,20 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
                 const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
 
-                let rowClass = "";
+                let rowClass = "border-b border-slate-100 dark:border-slate-800/60 transition-colors ";
                 if (isNoShow) {
-                  rowClass = "bg-orange-50 hover:bg-orange-100 text-muted-foreground";
+                  rowClass += "bg-orange-50/70 dark:bg-orange-950/20 hover:bg-orange-100/80 dark:hover:bg-orange-900/30 text-muted-foreground";
                 } else if (isBlacklisted) {
-                  rowClass = "bg-red-50 hover:bg-red-100 border-l-4 border-red-500";
+                  rowClass += "bg-red-50/80 dark:bg-red-950/30 hover:bg-red-100/90 dark:hover:bg-red-900/40 border-l-4 border-red-500 text-slate-900 dark:text-slate-100";
                 } else if (isPaid) {
-                  rowClass = "bg-green-50 hover:bg-green-100";
+                  rowClass += "bg-green-50/70 dark:bg-emerald-950/20 hover:bg-green-100/80 dark:hover:bg-emerald-900/30 text-slate-900 dark:text-slate-100";
                 } else if (isPartial) {
-                  rowClass = "bg-blue-50 hover:bg-blue-100";
+                  rowClass += "bg-blue-50/70 dark:bg-blue-950/20 hover:bg-blue-100/80 dark:hover:bg-blue-900/30 text-slate-900 dark:text-slate-100";
                 } else if ((res.paymentStatus as any) === 'CANCELLED') {
-                  rowClass = "bg-red-50 hover:bg-red-100 text-muted-foreground";
+                  rowClass += "bg-red-50/60 dark:bg-rose-950/20 hover:bg-red-100/70 dark:hover:bg-rose-900/30 text-muted-foreground";
                 } else {
                   // Pending is default
-                  rowClass = "bg-yellow-50 hover:bg-yellow-100";
+                  rowClass += "bg-yellow-50/70 dark:bg-amber-950/20 hover:bg-yellow-100/80 dark:hover:bg-amber-900/30 text-slate-900 dark:text-slate-100";
                 }
 
                 if (isNext) {
@@ -588,7 +588,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                               label: "Ver Nota",
                               icon: <NotepadText className="h-4 w-4" />,
                               onClick: () => setViewNotesRes(res),
-                              className: "text-blue-500 hover:text-blue-600 hover:bg-blue-50 shadow-sm border border-blue-100 rounded-full",
+                              className: "text-blue-500 dark:text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 shadow-xs border border-blue-200 dark:border-blue-800/60 rounded-full",
                               title: "Ver nota"
                             });
                           }
@@ -599,7 +599,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                                 label: "Marcar Pagado",
                                 icon: <DollarSign className="h-4 w-4" />,
                                 onClick: () => handleMarkPaidClick(res.id, res.totalAmount),
-                                className: "text-green-600 hover:text-green-700 hover:bg-green-50 shadow-sm border border-green-100 rounded-full",
+                                className: "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 shadow-xs border border-emerald-200 dark:border-emerald-800/60 rounded-full",
                                 title: "Marcar Pagado"
                               });
                             }
@@ -609,7 +609,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                                 label: "Marcar No Presentado",
                                 icon: <UserX className="h-4 w-4" />,
                                 onClick: () => handleNoShowClick(res.id),
-                                className: "text-orange-500 hover:text-orange-600 hover:bg-orange-50 shadow-sm border border-orange-100 rounded-full",
+                                className: "text-orange-500 dark:text-orange-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/50 shadow-xs border border-orange-200 dark:border-orange-800/60 rounded-full",
                                 title: "Marcar No Presentado"
                               });
                             }
@@ -620,7 +620,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                                 icon: <Ban className="h-4 w-4" />,
                                 onClick: () => { },
                                 disabled: true,
-                                className: "text-red-500 opacity-70 cursor-not-allowed shadow-sm border border-red-100 rounded-full",
+                                className: "text-red-500 dark:text-red-400 opacity-70 cursor-not-allowed shadow-xs border border-red-200 dark:border-red-800/60 rounded-full",
                                 title: "Huésped ya en lista negra"
                               });
                             } else {
@@ -628,7 +628,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                                 label: "Reportar",
                                 icon: <ShieldAlert className="h-4 w-4" />,
                                 onClick: () => setReportBlacklistData(res),
-                                className: "text-red-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-red-100 rounded-full",
+                                className: "text-red-500 dark:text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 shadow-xs border border-red-200 dark:border-red-800/60 rounded-full",
                                 title: "Reportar a Lista Negra"
                               });
                             }
@@ -640,7 +640,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                                 label: "Editar",
                                 icon: <Pencil className="h-4 w-4" />,
                                 onClick: () => handleEdit(res),
-                                className: "text-blue-600 hover:text-blue-700 hover:bg-blue-50 shadow-sm border border-blue-100 rounded-full", // Blue for clean consistency
+                                className: "text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 shadow-xs border border-blue-200 dark:border-blue-800/60 rounded-full",
                                 title: "Editar"
                               });
                             }
@@ -652,7 +652,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                                 label: "Cancelar Reserva",
                                 icon: <XCircle className="h-4 w-4" />,
                                 onClick: () => handleCancelReservationClick(res.id),
-                                className: "text-red-600 hover:text-red-700 hover:bg-red-50 shadow-sm border border-red-100 rounded-full",
+                                className: "text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 shadow-xs border border-red-200 dark:border-red-800/60 rounded-full",
                                 title: "Cancelar Reserva"
                               });
                             }
@@ -661,81 +661,34 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                               label: "Eliminar",
                               icon: <Trash className="h-4 w-4" />,
                               onClick: () => handleDeleteClick(res.id),
-                              className: "text-red-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-red-100 rounded-full",
+                              className: "text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 shadow-xs border border-red-200 dark:border-red-800/60 rounded-full",
                               title: "Eliminar"
                             });
                           }
 
-                          // --- SPLIT BUTTON LOGIC ---
-                          // Priority for Primary Action:
-                          // 1. Marcar Pagado (If available)
-                          // 2. Editar (Default)
-
-                          let primaryAction = actions.find(a => a.label === "Marcar Pagado");
-                          if (!primaryAction) {
-                            primaryAction = actions.find(a => a.label === "Editar");
-                          }
-                          // Fallback if neither exists (unlikely given permissions, but safe)
-                          if (!primaryAction && actions.length > 0) {
-                            primaryAction = actions[0];
-                          }
-
-                          if (!primaryAction) return null; // No actions available
-
-                          const secondaryActions = actions.filter(a => a !== primaryAction);
-
                           return (
-                            <div className="flex items-center justify-end">
-                              {/* Primary Action Button */}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={primaryAction.onClick}
-                                disabled={primaryAction.disabled}
-                                className={`h-8 rounded-r-none border-r-0 px-3 ${primaryAction.className ? primaryAction.className.replace('rounded-full', '') : ''}`}
-                                title={primaryAction.title}
-                              >
-                                {primaryAction.icon}
-                                <span className="ml-2 hidden lg:inline">{primaryAction.label}</span>
-                              </Button>
-
-                              {/* Dropdown for Secondary Actions */}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 w-8 px-0 rounded-l-none border-l-0"
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Abrir menú</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                {actions.map((action, idx) => (
+                                  <DropdownMenuItem
+                                    key={idx}
+                                    onClick={action.onClick}
+                                    disabled={action.disabled}
+                                    className="cursor-pointer flex items-center gap-2"
                                   >
-                                    <ChevronDown className="h-4 w-4" />
-                                    <span className="sr-only">Más opciones</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
-                                  <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
-                                  {secondaryActions.map((action, idx) => {
-                                    const colorClass = action.className?.includes('text-green') ? 'text-green-600' :
-                                      action.className?.includes('text-blue') ? 'text-blue-600' :
-                                        action.className?.includes('text-orange') ? 'text-orange-500' :
-                                          action.className?.includes('text-red') ? 'text-red-500' : '';
-
-                                    return (
-                                      <DropdownMenuItem
-                                        key={idx}
-                                        onClick={action.onClick}
-                                        disabled={action.disabled}
-                                      >
-                                        <span className={`flex items-center gap-2 w-full ${colorClass}`}>
-                                          {isValidElement(action.icon) ? cloneElement(action.icon as any, { className: `h-4 w-4 ${colorClass}` }) : action.icon}
-                                          {action.label}
-                                        </span>
-                                      </DropdownMenuItem>
-                                    );
-                                  })}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
+                                    {action.icon}
+                                    <span>{action.label}</span>
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           );
                         })()}
                       </TableCell>
@@ -769,22 +722,22 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
             const isCancelled = (res.paymentStatus as any) === 'CANCELLED';
 
-            let cardClass = "text-sm";
+            let cardClass = "text-sm border border-slate-200 dark:border-slate-800 ";
             if (isNoShow) {
-              cardClass += " bg-orange-50 opacity-90";
+              cardClass += "bg-orange-50/70 dark:bg-orange-950/30 opacity-90";
             } else if (isBlacklisted) {
-              cardClass += " bg-red-50 border-l-4 border-red-500";
+              cardClass += "bg-red-50/80 dark:bg-red-950/30 border-l-4 border-red-500";
             } else if (isPaid) {
-              cardClass += " bg-green-50";
+              cardClass += "bg-green-50/70 dark:bg-emerald-950/30";
             } else if (isPartial) {
-              cardClass += " bg-blue-50";
+              cardClass += "bg-blue-50/70 dark:bg-blue-950/30";
             } else if ((res.paymentStatus as any) === 'CANCELLED') {
-              cardClass += " bg-red-50/50";
+              cardClass += "bg-red-50/50 dark:bg-rose-950/20";
             } else {
-              cardClass += " bg-yellow-50";
+              cardClass += "bg-yellow-50/70 dark:bg-amber-950/30";
             }
 
-            if (isNext) cardClass += " border-2 border-blue-500";
+            if (isNext) cardClass += " ring-2 ring-blue-500";
 
             return (
               <Card key={res.id} className={cardClass}>
@@ -802,10 +755,10 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         </div>
 
                         <div className="flex-1">
-                          <div className={`font-bold text-xl whitespace-normal break-words leading-tight ${isNoShow ? "line-through text-muted-foreground" : ""}`}>
+                          <div className={`font-bold text-xl whitespace-normal break-words leading-tight ${isNoShow ? "line-through text-muted-foreground" : "text-slate-900 dark:text-white"}`}>
                             {res.guestName}
                           </div>
-                          <div className="text-base font-medium text-blue-600 mt-1 whitespace-normal break-words">
+                          <div className="text-base font-medium text-blue-600 dark:text-blue-400 mt-1 whitespace-normal break-words">
                             {res.department.name}
                           </div>
                         </div>
@@ -814,24 +767,24 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       {/* Icono Central Tipo Unidad (Mobile) */}
                       <div className="shrink-0 flex items-center justify-center px-2 self-center">
                         {isParkingUnit ? (
-                          <Car className="h-10 w-10 text-blue-700" />
+                          <Car className="h-10 w-10 text-blue-700 dark:text-blue-400" />
                         ) : (
-                          <Home className="h-10 w-10 text-gray-600" />
+                          <Home className="h-10 w-10 text-gray-600 dark:text-gray-300" />
                         )}
                       </div>
 
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap 
                           ${(res.paymentStatus as any) === 'CANCELLED' ? "bg-red-100 text-red-700 border-red-200" :
-                            isPaid ? "bg-gray-900 text-white border-gray-900" : // Black for paid
-                              isPartial ? "bg-blue-100 text-blue-700 border-blue-200" :
-                                "bg-yellow-100 text-yellow-700 border-yellow-200"
+                            isPaid ? "bg-gray-900 text-white border-gray-900 dark:bg-emerald-600 dark:border-emerald-600" : // Black for paid
+                              isPartial ? "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700" :
+                                "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700"
                           }`}>
                           {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PEND.'}
                         </span>
                         {/* Status Badge Update for Mobile - Hide if Cancelled */}
                         {(res.paymentStatus as any) !== 'CANCELLED' && (
-                          <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isNoShow ? "bg-gray-100 text-gray-600" : "bg-white text-gray-600"}`}>
+                          <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap ${isNoShow ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300" : "bg-white text-gray-600 dark:bg-slate-800 dark:text-gray-200 dark:border-slate-700"}`}>
                             {isNoShow ? "NO PRESENTADO" : (new Date(res.checkOut) < today ? "FINALIZADO" : "CONFIRMADO")}
                           </span>
                         )}
@@ -841,10 +794,10 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   </div>
 
                   {/* Dates & Financials (Grid - Wrap enabled) */}
-                  <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground border-t pt-3 border-b pb-3">
+                  <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground border-t dark:border-slate-800 pt-3 border-b pb-3">
                     <div className="col-span-2 sm:col-span-1 flex flex-wrap items-center gap-x-2">
                       <span>📅</span>
-                      <span className="font-medium text-gray-700 text-base">{format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-200 text-base">{format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}</span>
                     </div>
 
                     {/* New Info Row: Nights, People, Beds (Mobile) */}

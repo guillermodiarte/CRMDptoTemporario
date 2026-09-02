@@ -779,14 +779,15 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   )}
                   <Button onClick={handleSaveSupply} disabled={!newSupplyName || !newSupplyCost} className="flex-1 md:flex-none">
                     {editingSupply ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-                    {editingSupply ? "Actualizar" : "Agregar"}
+            {editingSupply ? "Actualizar" : "Agregar"}
                   </Button>
                 </div>
               </div>
 
-              <div className="hidden md:block border rounded-md overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden hidden md:block">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-muted/50">
+                  <thead className="bg-slate-50 dark:bg-slate-950/70 text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-800">
                     <tr>
                       <th className="p-3 font-medium">Nombre</th>
                       <th className="p-3 font-medium">Costo</th>
@@ -796,11 +797,11 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   </thead>
                   <tbody>
                     {supplies.map(supply => (
-                      <tr key={supply.id} className={`border-t ${!supply.isActive ? 'bg-slate-50 text-muted-foreground' : ''}`}>
-                        <td className="p-3">{supply.name}</td>
-                        <td className="p-3 font-medium">${supply.cost}</td>
+                      <tr key={supply.id} className={`border-t border-slate-100 dark:border-slate-800/60 ${!supply.isActive ? 'bg-slate-50 dark:bg-slate-800/40 text-muted-foreground' : ''}`}>
+                        <td className="p-3 text-slate-900 dark:text-slate-100">{supply.name}</td>
+                        <td className="p-3 font-medium text-slate-900 dark:text-slate-100">${supply.cost}</td>
                         <td className="p-3">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${supply.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${supply.isActive ? 'bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                             {supply.isActive ? "Activo" : "Inactivo"}
                           </span>
                         </td>
@@ -810,14 +811,14 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                             size="sm"
                             onClick={() => handleToggleSupply(supply)}
                             title={supply.isActive ? "Desactivar" : "Activar"}
-                            className={`h-8 w-8 p-0 ${supply.isActive ? 'text-amber-600' : 'text-green-600'}`}
+                            className={`h-8 w-8 p-0 ${supply.isActive ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}`}
                           >
                             {supply.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => handleEditSupply(supply)} className="h-8 w-8 p-0">
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteSupply(supply.id)} className="text-red-600 h-8 w-8 p-0">
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteSupply(supply.id)} className="text-red-600 dark:text-red-400 h-8 w-8 p-0">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </td>
@@ -829,7 +830,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                       </tr>
                     )}
                   </tbody>
-                  <tfoot className="bg-slate-100 font-semibold">
+                  <tfoot className="bg-slate-100 dark:bg-slate-800 font-semibold text-slate-900 dark:text-slate-100">
                     <tr>
                       <td className="p-3">TOTAL GASTOS INSUMOS (Activos)</td>
                       <td className="p-3 text-lg">${totalSuppliesCost}</td>
@@ -842,24 +843,24 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
               {/* Mobile Card View */}
               <div className="md:hidden space-y-3">
                 {supplies.map(supply => (
-                  <div key={supply.id} className={`p-4 rounded-lg border bg-white shadow-sm ${!supply.isActive ? 'bg-slate-50 opacity-70' : ''}`}>
+                  <div key={supply.id} className={`p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs ${!supply.isActive ? 'bg-slate-50 dark:bg-slate-800/40 opacity-70' : ''}`}>
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <div className="font-bold text-base leading-tight">{supply.name}</div>
-                        <div className="text-sm font-medium mt-1">${supply.cost}</div>
+                        <div className="font-bold text-base leading-tight text-slate-900 dark:text-slate-100">{supply.name}</div>
+                        <div className="text-sm font-medium mt-1 text-slate-700 dark:text-slate-300">${supply.cost}</div>
                       </div>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${supply.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${supply.isActive ? 'bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                         {supply.isActive ? "Activo" : "Inactivo"}
                       </span>
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-3 pt-3 border-t">
+                    <div className="flex justify-end gap-2 mt-3 pt-3 border-t dark:border-slate-800">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleToggleSupply(supply)}
                         title={supply.isActive ? "Desactivar" : "Activar"}
-                        className={`h-8 w-8 p-0 ${supply.isActive ? 'text-amber-600 border-amber-200 bg-amber-50' : 'text-green-600 border-green-200 bg-green-50'}`}
+                        className={`h-8 w-8 p-0 ${supply.isActive ? 'text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40' : 'text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/40'}`}
                       >
                         {supply.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                       </Button>
@@ -873,12 +874,12 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   </div>
                 ))}
                 {supplies.length === 0 && (
-                  <div className="text-center py-6 text-muted-foreground bg-slate-50 rounded-lg border border-dashed">
+                  <div className="text-center py-6 text-muted-foreground bg-slate-50 dark:bg-slate-900 rounded-lg border border-dashed dark:border-slate-800">
                     No hay insumos cargados.
                   </div>
                 )}
                 {supplies.length > 0 && (
-                  <div className="bg-slate-100 p-3 rounded-md font-semibold flex justify-between items-center text-sm">
+                  <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-md font-semibold flex justify-between items-center text-sm text-slate-900 dark:text-slate-100">
                     <span>TOTAL (Activos)</span>
                     <span className="text-lg">${totalSuppliesCost}</span>
                   </div>
@@ -888,7 +889,6 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
           </Card>
         </div>
 
-        {/* Side Column: Config & Backup */}
         <div className="space-y-6">
           {/* General Settings */}
           <Card>
@@ -992,14 +992,14 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
       {/* SuperAdmin Public Site Configuration Section */}
       {isSuperAdmin && (
-        <Card className="border-sky-200 bg-gradient-to-b from-sky-50/30 to-white shadow-sm mt-6">
-          <CardHeader className="border-b border-sky-100 pb-4">
+        <Card className="border-sky-200 dark:border-sky-900/50 bg-gradient-to-b from-sky-50/30 dark:from-slate-900/60 to-white dark:to-slate-900 shadow-xs mt-6">
+          <CardHeader className="border-b border-sky-100 dark:border-slate-800 pb-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-sky-600" />
-                  <CardTitle className="text-xl text-slate-900">Configuración del Sitio Web Público</CardTitle>
-                  <span className="text-xs bg-sky-100 text-sky-700 font-bold px-2.5 py-0.5 rounded-full border border-sky-200">
+                  <Globe className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+                  <CardTitle className="text-xl text-slate-900 dark:text-slate-100">Configuración del Sitio Web Público</CardTitle>
+                  <span className="text-xs bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold px-2.5 py-0.5 rounded-full border border-sky-200 dark:border-sky-800">
                     Solo SuperAdmin
                   </span>
                 </div>
@@ -1011,7 +1011,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
               <Button
                 onClick={handleSaveSiteConfig}
                 disabled={savingSiteConfig}
-                className="bg-sky-600 hover:bg-sky-700 font-bold shadow-md gap-2"
+                className="bg-sky-600 hover:bg-sky-700 font-bold shadow-md gap-2 cursor-pointer"
               >
                 {savingSiteConfig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Guardar Configuración del Sitio
@@ -1022,43 +1022,43 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
             {/* Bloque 1: Identidad & Dominio */}
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-sky-500" />
                 1. Identidad de Marca y Dominio
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-name" className="text-xs font-bold text-slate-700">Nombre del Alojamiento</Label>
+                  <Label htmlFor="sc-name" className="text-xs font-bold text-slate-700 dark:text-slate-200">Nombre del Alojamiento</Label>
                   <Input
                     id="sc-name"
                     value={siteConfig.siteName ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, siteName: e.target.value })}
                     placeholder="Ej. Alojamientos Di'Arte"
                   />
-                  <p className="text-[11px] text-slate-400">Aparece en Navbar, Hero, Footer y títulos.</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Aparece en Navbar, Hero, Footer y títulos.</p>
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="sc-slogan" className="text-xs font-bold text-slate-700">Slogan / Descripción Corta</Label>
+                  <Label htmlFor="sc-slogan" className="text-xs font-bold text-slate-700 dark:text-slate-200">Slogan / Descripción Corta</Label>
                   <Input
                     id="sc-slogan"
                     value={siteConfig.siteSlogan ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, siteSlogan: e.target.value })}
                     placeholder="Ej. Departamentos temporarios premium en Formosa..."
                   />
-                  <p className="text-[11px] text-slate-400">Se muestra en la portada de inicio y en el pie de página.</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Se muestra en la portada de inicio y en el pie de página.</p>
                 </div>
                 <div className="space-y-1.5 md:col-span-3">
-                  <Label htmlFor="sc-url" className="text-xs font-bold text-slate-700">Dominio / URL Web (VPN o Producción)</Label>
+                  <Label htmlFor="sc-url" className="text-xs font-bold text-slate-700 dark:text-slate-200">Dominio / URL Web (VPN o Producción)</Label>
                   <Input
                     id="sc-url"
                     value={siteConfig.siteUrl ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, siteUrl: e.target.value })}
                     placeholder="https://tudominio.com o https://vpn.tuempresa.com"
                   />
-                  <p className="text-[11px] text-slate-400">Utilizado para links canónicos y metadatos.</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Utilizado para links canónicos y metadatos.</p>
                 </div>
                 <div className="space-y-1.5 md:col-span-3">
-                  <Label htmlFor="sc-logo" className="text-xs font-bold text-slate-700">Logo de la Página (URL)</Label>
+                  <Label htmlFor="sc-logo" className="text-xs font-bold text-slate-700 dark:text-slate-200">Logo de la Página (URL)</Label>
                   <div className="flex gap-2">
                     <Input
                       id="sc-logo"
@@ -1080,9 +1080,9 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                       />
                     </Button>
                   </div>
-                  <p className="text-[11px] text-slate-400">Este logo se mostrará en el menú de navegación y como icono general.</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Este logo se mostrará en el menú de navegación y como icono general.</p>
                   {siteConfig.logoUrl && (
-                    <div className="mt-2 p-2 border rounded-md bg-slate-50 w-fit">
+                    <div className="mt-2 p-2 border border-slate-200 dark:border-slate-700 rounded-md bg-slate-50 dark:bg-slate-800 w-fit">
                       <img src={siteConfig.logoUrl} alt="Logo preview" className="h-10 w-auto object-contain rounded-md" />
                     </div>
                   )}
@@ -1093,7 +1093,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
             {/* Bloque 2: Carrusel de Portada / Hero Slides */}
             <div className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-indigo-500" />
                   2. Carrusel de Portada / Slides de Inicio ({heroSlidesList.length})
                 </h3>
@@ -1102,7 +1102,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   variant="outline"
                   size="sm"
                   onClick={handleAddSlide}
-                  className="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border-indigo-200 gap-1.5 cursor-pointer"
+                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Agregar Nuevo Slide
@@ -1111,13 +1111,13 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
               <div className="space-y-4">
                 {heroSlidesList.map((slide, idx) => (
-                  <div key={slide.id || idx} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 relative">
-                    <div className="flex items-center justify-between border-b pb-3">
+                  <div key={slide.id || idx} className="bg-white dark:bg-slate-900/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 relative">
+                    <div className="flex items-center justify-between border-b dark:border-slate-800 pb-3">
                       <div className="flex items-center gap-2">
-                        <span className="bg-indigo-100 text-indigo-700 font-extrabold text-xs px-2.5 py-1 rounded-lg">
+                        <span className="bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-extrabold text-xs px-2.5 py-1 rounded-lg">
                           Slide #{idx + 1}
                         </span>
-                        <span className="text-xs font-semibold text-slate-600">
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                           {slide.title || "Sin Título"}
                         </span>
                       </div>
@@ -1150,7 +1150,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteSlide(slide.id)}
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
                           title="Eliminar slide"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1161,7 +1161,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* Imagen */}
                       <div className="space-y-2 md:col-span-3">
-                        <Label className="text-xs font-bold text-slate-700">Foto de Fondo del Slide (URL o Subir)</Label>
+                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-200">Foto de Fondo del Slide (URL o Subir)</Label>
                         <div className="flex gap-2">
                           <Input
                             value={slide.image || ""}
@@ -1183,16 +1183,16 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                           </Button>
                         </div>
                         {slide.image && (
-                          <div className="mt-2 p-2 border rounded-xl bg-slate-50 w-fit flex items-center gap-3">
-                            <img src={slide.image} alt="Preview" className="h-16 w-28 object-cover rounded-lg border" />
-                            <span className="text-xs text-slate-500">Vista previa del fondo</span>
+                          <div className="mt-2 p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 w-fit flex items-center gap-3">
+                            <img src={slide.image} alt="Preview" className="h-16 w-28 object-cover rounded-lg border dark:border-slate-700" />
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Vista previa del fondo</span>
                           </div>
                         )}
                       </div>
 
                       {/* Título */}
                       <div className="space-y-1.5 md:col-span-1">
-                        <Label className="text-xs font-bold text-slate-700">Título Principal</Label>
+                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-200">Título Principal</Label>
                         <Input
                           value={slide.title || ""}
                           onChange={(e) => handleUpdateSlide(slide.id, { title: e.target.value })}
@@ -1202,7 +1202,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
                       {/* Subtítulo / Descripción */}
                       <div className="space-y-1.5 md:col-span-2">
-                        <Label className="text-xs font-bold text-slate-700">Subtítulo / Texto Descriptivo</Label>
+                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-200">Subtítulo / Texto Descriptivo</Label>
                         <Input
                           value={slide.subtitle || ""}
                           onChange={(e) => handleUpdateSlide(slide.id, { subtitle: e.target.value })}
@@ -1212,7 +1212,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
                       {/* Botón opcional */}
                       <div className="space-y-1.5 md:col-span-1">
-                        <Label className="text-xs font-bold text-slate-700">Texto del Botón (Opcional)</Label>
+                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-200">Texto del Botón (Opcional)</Label>
                         <Input
                           value={slide.buttonText || ""}
                           onChange={(e) => handleUpdateSlide(slide.id, { buttonText: e.target.value })}
@@ -1220,7 +1220,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                         />
                       </div>
                       <div className="space-y-1.5 md:col-span-2">
-                        <Label className="text-xs font-bold text-slate-700">Enlace del Botón (Opcional)</Label>
+                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-200">Enlace del Botón (Opcional)</Label>
                         <Input
                           value={slide.buttonLink || ""}
                           onChange={(e) => handleUpdateSlide(slide.id, { buttonLink: e.target.value })}
@@ -1235,33 +1235,33 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
             {/* Bloque 3: Contacto & WhatsApp */}
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
                 3. Teléfonos, WhatsApp y Email
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-phone-display" className="text-xs font-bold text-slate-700">Teléfono (para mostrar)</Label>
+                  <Label htmlFor="sc-phone-display" className="text-xs font-bold text-slate-700 dark:text-slate-200">Teléfono (para mostrar)</Label>
                   <Input
                     id="sc-phone-display"
                     value={siteConfig.phoneDisplay ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, phoneDisplay: e.target.value })}
                     placeholder="Ej. +54 9 351 314-6924"
                   />
-                  <p className="text-[11px] text-slate-400">Texto visible en Footer y Contacto.</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Texto visible en Footer y Contacto.</p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-phone-ws" className="text-xs font-bold text-slate-700">WhatsApp para Reservas (solo números)</Label>
+                  <Label htmlFor="sc-phone-ws" className="text-xs font-bold text-slate-700 dark:text-slate-200">WhatsApp para Reservas (solo números)</Label>
                   <Input
                     id="sc-phone-ws"
                     value={siteConfig.phoneWhatsApp ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, phoneWhatsApp: e.target.value.replace(/[^\d]/g, "") })}
                     placeholder="Ej. 5493513146924"
                   />
-                  <p className="text-[11px] text-emerald-600 font-semibold">¡A este número se enviarán todas las solicitudes de reserva!</p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">¡A este número se enviarán todas las solicitudes de reserva!</p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-email" className="text-xs font-bold text-slate-700">Email de Contacto</Label>
+                  <Label htmlFor="sc-email" className="text-xs font-bold text-slate-700 dark:text-slate-200">Email de Contacto</Label>
                   <Input
                     id="sc-email"
                     type="email"
@@ -1269,30 +1269,30 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     onChange={(e) => setSiteConfig({ ...siteConfig, email: e.target.value })}
                     placeholder="contacto@alojamientosdiarte.com"
                   />
-                  <p className="text-[11px] text-slate-400">Email clickeable (mailto:) en Footer y Contacto.</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Email clickeable (mailto:) en Footer y Contacto.</p>
                 </div>
                 <div className="space-y-1.5 md:col-span-3">
-                  <Label htmlFor="sc-ws-msg" className="text-xs font-bold text-slate-700">Mensaje predeterminado de consulta WhatsApp</Label>
+                  <Label htmlFor="sc-ws-msg" className="text-xs font-bold text-slate-700 dark:text-slate-200">Mensaje predeterminado de consulta WhatsApp</Label>
                   <Input
                     id="sc-ws-msg"
                     value={siteConfig.whatsappDefaultMsg ?? ""}
                     onChange={(e) => setSiteConfig({ ...siteConfig, whatsappDefaultMsg: e.target.value })}
                     placeholder="Ej. Hola! Me gustaría consultar sobre la disponibilidad de departamentos."
                   />
-                  <p className="text-[11px] text-slate-400">Texto inicial prellenado al hacer clic en 'Consultar por WhatsApp' desde Contacto.</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Texto inicial prellenado al hacer clic en 'Consultar por WhatsApp' desde Contacto.</p>
                 </div>
               </div>
             </div>
 
             {/* Bloque 4: Ubicación & Horarios */}
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-orange-500" />
                 4. Dirección, Ubicación y Horarios
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="sc-address" className="text-xs font-bold text-slate-700">Dirección</Label>
+                  <Label htmlFor="sc-address" className="text-xs font-bold text-slate-700 dark:text-slate-200">Dirección</Label>
                   <Input
                     id="sc-address"
                     value={siteConfig.address ?? ""}
@@ -1301,7 +1301,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-city" className="text-xs font-bold text-slate-700">Ciudad</Label>
+                  <Label htmlFor="sc-city" className="text-xs font-bold text-slate-700 dark:text-slate-200">Ciudad</Label>
                   <Input
                     id="sc-city"
                     value={siteConfig.city ?? ""}
@@ -1310,7 +1310,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-country" className="text-xs font-bold text-slate-700">País</Label>
+                  <Label htmlFor="sc-country" className="text-xs font-bold text-slate-700 dark:text-slate-200">País</Label>
                   <Input
                     id="sc-country"
                     value={siteConfig.country ?? ""}
@@ -1319,7 +1319,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="sc-hours" className="text-xs font-bold text-slate-700">Horario de Atención</Label>
+                  <Label htmlFor="sc-hours" className="text-xs font-bold text-slate-700 dark:text-slate-200">Horario de Atención</Label>
                   <Input
                     id="sc-hours"
                     value={siteConfig.businessHours ?? ""}
@@ -1328,7 +1328,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="sc-maps-url" className="text-xs font-bold text-slate-700">Link Google Maps (Abrir en app/web)</Label>
+                  <Label htmlFor="sc-maps-url" className="text-xs font-bold text-slate-700 dark:text-slate-200">Link Google Maps (Abrir en app/web)</Label>
                   <Input
                     id="sc-maps-url"
                     value={siteConfig.googleMapsUrl ?? ""}
@@ -1337,7 +1337,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   />
                 </div>
                 <div className="space-y-1.5 md:col-span-4">
-                  <Label htmlFor="sc-maps-embed" className="text-xs font-bold text-slate-700">URL del Mapa Interactivo (Google Maps Embed iframe src)</Label>
+                  <Label htmlFor="sc-maps-embed" className="text-xs font-bold text-slate-700 dark:text-slate-200">URL del Mapa Interactivo (Google Maps Embed iframe src)</Label>
                   <Input
                     id="sc-maps-embed"
                     value={siteConfig.googleMapsEmbedUrl ?? ""}
@@ -1350,13 +1350,13 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
             {/* Bloque 5: Redes Sociales, Footer & SEO */}
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-purple-500" />
                 5. Redes Sociales, Footer y SEO
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-insta" className="text-xs font-bold text-slate-700">Instagram URL</Label>
+                  <Label htmlFor="sc-insta" className="text-xs font-bold text-slate-700 dark:text-slate-200">Instagram URL</Label>
                   <Input
                     id="sc-insta"
                     value={siteConfig.instagramUrl ?? ""}
@@ -1365,7 +1365,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-fb" className="text-xs font-bold text-slate-700">Facebook URL</Label>
+                  <Label htmlFor="sc-fb" className="text-xs font-bold text-slate-700 dark:text-slate-200">Facebook URL</Label>
                   <Input
                     id="sc-fb"
                     value={siteConfig.facebookUrl ?? ""}
@@ -1374,7 +1374,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-copyright" className="text-xs font-bold text-slate-700">Texto Copyright Footer</Label>
+                  <Label htmlFor="sc-copyright" className="text-xs font-bold text-slate-700 dark:text-slate-200">Texto Copyright Footer</Label>
                   <Input
                     id="sc-copyright"
                     value={siteConfig.footerCopyright ?? ""}
@@ -1383,7 +1383,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-credit" className="text-xs font-bold text-slate-700">Crédito de Diseño / Desarrollo</Label>
+                  <Label htmlFor="sc-credit" className="text-xs font-bold text-slate-700 dark:text-slate-200">Crédito de Diseño / Desarrollo</Label>
                   <Input
                     id="sc-credit"
                     value={siteConfig.footerCredit ?? ""}
@@ -1392,7 +1392,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="sc-seo" className="text-xs font-bold text-slate-700">Descripción SEO (Metadatos para Google)</Label>
+                  <Label htmlFor="sc-seo" className="text-xs font-bold text-slate-700 dark:text-slate-200">Descripción SEO (Metadatos para Google)</Label>
                   <Input
                     id="sc-seo"
                     value={siteConfig.seoDescription ?? ""}
@@ -1405,18 +1405,18 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
             {/* Bloque 6: Servidor de Correo SMTP (Hostinger) */}
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-blue-500" />
                 6. Servidor de Correo SMTP (Hostinger / Envío de Consultas)
               </h3>
-              <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-4">
-                <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg text-xs text-sky-900 leading-relaxed">
-                  <strong>ℹ️ Configuración de Hostinger Email:</strong> Estas credenciales permiten que los mensajes enviados desde el formulario público de <code className="bg-white px-1 py-0.5 rounded text-sky-800 font-mono">/contacto</code> lleguen directamente a tu casilla de correo <strong>contacto@alojamientosdiarte.com</strong>.
+              <div className="bg-white dark:bg-slate-900/80 p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
+                <div className="p-3 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 rounded-lg text-xs text-sky-900 dark:text-sky-200 leading-relaxed">
+                  <strong>ℹ️ Configuración de Hostinger Email:</strong> Estas credenciales permiten que los mensajes enviados desde el formulario público de <code className="bg-white dark:bg-slate-800 px-1 py-0.5 rounded text-sky-800 dark:text-sky-300 font-mono">/contacto</code> lleguen directamente a tu casilla de correo <strong>contacto@alojamientosdiarte.com</strong>.
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-1.5 md:col-span-2">
-                    <Label htmlFor="sc-smtp-host" className="text-xs font-bold text-slate-700">Servidor SMTP (Host)</Label>
+                    <Label htmlFor="sc-smtp-host" className="text-xs font-bold text-slate-700 dark:text-slate-200">Servidor SMTP (Host)</Label>
                     <Input
                       id="sc-smtp-host"
                       value={siteConfig.smtpHost ?? ""}
@@ -1425,17 +1425,17 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="sc-smtp-port" className="text-xs font-bold text-slate-700">Puerto SMTP</Label>
+                    <Label htmlFor="sc-smtp-port" className="text-xs font-bold text-slate-700 dark:text-slate-200">Puerto SMTP</Label>
                     <Input
                       id="sc-smtp-port"
                       value={siteConfig.smtpPort ?? ""}
                       onChange={(e) => setSiteConfig({ ...siteConfig, smtpPort: e.target.value })}
                       placeholder="465"
                     />
-                    <p className="text-[10px] text-slate-400">465 (SSL) o 587 (TLS)</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">465 (SSL) o 587 (TLS)</p>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="sc-smtp-user" className="text-xs font-bold text-slate-700">Usuario / Casilla</Label>
+                    <Label htmlFor="sc-smtp-user" className="text-xs font-bold text-slate-700 dark:text-slate-200">Usuario / Casilla</Label>
                     <Input
                       id="sc-smtp-user"
                       value={siteConfig.smtpUser ?? ""}
@@ -1444,7 +1444,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     />
                   </div>
                   <div className="space-y-1.5 md:col-span-3">
-                    <Label htmlFor="sc-smtp-pass" className="text-xs font-bold text-slate-700">Contraseña de la Casilla de Correo</Label>
+                    <Label htmlFor="sc-smtp-pass" className="text-xs font-bold text-slate-700 dark:text-slate-200">Contraseña de la Casilla de Correo</Label>
                     <Input
                       id="sc-smtp-pass"
                       type="password"
@@ -1452,7 +1452,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                       onChange={(e) => setSiteConfig({ ...siteConfig, smtpPassword: e.target.value })}
                       placeholder="Tu contraseña creada en Hostinger..."
                     />
-                    <p className="text-[11px] text-slate-400">Ingresa la contraseña que creaste para la cuenta en el panel de Hostinger.</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">Ingresa la contraseña que creaste para la cuenta en el panel de Hostinger.</p>
                   </div>
                   <div className="space-y-1.5 flex flex-col justify-end">
                     <Button
@@ -1460,7 +1460,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                       variant="outline"
                       onClick={handleTestSmtp}
                       disabled={testingSmtp || !siteConfig.smtpPassword}
-                      className="border-sky-300 text-sky-700 hover:bg-sky-50 font-semibold gap-2 w-full cursor-pointer disabled:opacity-50"
+                      className="border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 font-semibold gap-2 w-full cursor-pointer disabled:opacity-50"
                     >
                       {testingSmtp ? <Loader2 className="w-4 h-4 animate-spin" /> : "⚡"}
                       {testingSmtp ? "Probando conexión..." : "Probar Conexión SMTP"}
@@ -1471,8 +1471,8 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                 {smtpTestResult && (
                   <div className={`p-3 rounded-lg text-xs font-medium border flex items-start gap-2 animate-in fade-in duration-200 ${
                     smtpTestResult.success
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                      : "bg-red-50 border-red-200 text-red-800"
+                      ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
+                      : "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300"
                   }`}>
                     <span className="text-sm">{smtpTestResult.success ? "✅" : "⚠️"}</span>
                     <span className="flex-1">{smtpTestResult.message}</span>
@@ -1482,12 +1482,12 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
             </div>
 
             {/* Footer action */}
-            <div className="flex justify-end pt-4 border-t border-slate-100">
+            <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
               <Button
                 onClick={handleSaveSiteConfig}
                 disabled={savingSiteConfig}
                 size="lg"
-                className="bg-sky-600 hover:bg-sky-700 font-bold px-8 shadow-lg gap-2"
+                className="bg-sky-600 hover:bg-sky-700 font-bold px-8 shadow-lg gap-2 cursor-pointer"
               >
                 {savingSiteConfig ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
                 Guardar Todos los Cambios del Sitio
