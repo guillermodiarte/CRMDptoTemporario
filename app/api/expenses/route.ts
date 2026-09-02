@@ -32,6 +32,14 @@ export async function POST(req: Request) {
     const sessionId = await requireSessionId();
     const { type, description, amount, departmentId, date, quantity, unitPrice, isDeleted } = body;
 
+    let cleanIsDeleted = false;
+    if (typeof isDeleted === "boolean") {
+      cleanIsDeleted = isDeleted;
+    } else if (typeof isDeleted === "string") {
+      const s = isDeleted.trim().toUpperCase();
+      cleanIsDeleted = s === "SI" || s === "SÍ" || s === "YES" || s === "TRUE" || s === "1";
+    }
+
     const expense = await prisma.expense.create({
       data: {
         type,
@@ -41,7 +49,7 @@ export async function POST(req: Request) {
         unitPrice: unitPrice ? Number(unitPrice) : null,
         departmentId: departmentId || null,
         date: date ? new Date(`${date}T12:00:00`) : new Date(),
-        isDeleted: isDeleted !== undefined ? isDeleted : false,
+        isDeleted: cleanIsDeleted,
         sessionId
       }
     });

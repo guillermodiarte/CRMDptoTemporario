@@ -22,6 +22,14 @@ export async function PATCH(
       return new NextResponse("Not Found or Access Denied", { status: 404 });
     }
 
+    let cleanIsDeleted: boolean | undefined = undefined;
+    if (typeof isDeleted === "boolean") {
+      cleanIsDeleted = isDeleted;
+    } else if (typeof isDeleted === "string") {
+      const s = isDeleted.trim().toUpperCase();
+      cleanIsDeleted = s === "SI" || s === "SÍ" || s === "YES" || s === "TRUE" || s === "1";
+    }
+
     const expense = await prisma.expense.update({
       where: { id },
       data: {
@@ -32,7 +40,7 @@ export async function PATCH(
         unitPrice: unitPrice ? Number(unitPrice) : null,
         departmentId: departmentId || null,
         date: date ? new Date(`${date}T12:00:00`) : undefined,
-        isDeleted: isDeleted !== undefined ? isDeleted : undefined,
+        isDeleted: cleanIsDeleted,
       },
     });
 

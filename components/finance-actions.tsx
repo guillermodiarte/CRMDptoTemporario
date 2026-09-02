@@ -168,12 +168,18 @@ export function FinanceActions({ expenses, departments, date = new Date(), onExp
             if (config.key === "amount" && (kLow === "monto" || kLow === "precio")) return true;
             if (config.key === "departmentName" && kLow === "depto") return true;
             if (config.key === "unitPrice" && kLow === "precio unitario") return true;
+            if (config.key === "isDeleted" && (kLow === "eliminado" || kLow === "borrado")) return true;
             return false;
           });
           if (foundKey) val = row[foundKey];
         }
 
-        entry[config.key] = val?.trim();
+        if (config.type === "boolean") {
+          const s = (val || "").toString().toLowerCase().trim();
+          entry[config.key] = ["si", "sí", "yes", "true", "1"].includes(s);
+        } else {
+          entry[config.key] = val?.trim();
+        }
       });
 
       // 2. Validate & Normalize
@@ -281,7 +287,7 @@ export function FinanceActions({ expenses, departments, date = new Date(), onExp
           date: row.date,
           quantity: row.quantity || 1,
           unitPrice: row.unitPrice || row.amount,
-          isDeleted: row.isDeleted !== undefined ? row.isDeleted : false
+          isDeleted: Boolean(row.isDeleted)
         };
 
         const res = await fetch("/api/expenses", {
@@ -312,7 +318,7 @@ export function FinanceActions({ expenses, departments, date = new Date(), onExp
     { header: "Desc.", accessorKey: "description" },
     { header: "Total", accessorKey: "amount", cell: (val: any) => <span>${val}</span> },
     { header: "Depto", accessorKey: "departmentName", cell: (val: any) => <span className="truncate max-w-[100px] block" title={val}>{val || "Global"}</span> },
-    { header: "Eliminado", accessorKey: "isDeleted", cell: (val: any) => val ? <span className="text-red-500">SI</span> : "NO" },
+    { header: "Eliminado", accessorKey: "isDeleted", cell: (val: any) => Boolean(val) ? <span className="text-red-500 font-bold">SI</span> : "NO" },
     {
       header: "Error",
       accessorKey: "_errors",
