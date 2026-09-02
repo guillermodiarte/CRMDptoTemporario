@@ -59,5 +59,11 @@ Thumbs.db
 .idea
 *.iml
 
-# Uploads
-public/uploads/
+# Uploads - keep default assets and seeds tracked
+public/uploads/*
+!public/uploads/general/
+!public/uploads/logos/
+!public/uploads/guia/
+!public/uploads/avatars/
+!public/uploads/slides/
+!public/uploads/departamentos/

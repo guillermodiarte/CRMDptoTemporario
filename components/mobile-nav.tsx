@@ -39,7 +39,7 @@ export function MobileNav({
   user,
   showParking,
   isSuperAdmin,
-  adminLogo = "/uploads/logos/logo-diarte-horizontal.png",
+  adminLogo = "/images/logo-diarte-horizontal.png",
   adminLogoDark,
   adminLogoSize = 46,
 }: MobileNavProps) {

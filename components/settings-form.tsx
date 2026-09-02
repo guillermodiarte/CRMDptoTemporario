@@ -1207,7 +1207,10 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     {siteConfig.loginBgUrl ? (
                       <img src={siteConfig.loginBgUrl} alt="Fondo Login" className="w-full h-full object-cover rounded-lg" />
                     ) : (
-                      <span className="text-xs text-slate-400">Default: Living room</span>
+                      <div className="relative w-full h-full">
+                        <img src="/images/login-bg.png" alt="Fondo Login Default" className="w-full h-full object-cover rounded-lg opacity-70" />
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white bg-black/40 rounded-lg">Fondo Predeterminado</span>
+                      </div>
                     )}
                   </div>
                 </div>

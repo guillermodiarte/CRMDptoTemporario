@@ -45,7 +45,7 @@ export default async function DashboardLayout({
 }) {
   const session = await auth();
   const config = await getSiteConfig();
-  const adminLogo = config.adminLogoUrl || "/uploads/logos/logo-diarte-horizontal.png";
+  const adminLogo = config.adminLogoUrl || "/images/logo-diarte-horizontal.png";
   const adminLogoDark = config.adminLogoUrlDark || adminLogo;
   const adminLogoSize = Number(config.adminLogoSize) || 46;
 

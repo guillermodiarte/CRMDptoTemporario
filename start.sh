@@ -118,6 +118,13 @@ if [ -f ".next/standalone/server.js" ]; then
         UPLOADS_DIR="$(pwd)/public/uploads"
     fi
     mkdir -p "$UPLOADS_DIR"
+
+    # Seed persistent volume with built-in/default upload assets if not already present
+    if [ -d "public/uploads" ]; then
+        log "Seeding default upload assets into $UPLOADS_DIR..."
+        cp -n -r public/uploads/* "$UPLOADS_DIR/" 2>/dev/null || cp -u -r public/uploads/* "$UPLOADS_DIR/" 2>/dev/null || true
+    fi
+
     mkdir -p .next/standalone/public
     rm -rf .next/standalone/public/uploads
     ln -sfn "$UPLOADS_DIR" .next/standalone/public/uploads
