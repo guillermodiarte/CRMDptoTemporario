@@ -651,12 +651,10 @@ export function PublicGuideClient({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f8f9fc] dark:bg-slate-950 flex flex-col transition-colors duration-500">
+    <div className="min-h-screen bg-[#f8f9fc] dark:bg-slate-950 flex flex-col transition-colors duration-300">
       <PublicNavbar siteName={config.siteName} logoUrl={config.logoUrl} logoUrlDark={config.logoUrlDark} logoSize={config.logoSize} />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      {/* El wrapper exterior tiene el color del contenido para que no se vea brecha en la transición */}
-      <div className="bg-[#f8f9fc] dark:bg-slate-950 transition-colors duration-500">
       <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white overflow-hidden pt-16">
         {/* Decorative blobs */}
         <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-sky-600/15 rounded-full blur-3xl pointer-events-none" />
@@ -718,13 +716,14 @@ export function PublicGuideClient({
           </div>
         </div>
 
-        {/* Wave - sin translate-y, el wrapper externo ya tiene el color correcto */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 50" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full text-[#f8f9fc] dark:text-slate-950 transition-colors duration-500 block">
-            <path d="M0 50L60 41.7C120 33.3 240 16.7 360 13.9C480 11.1 600 22.2 720 25C840 27.8 960 22.2 1080 19.4C1200 16.7 1320 16.7 1380 16.7L1440 16.7V50H0Z" fill="currentColor" />
-          </svg>
-        </div>
+        {/* Wave - ahora FUERA del hero como elemento hermano con margen negativo
+            Esto lo pone en el mismo contexto de render que el contenido de abajo
+            y la transición de color es perfectamente sincronizada */}
       </div>
+      <div className="-mt-[50px] relative z-10">
+        <svg viewBox="0 0 1440 50" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full text-[#f8f9fc] dark:text-slate-950 transition-colors duration-300 block">
+          <path d="M0 50L60 41.7C120 33.3 240 16.7 360 13.9C480 11.1 600 22.2 720 25C840 27.8 960 22.2 1080 19.4C1200 16.7 1320 16.7 1380 16.7L1440 16.7V50H0Z" fill="currentColor" />
+        </svg>
       </div>
 
       {/* ── Content ──────────────────────────────────────────────────────── */}

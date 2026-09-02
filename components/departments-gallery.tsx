@@ -406,8 +406,6 @@ export function DepartmentsGallery({
     <div className="min-h-screen flex flex-col">
 
       {/* Hero */}
-      {/* Wrapper con fondo del primer bloque de contenido para evitar línea en la transición */}
-      <div className="bg-white dark:bg-slate-900 transition-colors duration-500">
       <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white overflow-hidden pt-16">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
@@ -432,12 +430,11 @@ export function DepartmentsGallery({
           </div>
         </div>
         {/* Wave */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full text-white dark:text-slate-900 transition-colors duration-500 block">
+        <div className="absolute bottom-0 left-0 right-0 translate-y-[1px]">
+          <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full text-white dark:text-slate-900 transition-colors duration-300">
             <path d="M0 60L60 50C120 40 240 20 360 16.7C480 13.3 600 26.7 720 30C840 33.3 960 26.7 1080 23.3C1200 20 1320 20 1380 20L1440 20V60H1380C1320 60 1200 60 1080 60C960 60 840 60 720 60C600 60 480 60 360 60C240 60 120 60 60 60H0Z" fill="currentColor" />
           </svg>
         </div>
-      </div>
       </div>
 
       {/* Dept sections */}
