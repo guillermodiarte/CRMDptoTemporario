@@ -526,27 +526,16 @@ export function PublicLandingClient({
             </Popover>
           </div>
           <div className="flex-1 w-full relative">
-            <div className="flex items-center justify-between mb-1">
-              <label className={`block text-sm font-medium transition-colors ${
-                isMissingPeople 
-                  ? "text-red-600 dark:text-red-400 font-bold" 
-                  : "text-slate-700 dark:text-slate-300"
-              }`}>
-                Personas {isMissingPeople && <span className="text-red-500 font-bold">*</span>}
-              </label>
-              {isMissingPeople && (
-                <span className="text-xs font-bold text-red-500 dark:text-red-400 animate-pulse">
-                  * Obligatorio
-                </span>
-              )}
-            </div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Personas {isMissingPeople && <span className="text-red-500 font-bold">*</span>}
+            </label>
             <select
               ref={peopleSelectRef}
               value={peopleCount}
               onChange={e => setPeopleCount(e.target.value === '' ? '' : Number(e.target.value))}
               className={`w-full rounded-xl px-4 py-2.5 outline-none transition-all cursor-pointer appearance-none ${
                 isMissingPeople
-                  ? "border-2 border-red-500 bg-red-50/50 dark:bg-red-950/20 text-red-900 dark:text-red-200 ring-2 ring-red-500/20 font-medium"
+                  ? "border-2 border-red-500 bg-red-50/40 dark:bg-red-950/20 text-red-900 dark:text-red-200 ring-4 ring-red-500/15 font-medium"
                   : "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:border-sky-500 hover:bg-slate-50 dark:hover:bg-slate-700/80"
               }`}
             >
@@ -555,10 +544,15 @@ export function PublicLandingClient({
                 <option key={i + 1} value={i + 1}>{i + 1} {i + 1 === 1 ? 'persona' : 'personas'}</option>
               ))}
             </select>
+
+            {/* Absolute floating tooltip - does not alter the layout or push the input */}
             {isMissingPeople && (
-              <p className="text-xs font-semibold text-red-500 dark:text-red-400 mt-1 flex items-center gap-1">
-                <span>* Obligatorio seleccionar cantidad para continuar</span>
-              </p>
+              <div className="absolute top-full mt-2 left-0 right-0 z-30 pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+                <div className="relative bg-red-600 text-white text-xs font-semibold py-1.5 px-3 rounded-xl shadow-xl flex items-center justify-center gap-1.5 text-center">
+                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-red-600 rotate-45" />
+                  <span>* Obligatorio seleccionar cantidad para continuar</span>
+                </div>
+              </div>
             )}
           </div>
           <div className="w-full md:w-auto">
