@@ -43,6 +43,8 @@ export default async function Home({
       color: true,
       prices: true,
       amenities: true,
+      address: true,
+      googleMapsLink: true,
       reservations: {
         where: {
           status: { in: ['CONFIRMED', 'TENTATIVE'] },

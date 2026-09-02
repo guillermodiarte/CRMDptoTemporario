@@ -39,6 +39,8 @@ export default async function DepartamentosPage() {
       color: true,
       prices: true,
       amenities: true,
+      address: true,
+      googleMapsLink: true,
       reservations: {
         where: {
           status: { in: ['CONFIRMED', 'TENTATIVE'] },

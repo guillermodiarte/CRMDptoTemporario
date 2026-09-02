@@ -10,6 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { ImageCarousel, DepartmentModal, SharedDepartment } from "./shared-ui";
 import { PublicFooter } from "./public-footer";
 import { SiteConfig, SITE_CONFIG_DEFAULTS, HeroSlide } from "@/lib/site.config";
+import { DepartmentLocationMap } from "@/components/department-location-map";
 
 type Reservation = {
   id: string;
@@ -1202,6 +1203,43 @@ function ReservationRequestModal({
                 </div>
               )}
             </div>
+
+            {/* Location section */}
+            {data.type === 'direct' && (data.dept?.address || data.dept?.googleMapsLink) && (
+              <div className="bg-slate-50 dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 transition-colors">
+                <h3 className="font-semibold text-slate-800 dark:text-white mb-3 text-sm uppercase tracking-wider">Ubicación del Alojamiento</h3>
+                <DepartmentLocationMap
+                  address={data.dept.address}
+                  googleMapsLink={data.dept.googleMapsLink}
+                  deptName={data.dept.name}
+                  mode="compact"
+                />
+              </div>
+            )}
+
+            {data.type === 'combination' && (() => {
+              const locations = data.comb!.segments.map(seg => {
+                const d = departments.find(dep => dep.id === seg.deptId);
+                return {
+                  deptName: seg.deptName,
+                  address: d?.address,
+                  googleMapsLink: d?.googleMapsLink,
+                  nights: seg.nights,
+                };
+              }).filter(l => l.address || l.googleMapsLink);
+
+              if (locations.length === 0) return null;
+
+              return (
+                <div className="bg-slate-50 dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 transition-colors">
+                  <h3 className="font-semibold text-slate-800 dark:text-white mb-3 text-sm uppercase tracking-wider">Ubicación del Alojamiento</h3>
+                  <DepartmentLocationMap
+                    locations={locations}
+                    mode="compact"
+                  />
+                </div>
+              );
+            })()}
 
             <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
               <div>

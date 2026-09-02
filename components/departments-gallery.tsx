@@ -8,6 +8,7 @@ import {
 import { SharedDepartment } from "./shared-ui";
 import { PublicFooter } from "./public-footer";
 import { SiteConfig, SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
+import { DepartmentLocationMap } from "@/components/department-location-map";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
   addMonths, isBefore, startOfDay, isWithinInterval, isSameDay
@@ -357,6 +358,18 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
               </span>
             );
           })}
+        </div>
+      )}
+
+      {/* Location Map */}
+      {(dept.address || dept.googleMapsLink) && (
+        <div className="mt-1 mb-6">
+          <DepartmentLocationMap
+            address={dept.address}
+            googleMapsLink={dept.googleMapsLink}
+            deptName={dept.name}
+            mode="compact"
+          />
         </div>
       )}
 

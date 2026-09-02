@@ -5,6 +5,7 @@ import { Users, Bed, ChevronLeft, ChevronRight, CheckCircle2, X, Wifi, Tv, Wind,
 import Link from "next/link";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
+import { DepartmentLocationMap } from "@/components/department-location-map";
 
 export type SharedDepartment = {
   id: string;
@@ -17,6 +18,8 @@ export type SharedDepartment = {
   color: string;
   prices?: string | null;
   amenities?: string | null;
+  address?: string | null;
+  googleMapsLink?: string | null;
   reservations?: { checkIn: Date; checkOut: Date }[];
 };
 
@@ -234,6 +237,19 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
                          </div>
                        ))}
                      </div>
+                  </div>
+                )}
+
+                {/* Location Map */}
+                {(dept.address || dept.googleMapsLink) && (
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Ubicación</h3>
+                    <DepartmentLocationMap
+                      address={dept.address}
+                      googleMapsLink={dept.googleMapsLink}
+                      deptName={dept.name}
+                      mode="expanded"
+                    />
                   </div>
                 )}
               </div>
