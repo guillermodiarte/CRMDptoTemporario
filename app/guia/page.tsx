@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { PublicGuideClient } from "@/components/public-guide-client";
 import { getSiteConfig } from "@/lib/site-config-loader";
 
@@ -11,5 +12,8 @@ export async function generateMetadata() {
 
 export default async function GuiaPage() {
   const config = await getSiteConfig();
+  if (config.guiaEnabled === "false") {
+    redirect("/");
+  }
   return <PublicGuideClient config={config} />;
 }

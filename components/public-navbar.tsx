@@ -12,6 +12,7 @@ interface PublicNavbarProps {
   logoUrl?: string;
   logoUrlDark?: string;
   logoSize?: string;
+  guiaEnabled?: string;
 }
 
 export function PublicNavbar({ 
@@ -19,6 +20,7 @@ export function PublicNavbar({
   logoUrl = SITE_CONFIG_DEFAULTS.logoUrl,
   logoUrlDark = SITE_CONFIG_DEFAULTS.logoUrlDark,
   logoSize = SITE_CONFIG_DEFAULTS.logoSize,
+  guiaEnabled = SITE_CONFIG_DEFAULTS.guiaEnabled,
 }: PublicNavbarProps) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -33,14 +35,14 @@ export function PublicNavbar({
   const navLinks = [
     { href: "/", label: "Inicio", icon: <Home className="w-4 h-4" /> },
     { href: "/departamentos", label: "Departamentos", icon: <Building2 className="w-4 h-4" /> },
-    { href: "/guia", label: "Guía & Turismo", icon: <Compass className="w-4 h-4" /> },
+    ...(guiaEnabled !== "false" ? [{ href: "/guia", label: "Guía & Turismo", icon: <Compass className="w-4 h-4" /> }] : []),
     { href: "/contacto", label: "Contacto", icon: <Phone className="w-4 h-4" /> },
   ];
 
   const currentLogoSize = Number(logoSize) || 40;
 
   return (
-    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-700 ease-in-out ${
       scrolled || mobileMenuOpen
         ? "bg-slate-900/95 dark:bg-slate-950/95 shadow-xl border-b border-slate-800"
         : "bg-slate-900/70 dark:bg-slate-950/70 backdrop-blur-md border-b border-white/10 dark:border-white/5"

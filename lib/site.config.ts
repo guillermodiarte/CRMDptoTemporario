@@ -84,6 +84,9 @@ export const SITE_CONFIG_DEFAULTS = {
   smtpUser: "contacto@alojamientosdiarte.com",
   smtpPassword: "",
   smtpFromName: "Alojamientos Di'Arte",
+
+  // Páginas públicas
+  guiaEnabled: "true", // "true" | "false"
 };
 
 export type SiteConfig = typeof SITE_CONFIG_DEFAULTS;

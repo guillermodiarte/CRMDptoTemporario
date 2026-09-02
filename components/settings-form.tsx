@@ -38,6 +38,7 @@ import {
   Sliders,
   Send,
   FolderOpen,
+  Compass,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -742,6 +743,30 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     }}
                   />
                 </div>
+
+                <div className="flex items-center justify-between p-3.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/40">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="guiaEnabledGeneral" className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <Compass className="w-4 h-4 text-sky-500" /> Página Guía & Turismo
+                    </Label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Activar o desactivar la página pública de Guía de Turismo y su enlace en la barra de navegación.
+                    </p>
+                  </div>
+                  <Switch
+                    id="guiaEnabledGeneral"
+                    checked={siteConfig.guiaEnabled !== "false"}
+                    onCheckedChange={(val) => {
+                      const strVal = val ? "true" : "false";
+                      setSiteConfig(prev => ({ ...prev, guiaEnabled: strVal }));
+                      fetch("/api/site-config", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ guiaEnabled: strVal }),
+                      }).then(() => router.refresh());
+                    }}
+                  />
+                </div>
               </CardContent>
             </Card>
 
@@ -1197,6 +1222,43 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   </label>
                 </div>
               </div>
+              </div>
+
+              {/* Páginas Públicas del Sitio Web */}
+              <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-4">
+                <div>
+                  <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 text-sm">
+                    <Compass className="w-4 h-4 text-sky-500" /> Páginas Públicas del Sitio Web
+                  </Label>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Controlá qué páginas están visibles para los huéspedes y en la barra de navegación.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                  <div className="space-y-0.5">
+                    <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                      Página Guía & Turismo (/guia)
+                    </span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {siteConfig.guiaEnabled !== "false"
+                        ? "Visible en la barra de navegación y accesible al público."
+                        : "Oculta de la barra de navegación y redirige automáticamente a la portada."}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={siteConfig.guiaEnabled !== "false"}
+                    onCheckedChange={(val) => {
+                      const strVal = val ? "true" : "false";
+                      setSiteConfig(prev => ({ ...prev, guiaEnabled: strVal }));
+                      fetch("/api/site-config", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ guiaEnabled: strVal }),
+                      }).then(() => router.refresh());
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">

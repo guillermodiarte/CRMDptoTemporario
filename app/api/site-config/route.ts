@@ -69,6 +69,7 @@ export async function PUT(req: Request) {
       smtpUser: "smtp_user",
       smtpPassword: "smtp_password",
       smtpFromName: "smtp_from_name",
+      guiaEnabled: "site_guia_enabled",
     };
 
     const updates = [];

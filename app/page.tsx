@@ -60,7 +60,7 @@ export default async function Home({
 
   return (
     <>
-      <PublicNavbar siteName={config.siteName} logoUrl={config.logoUrl} logoUrlDark={config.logoUrlDark} logoSize={config.logoSize} />
+      <PublicNavbar siteName={config.siteName} logoUrl={config.logoUrl} logoUrlDark={config.logoUrlDark} logoSize={config.logoSize} guiaEnabled={config.guiaEnabled} />
       <PublicLandingClient initialDepartments={departments} config={config} />
     </>
   )

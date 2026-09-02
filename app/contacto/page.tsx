@@ -19,11 +19,11 @@ export default async function ContactoPage() {
   const whatsappMsg = encodeURIComponent(config.whatsappDefaultMsg);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors duration-300">
-      <PublicNavbar siteName={config.siteName} logoUrl={config.logoUrl} logoUrlDark={config.logoUrlDark} logoSize={config.logoSize} />
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors duration-700 ease-in-out">
+      <PublicNavbar siteName={config.siteName} logoUrl={config.logoUrl} logoUrlDark={config.logoUrlDark} logoSize={config.logoSize} guiaEnabled={config.guiaEnabled} />
 
-      {/* ── HERO (Centered) ── */}
-      <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white overflow-hidden pt-16">
+      {/* ── HERO (Centered) — Corte recto limpio ── */}
+      <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white overflow-hidden pt-16 border-b border-slate-800/80">
         {/* Decorative background glow */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
@@ -40,15 +40,6 @@ export default async function ContactoPage() {
             ¿Tenés preguntas sobre disponibilidad, precios o servicios? Escribinos y te respondemos a la brevedad.
           </p>
         </div>
-
-        {/* Wave - ahora FUERA del hero como elemento hermano con margen negativo.
-            Esto lo pone en el mismo contexto de pintura que el contenido de abajo,
-            por lo que la transición de color es perfectamente sincronizada */}
-      </div>
-      <div className="-mt-[60px] relative z-10">
-        <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full text-slate-50 dark:text-slate-950 transition-colors duration-300 block">
-          <path d="M0 60L60 50C120 40 240 20 360 16.7C480 13.3 600 26.7 720 30C840 33.3 960 26.7 1080 23.3C1200 20 1320 20 1380 20L1440 20V60H1380C1320 60 1200 60 1080 60C960 60 840 60 720 60C600 60 480 60 360 60C240 60 120 60 60 60H0Z" fill="currentColor" />
-        </svg>
       </div>
 
       {/* ── MAIN BODY — 3-column layout ── */}
@@ -61,7 +52,7 @@ export default async function ContactoPage() {
             {/* ─── LEFT COLUMN: Contact info + WhatsApp ─── */}
             <div className="space-y-6">
               {/* Info card */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm transition-colors duration-300">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm transition-colors duration-700 ease-in-out">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white">Información de contacto</h2>
                   <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Encontranos por el medio que prefieras.</p>
@@ -138,13 +129,17 @@ export default async function ContactoPage() {
               </a>
 
               {/* Quick-access hours card */}
-              <div className="bg-indigo-50 dark:bg-indigo-600/10 border border-indigo-200/80 dark:border-indigo-500/20 rounded-2xl px-6 py-5 transition-colors duration-300">
-                <p className="text-indigo-600 dark:text-indigo-300 text-xs font-semibold uppercase tracking-wider mb-1">⚡ Tiempo de respuesta</p>
-                <p className="text-slate-800 dark:text-white text-sm font-medium">Respondemos en menos de 24 hs. Consultas urgentes: WhatsApp.</p>
+              <div className="bg-indigo-50 dark:bg-indigo-600/10 border border-indigo-200/80 dark:border-indigo-500/20 rounded-2xl px-6 py-5 transition-colors duration-700 ease-in-out">
+                <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider mb-1">
+                  Atención Inmediata
+                </p>
+                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                  Para reservas urgentes o consultas sobre el día, te recomendamos escribirnos directamente por WhatsApp.
+                </p>
               </div>
 
-              {/* Social / extra links */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm transition-colors duration-300">
+              {/* Redes Sociales */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm transition-colors duration-700 ease-in-out">
                 <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Seguinos en redes</h3>
                 <div className="flex gap-3 flex-wrap">
                   {config.instagramUrl && (
@@ -178,8 +173,8 @@ export default async function ContactoPage() {
 
             {/* ─── CENTER COLUMN: Map + Form ─── */}
             <div className="space-y-6">
-              {/* Map */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden h-72 shadow-sm transition-colors duration-300">
+              {/* Mapa embebido */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden h-72 shadow-sm transition-colors duration-700 ease-in-out">
                 <iframe
                   src={config.googleMapsEmbedUrl}
                   width="100%"
@@ -198,8 +193,8 @@ export default async function ContactoPage() {
 
             {/* ─── RIGHT COLUMN: FAQ ─── */}
             <div className="space-y-6">
-              {/* FAQ Card */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm transition-colors duration-300">
+              {/* FAQ rápido */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm transition-colors duration-700 ease-in-out">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Preguntas frecuentes</h2>
                 <div className="space-y-5">
                   {[
