@@ -5,6 +5,7 @@ import {
   Users, Bed, Wifi, Tv, Wind, Flame, Car, Droplets, Sparkles,
   ChevronLeft, ChevronRight, X, Phone, Star, CalendarDays
 } from "lucide-react";
+import Link from "next/link";
 import { SharedDepartment } from "./shared-ui";
 import { PublicFooter } from "./public-footer";
 import { SiteConfig, SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
@@ -408,7 +409,7 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
   );
 
   return (
-    <section ref={ref} id={`dept-${index}`} className={`py-16 md:py-20 transition-colors duration-700 ease-in-out ${index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/80 dark:bg-slate-950"}`}>
+    <section ref={ref} id={`dept-${index}`} className={`scroll-mt-24 py-16 md:py-20 transition-colors duration-700 ease-in-out ${index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/80 dark:bg-slate-950"}`}>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 lg:items-stretch">
           {flip ? <>{photos}{info}</> : <>{info}{photos}</>}
@@ -428,6 +429,18 @@ export function DepartmentsGallery({
 }) {
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [availDept, setAvailDept] = useState<SharedDepartment | null>(null);
+
+  const scrollToDept = (index: number) => {
+    const el = document.getElementById(`dept-${index}`);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const targetY = rect.top + window.scrollY - 80;
+      window.scrollTo({ top: targetY, behavior: "smooth" });
+      if (typeof history !== "undefined" && history.pushState) {
+        history.pushState(null, "", `#dept-${index}`);
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-700 ease-in-out">
@@ -449,10 +462,13 @@ export function DepartmentsGallery({
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             {departments.map((d, i) => (
-              <a key={d.id} href={`#dept-${i}`}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-sm font-semibold text-white/80 hover:text-white transition-all backdrop-blur-sm">
+              <button
+                key={d.id}
+                onClick={() => scrollToDept(i)}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-sm font-semibold text-white/80 hover:text-white transition-all backdrop-blur-sm cursor-pointer active:scale-95"
+              >
                 {d.name}
-              </a>
+              </button>
             ))}
           </div>
         </div>
@@ -472,11 +488,13 @@ export function DepartmentsGallery({
       {/* Contact CTA */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-16 text-white text-center">
         <h2 className="text-3xl font-extrabold mb-2">¿Listo para reservar?</h2>
-        <p className="text-indigo-200 mb-8 max-w-md mx-auto">Consultá disponibilidad y precios directamente con nosotros. Respondemos rápido.</p>
-        <a href="/contacto"
-          className="inline-flex items-center gap-2 bg-white text-indigo-700 font-bold px-8 py-4 rounded-2xl hover:bg-indigo-50 transition-colors shadow-xl text-sm">
-          <Phone className="w-4 h-4" /> Consultar disponibilidad
-        </a>
+        <p className="text-indigo-200 mb-8 max-w-md mx-auto">Consultá disponibilidad y fechas directamente en nuestro buscador principal.</p>
+        <Link
+          href="/#search-bar"
+          className="inline-flex items-center gap-2 bg-white text-indigo-700 font-bold px-8 py-4 rounded-2xl hover:bg-indigo-50 transition-all hover:scale-105 shadow-xl text-sm cursor-pointer"
+        >
+          <CalendarDays className="w-4 h-4" /> Consultar disponibilidad
+        </Link>
       </div>
 
       {/* Lightbox */}

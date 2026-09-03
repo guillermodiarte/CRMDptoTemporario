@@ -204,6 +204,27 @@ export function PublicLandingClient({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Smooth scroll to search bar if arriving with #search-bar or hashchange
+  useEffect(() => {
+    const checkAndScroll = () => {
+      if (typeof window === "undefined") return;
+      if (window.location.hash === "#search-bar" || window.location.hash.includes("search")) {
+        const timer = setTimeout(() => {
+          if (searchBarRef.current) {
+            const rect = searchBarRef.current.getBoundingClientRect();
+            const targetY = rect.top + window.scrollY - 90;
+            smoothScrollTo(targetY, 900);
+          }
+        }, 300);
+        return () => clearTimeout(timer);
+      }
+    };
+
+    checkAndScroll();
+    window.addEventListener("hashchange", checkAndScroll);
+    return () => window.removeEventListener("hashchange", checkAndScroll);
+  }, []);
+
   const departments = useMemo<Department[]>(() => {
     return initialDepartments.map(dep => ({
       ...dep,
@@ -637,7 +658,7 @@ export function PublicLandingClient({
       <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-30">
 
         {/* Search / Filter Section */}
-        <div ref={searchBarRef} className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 sm:p-7 mb-8 border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-end transition-colors duration-300 relative z-30">
+        <div id="search-bar" ref={searchBarRef} className="scroll-mt-28 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 sm:p-7 mb-8 border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-end transition-colors duration-300 relative z-30">
           <div className="flex-1 w-full">
             <label className="block text-sm font-bold text-slate-800 dark:text-slate-100 mb-1.5 tracking-wide">
               Check-in <span className="text-xs font-medium text-slate-500 dark:text-slate-400">(Fecha de Ingreso)</span>
