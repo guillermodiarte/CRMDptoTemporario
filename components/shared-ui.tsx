@@ -225,21 +225,6 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{dept.description || "Un hermoso departamento completamente equipado para tu estadía. Perfecto para descansar y disfrutar con todas las comodidades."}</p>
                 </div>
 
-                {/* Amenities */}
-                {amenities.length > 0 && (
-                  <div>
-                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Servicios Incluidos</h3>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-6">
-                       {amenities.map((am, i) => (
-                         <div key={i} className="flex items-center gap-3 text-slate-700 dark:text-slate-200">
-                           <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400">{am.icon}</div>
-                           <span className="font-medium text-sm">{am.label}</span>
-                         </div>
-                       ))}
-                     </div>
-                  </div>
-                )}
-
                 {/* Location Map */}
                 {(dept.address || dept.googleMapsLink) && (
                   <div>
@@ -254,8 +239,24 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
                 )}
               </div>
 
-              {/* Pricing & Booking */}
+              {/* Pricing, Amenities & Booking */}
               <div className="space-y-6">
+                {/* Amenities */}
+                {amenities.length > 0 && (
+                  <div className="bg-slate-50 dark:bg-slate-800/80 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-colors">
+                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Servicios Incluidos</h3>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-y-3.5 gap-x-4">
+                       {amenities.map((am, i) => (
+                         <div key={i} className="flex items-center gap-3 text-slate-700 dark:text-slate-200">
+                           <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400 shrink-0">{am.icon}</div>
+                           <span className="font-medium text-sm">{am.label}</span>
+                         </div>
+                       ))}
+                     </div>
+                  </div>
+                )}
+
+                {/* Pricing */}
                 <div className="bg-slate-50 dark:bg-slate-800/80 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-colors">
                   <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                     Precios por Noche
