@@ -312,6 +312,12 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
       </div>
 
       <h2 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3">{dept.name}</h2>
+
+      {/* Mobile photos — only visible on mobile/tablet (< lg) */}
+      <div className="block lg:hidden my-6">
+        <PhotoGallery images={images} onLightbox={(i) => onLightbox(images, i)} />
+      </div>
+
       <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6 text-base whitespace-pre-wrap">
         {dept.description || "Un hermoso departamento completamente equipado para tu estadía. Perfecto para descansar con todas las comodidades del hogar."}
       </p>
@@ -384,7 +390,7 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
       {/* CTA */}
       <button
         onClick={() => onAvailability(dept)}
-        className={`inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-white ${accent.btn} transition-all shadow-md hover:shadow-lg hover:scale-[1.02] self-start text-sm cursor-pointer`}
+        className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-white ${accent.btn} transition-all shadow-md hover:shadow-lg hover:scale-[1.02] self-center lg:self-start text-sm cursor-pointer w-full sm:w-auto text-center`}
       >
         <CalendarDays className="w-5 h-5" />
         Ver Fechas de Disponibilidad
@@ -392,10 +398,10 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
     </div>
   );
 
-  /* Photo panel — same height as info, fixed via min-h */
+  /* Photo panel (Desktop only — hidden on mobile to avoid duplication) */
   const photos = (
     <div
-      className={`min-h-[520px] lg:min-h-0 lg:self-stretch transition-all duration-700 ease-out delay-150 ${visible ? "opacity-100 translate-x-0" : flip ? "opacity-0 -translate-x-12" : "opacity-0 translate-x-12"}`}
+      className={`hidden lg:block min-h-[520px] lg:min-h-0 lg:self-stretch transition-all duration-700 ease-out delay-150 ${visible ? "opacity-100 translate-x-0" : flip ? "opacity-0 -translate-x-12" : "opacity-0 translate-x-12"}`}
     >
       <PhotoGallery images={images} onLightbox={(i) => onLightbox(images, i)} />
     </div>

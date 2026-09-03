@@ -136,10 +136,6 @@ export function PublicNavbar({
               </Link>
             );
           })}
-          
-          <div className="pt-2 border-t border-slate-800">
-            <ThemeToggle variant="full" />
-          </div>
         </div>
       )}
     </nav>
