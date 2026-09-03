@@ -241,21 +241,6 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
 
               {/* Pricing, Amenities & Booking */}
               <div className="space-y-6">
-                {/* Amenities */}
-                {amenities.length > 0 && (
-                  <div className="bg-slate-50 dark:bg-slate-800/80 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-colors">
-                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Servicios Incluidos</h3>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-y-3.5 gap-x-4">
-                       {amenities.map((am, i) => (
-                         <div key={i} className="flex items-center gap-3 text-slate-700 dark:text-slate-200">
-                           <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400 shrink-0">{am.icon}</div>
-                           <span className="font-medium text-sm">{am.label}</span>
-                         </div>
-                       ))}
-                     </div>
-                  </div>
-                )}
-
                 {/* Pricing */}
                 <div className="bg-slate-50 dark:bg-slate-800/80 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-colors">
                   <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
@@ -277,6 +262,21 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
                     )}
                   </div>
                 </div>
+
+                {/* Amenities */}
+                {amenities.length > 0 && (
+                  <div className="bg-slate-50 dark:bg-slate-800/80 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-colors">
+                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Servicios Incluidos</h3>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-y-3.5 gap-x-4">
+                       {amenities.map((am, i) => (
+                         <div key={i} className="flex items-center gap-3 text-slate-700 dark:text-slate-200">
+                           <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400 shrink-0">{am.icon}</div>
+                           <span className="font-medium text-sm">{am.label}</span>
+                         </div>
+                       ))}
+                     </div>
+                  </div>
+                )}
 
                 <button onClick={(e) => { e.stopPropagation(); setShowCalendar(true); }} className="w-full py-4 px-4 bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-sm shadow-xl shadow-slate-900/20 dark:shadow-sky-900/30 cursor-pointer">
                     <CalendarDays className="w-5 h-5" />

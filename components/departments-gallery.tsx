@@ -312,7 +312,7 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
       </div>
 
       <h2 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3">{dept.name}</h2>
-      <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6 text-base">
+      <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6 text-base whitespace-pre-wrap">
         {dept.description || "Un hermoso departamento completamente equipado para tu estadía. Perfecto para descansar con todas las comodidades del hogar."}
       </p>
 
@@ -326,44 +326,52 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
         </span>
       </div>
 
-      {/* Prices */}
-      <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 mb-6 shadow-sm transition-colors">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Precios por noche</p>
-        {Object.keys(prices).length > 0 ? (
-          <div className="divide-y divide-slate-100 dark:divide-slate-700">
-            {Object.entries(prices).sort(([a], [b]) => Number(a) - Number(b)).map(([ppl, price]) => (
-              <div key={ppl} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
-                <span className="text-slate-500 dark:text-slate-400 text-sm">{Number(ppl) === 1 ? "1 persona" : `${ppl} personas`}</span>
-                <span className={`font-bold text-lg ${accent.text}`}>${Number(price).toLocaleString()}</span>
+      {/* Precios & Servicios al costado */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 items-stretch">
+        {/* Prices */}
+        <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-xs transition-colors flex flex-col justify-between">
+          <div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Precios por noche</p>
+            {Object.keys(prices).length > 0 ? (
+              <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                {Object.entries(prices).sort(([a], [b]) => Number(a) - Number(b)).map(([ppl, price]) => (
+                  <div key={ppl} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
+                    <span className="text-slate-500 dark:text-slate-400 text-sm">{Number(ppl) === 1 ? "1 persona" : `${ppl} personas`}</span>
+                    <span className={`font-bold text-base sm:text-lg ${accent.text}`}>${Number(price).toLocaleString()}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <div className="flex items-baseline gap-1 py-1">
+                <span className={`text-2xl sm:text-3xl font-black ${accent.text}`}>${dept.basePrice.toLocaleString()}</span>
+                <span className="text-slate-400 text-sm">/ noche</span>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="flex items-baseline gap-1">
-            <span className={`text-3xl font-black ${accent.text}`}>${dept.basePrice.toLocaleString()}</span>
-            <span className="text-slate-400 text-sm">/ noche</span>
-          </div>
-        )}
-      </div>
-
-      {/* Amenities */}
-      {amenities.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-7">
-          {amenities.map(id => {
-            const a = AMENITY_MAP[id];
-            if (!a) return null;
-            return (
-              <span key={id} className="inline-flex items-center gap-1.5 text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full font-medium">
-                <span className={accent.text}>{a.icon}</span> {a.label}
-              </span>
-            );
-          })}
         </div>
-      )}
+
+        {/* Amenities */}
+        {amenities.length > 0 ? (
+          <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-xs transition-colors flex flex-col">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Servicios incluidos</p>
+            <div className="flex flex-wrap gap-2 content-start">
+              {amenities.map(id => {
+                const a = AMENITY_MAP[id];
+                if (!a) return null;
+                return (
+                  <span key={id} className="inline-flex items-center gap-1.5 text-xs bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl font-medium">
+                    <span className={accent.text}>{a.icon}</span> {a.label}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+      </div>
 
       {/* Location Map */}
       {(dept.address || dept.googleMapsLink) && (
-        <div className="mt-1 mb-6">
+        <div className="mb-6">
           <DepartmentLocationMap
             address={dept.address}
             googleMapsLink={dept.googleMapsLink}
@@ -394,9 +402,9 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
   );
 
   return (
-    <section ref={ref} id={`dept-${index}`} className={`py-20 transition-colors duration-700 ease-in-out ${index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/80 dark:bg-slate-950"}`}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 lg:items-stretch">
+    <section ref={ref} id={`dept-${index}`} className={`py-16 md:py-20 transition-colors duration-700 ease-in-out ${index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/80 dark:bg-slate-950"}`}>
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 lg:items-stretch">
           {flip ? <>{photos}{info}</> : <>{info}{photos}</>}
         </div>
       </div>
