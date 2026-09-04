@@ -48,6 +48,7 @@ export async function PUT(req: Request) {
       loginLogoSize: "site_login_logo_size",
       heroSlides: "site_hero_slides",
       heroSlideInterval: "site_hero_slide_interval",
+      heroOverlayOpacity: "site_hero_overlay_opacity",
       phoneDisplay: "site_phone_display",
       phoneWhatsApp: "site_phone_whatsapp",
       email: "site_email",

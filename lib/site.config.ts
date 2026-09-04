@@ -49,6 +49,7 @@ export const SITE_CONFIG_DEFAULTS = {
   // Slides / Carrusel de Portada
   heroSlides: JSON.stringify(DEFAULT_HERO_SLIDES),
   heroSlideInterval: "6000", // ms between slides (2000-15000)
+  heroOverlayOpacity: "45", // % oscurecimiento tenue del fondo (10-90)
 
   // Contacto principal
   phoneDisplay: "+54 9 351 314-6924",

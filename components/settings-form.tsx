@@ -1300,6 +1300,53 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                   Tiempo entre cambio automático de slides. Solo aplica si hay más de un slide y el usuario no está sobre la imagen.
                 </p>
               </div>
+
+              {/* Slide Overlay Opacity */}
+              <div className="p-4 rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/20 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <label className="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 8v8"/><path d="M8 12h8"/>
+                    </svg>
+                    Tenue del fondo de slide
+                  </label>
+                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 tabular-nums bg-indigo-100 dark:bg-indigo-900/60 px-3 py-1 rounded-full">
+                    {Number(siteConfig.heroOverlayOpacity) ?? 45}% oscuridad
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-500 shrink-0">Claro</span>
+                  <input
+                    type="range"
+                    min={10}
+                    max={90}
+                    step={5}
+                    value={Number(siteConfig.heroOverlayOpacity) || 45}
+                    onChange={e => setSiteConfig(prev => ({ ...prev, heroOverlayOpacity: e.target.value }))}
+                    className="flex-1 h-2 rounded-full accent-indigo-500 cursor-pointer"
+                  />
+                  <span className="text-xs text-slate-500 shrink-0">Oscuro</span>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {[15, 25, 35, 45, 60, 75].map(pct => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setSiteConfig(prev => ({ ...prev, heroOverlayOpacity: String(pct) }))}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
+                        Number(siteConfig.heroOverlayOpacity) === pct
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
+                      }`}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Cuánto oscurecer la imagen de fondo de cada slide para que el texto sea más legible.
+                </p>
+              </div>
             </CardContent>
 
             <CardContent className="space-y-6 pt-0">

@@ -517,6 +517,7 @@ export function PublicLandingClient({
 
   // Auto-advance slides using configured interval (default 6s)
   const slideInterval = Math.max(2000, Math.min(15000, Number(config.heroSlideInterval) || 6000));
+  const overlayOpacity = Math.max(10, Math.min(90, Number(config.heroOverlayOpacity) || 45)) / 100;
   useEffect(() => {
     if (parsedHeroSlides.length <= 1 || isHoveringHero) return;
     const interval = setInterval(() => {
@@ -562,8 +563,13 @@ export function PublicLandingClient({
                       isActive ? "scale-105" : "scale-100"
                     }`}
                   />
-                  {/* Dark gradient overlay for text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/75 backdrop-blur-[0.5px]" />
+                  {/* Dark gradient overlay — opacity controlled from Configuración */}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: `linear-gradient(to top, rgba(2,6,23,${Math.min(overlayOpacity + 0.2, 1)}) 0%, rgba(2,6,23,${overlayOpacity}) 50%, rgba(2,6,23,${Math.max(overlayOpacity - 0.05, 0.2)}) 100%)`,
+                    }}
+                  />
                 </div>
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
@@ -581,11 +587,11 @@ export function PublicLandingClient({
             const isActive = idx === currentSlideIndex;
             if (!isActive) return null;
             return (
-              <div key={slide.id || idx} className="max-w-3xl mx-auto animate-in fade-in zoom-in-95 duration-500">
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-5 text-white drop-shadow-lg">
+              <div key={slide.id || idx} className={`max-w-3xl mx-auto animate-in fade-in zoom-in-95 duration-500 flex flex-col items-center ${!slide.buttonText ? "justify-center" : ""}`}>
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-5 text-white drop-shadow-lg text-center">
                   {slide.title || config.siteName}
                 </h1>
-                <p className="text-lg sm:text-xl text-slate-200 drop-shadow-md leading-relaxed mb-6 font-normal max-w-2xl mx-auto">
+                <p className="text-lg sm:text-xl text-slate-200 drop-shadow-md leading-relaxed mb-6 font-normal max-w-2xl mx-auto text-center">
                   {slide.subtitle || config.siteSlogan}
                 </p>
                 {slide.buttonText && (
