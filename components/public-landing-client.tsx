@@ -1095,13 +1095,13 @@ function ReservationRequestModal({
     if (data.type === 'direct') {
       const dailyPrice = getPriceForPeople(data.dept!, people);
       message += `- Departamento: ${data.dept!.name}\n`;
-      message += `- Precio por día (${people} ${people === 1 ? 'persona' : 'personas'}): $${dailyPrice.toLocaleString()}\n`;
+      message += `- Precio por día (${people} ${people === 1 ? 'persona' : 'personas'}): $${dailyPrice.toLocaleString('de-DE')}\n`;
     } else {
       message += `- Tipo: Reserva Combinada\n`;
       data.comb!.segments.forEach((seg, i) => {
         const d = departments.find(dep => dep.id === seg.deptId);
         const segDaily = d ? getPriceForPeople(d, people) : 0;
-        message += `  ${i + 1}. ${seg.deptName} (${format(seg.checkIn, 'dd/MM')} al ${format(seg.checkOut, 'dd/MM')}) - $${segDaily.toLocaleString()}/día\n`;
+        message += `  ${i + 1}. ${seg.deptName} (${format(seg.checkIn, 'dd/MM')} al ${format(seg.checkOut, 'dd/MM')}) - $${segDaily.toLocaleString('de-DE')}/día\n`;
       });
     }
     message += `- Check-in: ${format(data.checkIn, 'dd/MM/yyyy')}\n`;
@@ -1109,7 +1109,7 @@ function ReservationRequestModal({
     message += `- Noches: ${nights}\n`;
     message += `- Personas: ${people}\n`;
     message += `- Cochera: ${garage ? 'Sí' : 'No'}\n`;
-    message += `- Precio Total: $${totalPrice.toLocaleString()}\n`;
+    message += `- Precio Total: $${totalPrice.toLocaleString('de-DE')}\n`;
 
     if (config?.whatsappReservationFooter?.trim()) {
       message += `\n${config.whatsappReservationFooter.trim()}\n`;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { Department, Expense } from "@prisma/client";
 import { Pencil, Trash2, Plus, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,22 @@ const PLATFORM_COLORS: Record<string, string> = {
   'OTHER': '#888888'
 };
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-xl text-sm">
+        {label && <p className="font-semibold text-slate-800 dark:text-slate-100 mb-1">{label}</p>}
+        {payload.map((entry: any, i: number) => (
+          <p key={i} style={{ color: entry.color }} className="">
+            {entry.name}: {typeof entry.value === 'number' ? formatCurrency(entry.value) : entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
 export function FinanceView({ expenses, departments, monthlyStats, distribution, summary, role, date = new Date(), departmentStats = [], platformStats = [], startYear, endYear, reservations = [] }: FinanceViewProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -65,6 +82,10 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+  const tooltipCursorFill = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
 
   const [isPdfExporting, setIsPdfExporting] = useState(false);
   const pdfRef = useRef<HTMLDivElement>(null);
@@ -398,7 +419,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
               <BarChart data={departmentStats}>
                 <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatAxisNumber(value)} width={80} />
-                <Tooltip formatter={(value: number | undefined) => formatCurrency(value || 0)} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: tooltipCursorFill }} />
                 <Legend />
                 <Bar dataKey="income" name="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} isAnimationActive={!isPdfExporting}>
                   {isPdfExporting && <LabelList dataKey="income" position="top" formatter={(val: any) => `$${val}`} fontSize={10} />}
@@ -467,7 +488,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
               <BarChart data={monthlyStats}>
                 <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatAxisNumber(value)} width={80} />
-                <Tooltip formatter={(value: number | undefined) => formatCurrency(value || 0)} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: tooltipCursorFill }} />
                 <Legend />
                 <Bar dataKey="income" name="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} isAnimationActive={!isPdfExporting}>
                 </Bar>

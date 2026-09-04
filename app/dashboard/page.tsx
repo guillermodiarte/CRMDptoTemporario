@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, CreditCard, CalendarDays, Activity, Car, Plus, List } from "lucide-react";
+import { Users, CreditCard, CalendarDays, Activity, Car, Plus, List, LogOut } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -97,6 +97,26 @@ export default async function DashboardPage() {
     }
   });
 
+  // 5. Today's checkouts (guests leaving today)
+  const startOfTodayCheckout = new Date(today);
+  startOfTodayCheckout.setHours(0, 0, 0, 0);
+  const endOfTodayCheckout = new Date(today);
+  endOfTodayCheckout.setHours(23, 59, 59, 999);
+
+  const todaysCheckouts = await prisma.reservation.findMany({
+    where: {
+      checkOut: { gte: startOfTodayCheckout, lte: endOfTodayCheckout },
+      status: { notIn: ["CANCELLED", "PENDING_APPROVAL", "NO_SHOW"] },
+      sessionId: sessionId
+    },
+    select: {
+      id: true,
+      guestName: true,
+      department: { select: { name: true, type: true } }
+    },
+    orderBy: { checkOut: "asc" }
+  });
+
   // Calculate Monthly Revenue (Finance Page Logic)
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
@@ -155,11 +175,11 @@ export default async function DashboardPage() {
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {/* MOBILE QUICK ACTIONS (Option 2) */}
         <div className="col-span-2 md:hidden">
-          <Card className="bg-white shadow-sm border-slate-200">
+          <Card className="bg-white dark:bg-slate-900 shadow-sm border-slate-200 dark:border-slate-800">
             <CardContent className="p-4">
               <div className="grid grid-cols-3 gap-3">
                 {/* Create Reservation */}
-                <Link href="/dashboard/reservations?new=true" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-blue-50 text-blue-700 active:scale-95 transition-transform">
+                <Link href="/dashboard/reservations?new=true" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 active:scale-95 transition-transform">
                   <div className="h-10 w-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md">
                     <Plus className="h-6 w-6" />
                   </div>
@@ -167,16 +187,16 @@ export default async function DashboardPage() {
                 </Link>
 
                 {/* View Reservations */}
-                <Link href="/dashboard/reservations" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-emerald-50 text-emerald-700 active:scale-95 transition-transform">
-                  <div className="h-10 w-10 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center border border-emerald-200 shadow-sm">
+                <Link href="/dashboard/reservations" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 active:scale-95 transition-transform">
+                  <div className="h-10 w-10 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 rounded-full flex items-center justify-center border border-emerald-200 dark:border-emerald-700 shadow-sm">
                     <List className="h-6 w-6" />
                   </div>
                   <span className="text-[10px] font-bold text-center leading-tight">Ver<br />Reservas</span>
                 </Link>
 
                 {/* Calendar */}
-                <Link href="/dashboard/calendar" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-purple-50 text-purple-700 active:scale-95 transition-transform">
-                  <div className="h-10 w-10 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center border border-purple-200 shadow-sm">
+                <Link href="/dashboard/calendar" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 active:scale-95 transition-transform">
+                  <div className="h-10 w-10 bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 rounded-full flex items-center justify-center border border-purple-200 dark:border-purple-700 shadow-sm">
                     <CalendarDays className="h-6 w-6" />
                   </div>
                   <span className="text-[10px] font-bold text-center leading-tight">Calendario</span>
@@ -292,14 +312,49 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <div className="col-span-2 md:col-span-2 lg:col-span-2 h-full">
-          <NotesWidget />
-        </div>
-        <div className="col-span-2 md:col-span-1">
+        {/* ROW: Retiros de Hoy + Clima + Dólar (3 columnas) */}
+        <div className="col-span-2 lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* WIDGET 5: RETIROS DE HOY */}
+          <Card className="border-rose-200/60 dark:border-rose-900/40">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+                <span>Retiros de Hoy</span>
+                {todaysCheckouts.length > 0 && (
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                    {todaysCheckouts.length}
+                  </span>
+                )}
+              </CardTitle>
+              <LogOut className="h-4 w-4 text-rose-500" />
+            </CardHeader>
+            <CardContent>
+              {todaysCheckouts.length > 0 ? (
+                <div className="space-y-1.5">
+                  {todaysCheckouts.map(res => (
+                    <div key={res.id} className="flex items-center justify-between rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 px-3 py-1.5">
+                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[60%]">{res.guestName}</span>
+                      <span className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                        {res.department.type === 'PARKING' ? '🚗 Cochera' : `🏠 ${res.department.name}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No hay retiros programados para hoy</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* CLIMA */}
           <WeatherWidget data={weatherData} />
-        </div>
-        <div className="col-span-2 md:col-span-1">
+
+          {/* DÓLAR */}
           <DollarWidget data={dollarData} />
+        </div>
+
+        {/* NOTAS RÁPIDAS — fila completa */}
+        <div className="col-span-2 lg:col-span-4">
+          <NotesWidget />
         </div>
       </div>
     </div>

@@ -279,16 +279,16 @@ export function UsersClient({ data, currentUserId, availableSessions = [] }: Use
         {filteredData.map((user) => {
           const isCurrentUser = user.id === currentUserId;
           return (
-            <div key={user.id} className={`p-4 rounded-lg border bg-white shadow-sm ${!user.isActive ? "opacity-60 bg-muted/50" : ""}`}>
+            <div key={user.id} className={`p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm ${!user.isActive ? "opacity-60 bg-muted/50" : ""}`}>
               <div className="flex justify-between items-start gap-2">
                 <div className="min-w-0">
-                  <div className="font-bold text-base whitespace-normal break-words leading-tight">{user.name || "Sin nombre"}</div>
+                  <div className="font-bold text-base whitespace-normal break-words leading-tight text-slate-900 dark:text-slate-100">{user.name || "Sin nombre"}</div>
                   <div className="text-sm text-muted-foreground whitespace-normal break-words mt-0.5">{user.email}</div>
                   {user.phone && <div className="text-xs text-muted-foreground mt-1">{user.phone}</div>}
                   {user.allSessions && user.allSessions.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {user.allSessions.map((s: any) => (
-                        <Badge key={s.sessionId} variant="outline" className="bg-slate-50 text-[10px]">
+                        <Badge key={s.sessionId} variant="outline" className="bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 dark:border-slate-700 text-[10px]">
                           {s.session.name}
                         </Badge>
                       ))}
@@ -300,9 +300,9 @@ export function UsersClient({ data, currentUserId, availableSessions = [] }: Use
                 </Badge>
               </div>
 
-              <div className="flex justify-between items-center pt-3 mt-3 border-t">
+              <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-100 dark:border-slate-800">
                 {user.isActive ? (
-                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100 shadow-none border-0 shrink-0">Activo</Badge>
+                  <Badge className="bg-green-100 dark:bg-green-950/60 text-green-800 dark:text-green-300 hover:bg-green-100 shadow-none border-0 shrink-0">Activo</Badge>
                 ) : (
                   <Badge variant="destructive" className="shrink-0">Inactivo</Badge>
                 )}
@@ -314,7 +314,7 @@ export function UsersClient({ data, currentUserId, availableSessions = [] }: Use
                   {!isCurrentUser && user.email !== "guillermo.diarte@gmail.com" && (
                     <>
                       {user.isActive ? (
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-orange-500 bg-orange-50/50 border-orange-200" onClick={() => setDeleteId({ id: user.id, action: "DEACTIVATE" })}>
+                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-orange-500 bg-orange-50/50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900/50" onClick={() => setDeleteId({ id: user.id, action: "DEACTIVATE" })}>
                           <Ban className="h-4 w-4" />
                         </Button>
                       ) : (

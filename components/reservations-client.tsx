@@ -83,7 +83,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [editingRes, setEditingRes] = useState<ReservationWithDept | null>(null);
-  const [reminderModal, setReminderModal] = useState<{ isOpen: boolean; items: ReminderItem[] } | null>(null);
+  const [reminderModal, setReminderModal] = useState<{ isOpen: boolean; items: ReminderItem[]; source?: string } | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const isVisualizer = role === 'VISUALIZER';
@@ -330,10 +330,11 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
               departments={departments}
               setOpen={setOpen}
               initialData={editingRes}
-              onDirectCreated={(info) => {
+              onReservationCreated={(info) => {
                 setTimeout(() => {
                   setReminderModal({
                     isOpen: true,
+                    source: info.source,
                     items: [{
                       departmentName: info.departmentName,
                       checkIn: info.checkIn,
@@ -879,9 +880,9 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         {res.notes && (
                           <Popover>
                             <PopoverTrigger asChild>
-                              <button title="Ver nota" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium"><NotepadText className="h-5 w-5" /> Nota</button>
+                              <button title="Ver nota" className="text-blue-600 dark:text-blue-400 flex items-center gap-2 text-sm bg-blue-50 dark:bg-blue-950/40 px-4 h-10 rounded border border-blue-100 dark:border-blue-900/40 font-medium"><NotepadText className="h-5 w-5" /> Nota</button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-64 p-3 text-sm bg-white shadow-lg border rounded-md">
+                            <PopoverContent className="w-64 p-3 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xl border border-slate-200 dark:border-slate-700 rounded-md whitespace-pre-wrap">
                               {res.notes}
                             </PopoverContent>
                           </Popover>
@@ -1046,10 +1047,10 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
           {viewNotesRes && (
             <div className="space-y-4">
               <div>
-                <h4 className="font-semibold text-sm text-gray-900 mb-1">Huésped</h4>
-                <p className="text-sm text-gray-600">{viewNotesRes.guestName}</p>
+                <h4 className="font-semibold text-sm text-gray-900 dark:text-slate-200 mb-1">Huésped</h4>
+                <p className="text-sm text-gray-600 dark:text-slate-400">{viewNotesRes.guestName}</p>
               </div>
-              <div className="bg-slate-50 p-3 rounded-md border text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-md border border-slate-200 dark:border-slate-700 text-sm text-gray-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
                 {viewNotesRes.notes}
               </div>
             </div>
@@ -1061,6 +1062,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
           isOpen={reminderModal.isOpen}
           onClose={() => setReminderModal(null)}
           items={reminderModal.items}
+          source={reminderModal.source}
         />
       )}
     </>

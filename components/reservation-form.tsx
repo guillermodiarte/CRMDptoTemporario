@@ -75,9 +75,15 @@ interface ReservationFormProps {
     checkIn: string | Date;
     checkOut: string | Date;
   }) => void;
+  onReservationCreated?: (info: {
+    source: 'DIRECT' | 'BOOKING' | 'AIRBNB';
+    departmentName?: string;
+    checkIn: string | Date;
+    checkOut: string | Date;
+  }) => void;
 }
 
-export function ReservationForm({ departments, setOpen, defaultDepartmentId, defaultDate, initialData, onDirectCreated }: ReservationFormProps) {
+export function ReservationForm({ departments, setOpen, defaultDepartmentId, defaultDate, initialData, onDirectCreated, onReservationCreated }: ReservationFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [overlapWarning, setOverlapWarning] = useState(false);
@@ -357,21 +363,31 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
       if (!res.ok) throw new Error("Error creando reserva");
 
-      const isNewDirect = !initialData && values.source === 'DIRECT';
+      const isNewReservation = !initialData;
       const createdCheckIn = values.checkIn;
       const createdCheckOut = values.checkOut;
+      const createdSource = (values.source || 'DIRECT').toString().trim().toUpperCase();
       const deptName = departments.find(d => d.id === values.departmentId)?.name;
 
       router.refresh();
       setOpen(false);
       form.reset();
 
-      if (isNewDirect && onDirectCreated) {
-        onDirectCreated({
-          departmentName: deptName || 'Departamento',
-          checkIn: createdCheckIn,
-          checkOut: createdCheckOut,
-        });
+      if (isNewReservation) {
+        if (onReservationCreated) {
+          onReservationCreated({
+            source: createdSource as 'DIRECT' | 'BOOKING' | 'AIRBNB',
+            departmentName: deptName || 'Departamento',
+            checkIn: createdCheckIn,
+            checkOut: createdCheckOut,
+          });
+        } else if (createdSource === 'DIRECT' && onDirectCreated) {
+          onDirectCreated({
+            departmentName: deptName || 'Departamento',
+            checkIn: createdCheckIn,
+            checkOut: createdCheckOut,
+          });
+        }
       }
     } catch (error) {
       console.error(error);
@@ -754,10 +770,10 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
           render={({ field }) => (
             <FormItem>
               <FormLabel>Plataforma</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value || "DIRECT"}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Seleccionar plataforma" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>

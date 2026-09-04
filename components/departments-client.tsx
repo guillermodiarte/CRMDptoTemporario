@@ -43,6 +43,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverlay,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -59,6 +60,7 @@ interface SortableDepartmentRowProps {
   defaultType?: "APARTMENT" | "PARKING";
   totalSuppliesCost: number;
   isVisualizer: boolean;
+  canReorder?: boolean;
   isMounted: boolean;
   togglingId: string | null;
   onToggleActive: (dept: Department) => void;
@@ -72,6 +74,7 @@ const SortableDepartmentRow: React.FC<SortableDepartmentRowProps> = ({
   defaultType,
   totalSuppliesCost,
   isVisualizer,
+  canReorder = true,
   isMounted,
   togglingId,
   onToggleActive,
@@ -86,17 +89,17 @@ const SortableDepartmentRow: React.FC<SortableDepartmentRowProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: dept.id, disabled: isVisualizer || !isMounted });
+  } = useSortable({ id: dept.id, disabled: !canReorder || !isMounted });
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
     zIndex: isDragging ? 50 : undefined,
-    opacity: isDragging ? 0.6 : undefined,
+    opacity: isDragging ? 0.35 : undefined,
     position: isDragging ? "relative" : undefined,
   };
 
-  const dragHandleProps = isMounted && !isVisualizer ? { ...attributes, ...listeners } : {};
+  const dragHandleProps = isMounted && canReorder ? { ...attributes, ...listeners } : {};
 
   return (
     <TableRow
@@ -105,10 +108,10 @@ const SortableDepartmentRow: React.FC<SortableDepartmentRowProps> = ({
       className={cn(
         "border-b border-slate-100 dark:border-slate-800/60 transition-colors",
         !dept.isActive && "opacity-60 bg-muted/50",
-        isDragging && "bg-slate-100 dark:bg-slate-800 shadow-lg"
+        isDragging && "bg-blue-50/50 dark:bg-blue-950/20 border-2 border-dashed border-blue-400 dark:border-blue-500"
       )}
     >
-      {!isVisualizer && (
+      {canReorder && (
         <TableCell className="w-10 px-2 text-center">
           <button
             type="button"
@@ -270,6 +273,7 @@ const SortableDepartmentRow: React.FC<SortableDepartmentRowProps> = ({
 interface SortableDepartmentCardProps {
   dept: Department;
   isVisualizer: boolean;
+  canReorder?: boolean;
   isMounted: boolean;
   togglingId: string | null;
   onToggleActive: (dept: Department) => void;
@@ -280,6 +284,7 @@ interface SortableDepartmentCardProps {
 const SortableDepartmentCard: React.FC<SortableDepartmentCardProps> = ({
   dept,
   isVisualizer,
+  canReorder = true,
   isMounted,
   togglingId,
   onToggleActive,
@@ -293,16 +298,16 @@ const SortableDepartmentCard: React.FC<SortableDepartmentCardProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: dept.id, disabled: isVisualizer || !isMounted });
+  } = useSortable({ id: dept.id, disabled: !canReorder || !isMounted });
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
     zIndex: isDragging ? 50 : undefined,
-    opacity: isDragging ? 0.6 : undefined,
+    opacity: isDragging ? 0.35 : undefined,
   };
 
-  const dragHandleProps = isMounted && !isVisualizer ? { ...attributes, ...listeners } : {};
+  const dragHandleProps = isMounted && canReorder ? { ...attributes, ...listeners } : {};
 
   return (
     <Card
@@ -311,14 +316,14 @@ const SortableDepartmentCard: React.FC<SortableDepartmentCardProps> = ({
       className={cn(
         "overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900",
         !dept.isActive && "opacity-60 bg-muted/50",
-        isDragging && "shadow-lg ring-2 ring-blue-500"
+        isDragging && "shadow-lg ring-2 ring-blue-500 border-dashed border-blue-400 dark:border-blue-500"
       )}
     >
       <CardContent className="p-3 space-y-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-2 min-w-0 flex-1">
-              {!isVisualizer && (
+              {canReorder && (
                 <button
                   type="button"
                   {...dragHandleProps}
@@ -388,6 +393,30 @@ const SortableDepartmentCard: React.FC<SortableDepartmentCardProps> = ({
   );
 };
 
+const DepartmentDragPreview: React.FC<{ dept: Department }> = ({ dept }) => (
+  <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-900 border-2 border-blue-500 rounded-xl shadow-2xl scale-[1.02] cursor-grabbing min-w-[320px] max-w-[520px] select-none pointer-events-none">
+    <GripVertical className="h-5 w-5 text-blue-500 shrink-0" />
+    {dept.color && (
+      <div className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: dept.color }} />
+    )}
+    <div className="min-w-0 flex-1">
+      <div className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">
+        {dept.name}
+        {dept.alias && <span className="text-muted-foreground font-normal ml-1">({dept.alias})</span>}
+      </div>
+      <div className="text-xs text-muted-foreground truncate">{dept.address || "Sin dirección"}</div>
+    </div>
+    <div className="flex items-center gap-1.5 shrink-0">
+      <Badge variant={dept.isActive ? "default" : "secondary"}>
+        {dept.isActive ? "Activo" : "Inactivo"}
+      </Badge>
+      <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700">
+        {dept.showOnPublic ? "Público" : "Oculto"}
+      </Badge>
+    </div>
+  </div>
+);
+
 interface DepartmentsClientProps {
   initialDepartments: Department[];
   defaultType?: "APARTMENT" | "PARKING";
@@ -400,17 +429,26 @@ interface DepartmentsClientProps {
 // Fix duplicated state declarations by replacing the component body
 export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDepartments = [], defaultType, title = "Departamentos", role, totalSuppliesCost, otherSessionsDepts }) => {
   const [departments, setDepartments] = useState<Department[]>(initialDepartments);
+  const [otherSessions, setOtherSessions] = useState<{ sessionName: string; departments: Department[] }[]>(otherSessionsDepts || []);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const router = useRouter();
+
+  const isAdmin = role === 'ADMIN';
   const isVisualizer = role === 'VISUALIZER';
+  const canReorder = isAdmin;
   const entityName = defaultType === "PARKING" ? "Cochera" : "Departamento";
 
   useEffect(() => {
     setDepartments(initialDepartments);
   }, [initialDepartments]);
+
+  useEffect(() => {
+    setOtherSessions(otherSessionsDepts || []);
+  }, [otherSessionsDepts]);
 
   const handleEdit = (dept: Department) => {
     setEditingDepartment(dept);
@@ -420,7 +458,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
   const handleCreate = () => {
     setEditingDepartment(null);
     setIsModalOpen(true);
-  }
+  };
 
   const toggleActive = async (dept: Department) => {
     setTogglingId(dept.id);
@@ -468,6 +506,13 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
   // Filter out archived departments
   const visibleData = departments.filter(d => !d.isArchived);
 
+  // All departments for drag overlay lookup
+  const allDepts = [
+    ...visibleData,
+    ...(otherSessions.flatMap((s) => s.departments) || []),
+  ];
+  const activeDept = allDepts.find((d) => d.id === activeId);
+
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
     setIsMounted(true);
@@ -485,6 +530,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
   );
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -507,6 +553,44 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
     } catch (e) {
       toast.error("Error al guardar el nuevo orden");
       setDepartments(initialDepartments);
+    }
+  };
+
+  const handleOtherSessionDragEnd = async (sessionIndex: number, event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const currentSession = otherSessions[sessionIndex];
+    if (!currentSession) return;
+
+    const sessionVisible = currentSession.departments.filter(d => !d.isArchived);
+    const oldIndex = sessionVisible.findIndex((d) => d.id === active.id);
+    const newIndex = sessionVisible.findIndex((d) => d.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = arrayMove(sessionVisible, oldIndex, newIndex);
+    setOtherSessions(prev => {
+      const copy = [...prev];
+      copy[sessionIndex] = {
+        ...copy[sessionIndex],
+        departments: newOrder,
+      };
+      return copy;
+    });
+
+    try {
+      const res = await fetch("/api/departments/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds: newOrder.map((d) => d.id) }),
+      });
+      if (!res.ok) throw new Error("Error al guardar");
+      toast.success(`Orden de ${currentSession.sessionName} actualizado`);
+      router.refresh();
+    } catch (e) {
+      toast.error("Error al guardar el nuevo orden");
+      setOtherSessions(otherSessionsDepts || []);
     }
   };
 
@@ -559,13 +643,20 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
           <p className="text-sm text-muted-foreground">Gestiona tus unidades de alquiler temporal. Los inactivos no aparecen en nuevas reservas.</p>
         </div>
 
-        <DndContext id="departments-dnd" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+          id="departments-dnd"
+          sensors={canReorder ? sensors : []}
+          collisionDetection={closestCenter}
+          onDragStart={(e) => setActiveId(String(e.active.id))}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveId(null)}
+        >
           {/* Desktop Table */}
           <div className="hidden md:block rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800">
-                  {!isVisualizer && <TableHead className="w-10 px-2 text-center text-slate-700 dark:text-slate-200" title="Arrastrar para ordenar"></TableHead>}
+                  {canReorder && <TableHead className="w-10 px-2 text-center text-slate-700 dark:text-slate-200" title="Arrastrar para ordenar"></TableHead>}
                   <TableHead className="w-[300px] text-slate-700 dark:text-slate-200">Nombre</TableHead>
                   {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Cap./Camas</TableHead>}
                   {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Wifi</TableHead>}
@@ -584,8 +675,8 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                   {!isVisualizer && <TableHead className="text-right text-slate-700 dark:text-slate-200">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
-              <SortableContext items={visibleData.map(d => d.id)} strategy={verticalListSortingStrategy}>
-                <TableBody>
+              <TableBody>
+                <SortableContext items={visibleData.map(d => d.id)} strategy={verticalListSortingStrategy}>
                   {visibleData.map((dept) => (
                     <SortableDepartmentRow
                       key={dept.id}
@@ -593,6 +684,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                       defaultType={defaultType}
                       totalSuppliesCost={totalSuppliesCost}
                       isVisualizer={isVisualizer}
+                      canReorder={canReorder}
                       isMounted={isMounted}
                       togglingId={togglingId}
                       onToggleActive={toggleActive}
@@ -608,8 +700,8 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                       </TableCell>
                     </TableRow>
                   )}
-                </TableBody>
-              </SortableContext>
+                </SortableContext>
+              </TableBody>
             </Table>
           </div>
 
@@ -621,6 +713,7 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
                   key={dept.id}
                   dept={dept}
                   isVisualizer={isVisualizer}
+                  canReorder={canReorder}
                   isMounted={isMounted}
                   togglingId={togglingId}
                   onToggleActive={toggleActive}
@@ -635,95 +728,116 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
               )}
             </SortableContext>
           </div>
+
+          <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
+            {activeDept ? <DepartmentDragPreview dept={activeDept} /> : null}
+          </DragOverlay>
         </DndContext>
 
         {/* Other Sessions Departments (SuperAdmin only) */}
-        {otherSessionsDepts && otherSessionsDepts.length > 0 && (
+        {otherSessions && otherSessions.length > 0 && (
           <div className="mt-12 space-y-8 border-t dark:border-slate-800 pt-8">
             <div>
               <h3 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Departamentos de otras Sesiones</h3>
               <p className="text-sm text-muted-foreground">Como SuperAdmin, puedes ver y editar los departamentos de las demás sesiones.</p>
             </div>
             
-            {otherSessionsDepts.map(sessionData => (
-              <div key={sessionData.sessionName} className="space-y-4">
-                <h4 className="text-lg font-semibold border-b dark:border-slate-800 pb-2 text-indigo-700 dark:text-indigo-400">{sessionData.sessionName}</h4>
-                <div className="rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800">
-                        <TableHead className="w-[300px] text-slate-700 dark:text-slate-200">Nombre</TableHead>
-                        {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Cap./Camas</TableHead>}
-                        <TableHead className="text-slate-700 dark:text-slate-200">Estado</TableHead>
-                        {!isVisualizer && <TableHead className="text-right text-slate-700 dark:text-slate-200">Acciones</TableHead>}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sessionData.departments.map(dept => (
-                        <TableRow key={dept.id} className={cn("border-b border-slate-100 dark:border-slate-800/60", !dept.isActive && "opacity-60 bg-muted/50")}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              {dept.color && (
-                                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dept.color }} />
-                              )}
-                              <div>
-                                <div className="text-slate-900 dark:text-slate-100 font-semibold">{dept.name}</div>
-                                {dept.alias && <div className="text-xs text-muted-foreground">{dept.alias}</div>}
-                                {dept.address && <div className="text-xs text-muted-foreground font-normal">{dept.address}</div>}
-                              </div>
-                            </div>
-                          </TableCell>
-                          {defaultType !== 'PARKING' && (
-                            <TableCell>
-                              <div className="text-sm text-slate-800 dark:text-slate-200">
-                                {dept.maxPeople}p / {dept.bedCount}c
-                              </div>
-                            </TableCell>
-                          )}
-                          <TableCell>
-                            <div className="flex flex-col gap-1 items-start">
-                              <Badge variant={dept.isActive ? "default" : "secondary"}>
-                                {dept.isActive ? "Activo" : "Inactivo"}
-                              </Badge>
-                              <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 dark:border-slate-700">
-                                {dept.showOnPublic ? "Público" : "Oculto"}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          {!isVisualizer && (
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => toggleActive(dept)}
-                                  disabled={togglingId === dept.id}
-                                  title={dept.isActive ? "Desactivar" : "Activar"}
-                                >
-                                  {dept.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => togglePublic(dept)}
-                                  disabled={togglingId === dept.id}
-                                  title={dept.showOnPublic ? "Ocultar de web" : "Mostrar en web"}
-                                >
-                                  {dept.showOnPublic ? <Globe className="h-4 w-4 text-blue-500" /> : <GlobeLock className="h-4 w-4 text-muted-foreground" />}
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleEdit(dept)}>
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+            {otherSessions.map((sessionData, sIndex) => {
+              const sessionVisibleData = sessionData.departments.filter(d => !d.isArchived);
+              return (
+                <div key={sessionData.sessionName} className="space-y-4">
+                  <h4 className="text-lg font-semibold border-b dark:border-slate-800 pb-2 text-indigo-700 dark:text-indigo-400">{sessionData.sessionName}</h4>
+
+                  <DndContext
+                    id={`other-dnd-${sIndex}`}
+                    sensors={canReorder ? sensors : []}
+                    collisionDetection={closestCenter}
+                    onDragStart={(e) => setActiveId(String(e.active.id))}
+                    onDragEnd={(e) => handleOtherSessionDragEnd(sIndex, e)}
+                    onDragCancel={() => setActiveId(null)}
+                  >
+                    {/* Desktop Table */}
+                    <div className="hidden md:block rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800">
+                            {canReorder && <TableHead className="w-10 px-2 text-center text-slate-700 dark:text-slate-200" title="Arrastrar para ordenar"></TableHead>}
+                            <TableHead className="w-[300px] text-slate-700 dark:text-slate-200">Nombre</TableHead>
+                            {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Cap./Camas</TableHead>}
+                            {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Wifi</TableHead>}
+                            <TableHead className="text-slate-700 dark:text-slate-200">Cód. Locker</TableHead>
+                            <TableHead className="text-slate-700 dark:text-slate-200">Links</TableHead>
+                            {defaultType === 'PARKING' ? (
+                              <>
+                                <TableHead className="text-slate-700 dark:text-slate-200">Precio</TableHead>
+                                <TableHead className="text-slate-700 dark:text-slate-200">Limpieza</TableHead>
+                              </>
+                            ) : (
+                              <TableHead className="text-slate-700 dark:text-slate-200">Precios (Base/Limp)</TableHead>
+                            )}
+                            {defaultType !== 'PARKING' && (
+                              <TableHead className="text-slate-700 dark:text-slate-200">Insumos (Global)</TableHead>
+                            )}
+                            <TableHead className="text-slate-700 dark:text-slate-200">Estado</TableHead>
+                            {!isVisualizer && <TableHead className="text-right text-slate-700 dark:text-slate-200">Acciones</TableHead>}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <SortableContext items={sessionVisibleData.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+                            {sessionVisibleData.map(dept => (
+                              <SortableDepartmentRow
+                                key={dept.id}
+                                dept={dept}
+                                defaultType={defaultType}
+                                totalSuppliesCost={totalSuppliesCost}
+                                isVisualizer={isVisualizer}
+                                canReorder={canReorder}
+                                isMounted={isMounted}
+                                togglingId={togglingId}
+                                onToggleActive={toggleActive}
+                                onTogglePublic={togglePublic}
+                                onEdit={handleEdit}
+                                onDelete={setDeleteId}
+                              />
+                            ))}
+                            {sessionVisibleData.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={12} className="text-center h-24 text-muted-foreground">
+                                  No se encontraron {entityName.toLowerCase()}s en esta sesión.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </SortableContext>
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                      <SortableContext items={sessionVisibleData.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+                        {sessionVisibleData.map(dept => (
+                          <SortableDepartmentCard
+                            key={dept.id}
+                            dept={dept}
+                            isVisualizer={isVisualizer}
+                            canReorder={canReorder}
+                            isMounted={isMounted}
+                            togglingId={togglingId}
+                            onToggleActive={toggleActive}
+                            onTogglePublic={togglePublic}
+                            onEdit={handleEdit}
+                          />
+                        ))}
+                      </SortableContext>
+                    </div>
+
+                    <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
+                      {activeDept ? <DepartmentDragPreview dept={activeDept} /> : null}
+                    </DragOverlay>
+                  </DndContext>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

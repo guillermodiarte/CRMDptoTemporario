@@ -632,7 +632,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
             >
-              <MessageSquare className="w-4 h-4 text-emerald-500" /> WhatsApp
+              <img src="/icons/whatsapp.svg" alt="WhatsApp" className="w-4 h-4 object-contain shrink-0" /> WhatsApp
             </button>
 
             <button
@@ -1506,8 +1506,8 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
           {/* Header Banner */}
           <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shrink-0">
-                <MessageSquare className="w-6 h-6" />
+              <div className="w-11 h-11 rounded-xl bg-white dark:bg-slate-800 p-1.5 flex items-center justify-center shadow-xs border border-emerald-500/20 shrink-0">
+                <img src="/icons/whatsapp.svg" alt="WhatsApp" className="w-8 h-8 object-contain" />
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base sm:text-lg">
