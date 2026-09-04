@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Department } from "@prisma/client";
-import { Plus, Pencil, Eye, EyeOff, Wifi, Trash, Lock, Download, Globe, GlobeLock } from "lucide-react";
+import { Plus, Pencil, Eye, EyeOff, Wifi, Trash, Lock, Download, Globe, GlobeLock, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,6 +35,358 @@ import {
 import { useRouter } from "next/navigation";
 import { DepartmentsActions } from "./departments-actions";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { toast } from "sonner";
+
+interface SortableDepartmentRowProps {
+  dept: Department;
+  defaultType?: "APARTMENT" | "PARKING";
+  totalSuppliesCost: number;
+  isVisualizer: boolean;
+  isMounted: boolean;
+  togglingId: string | null;
+  onToggleActive: (dept: Department) => void;
+  onTogglePublic: (dept: Department) => void;
+  onEdit: (dept: Department) => void;
+  onDelete: (id: string) => void;
+}
+
+const SortableDepartmentRow: React.FC<SortableDepartmentRowProps> = ({
+  dept,
+  defaultType,
+  totalSuppliesCost,
+  isVisualizer,
+  isMounted,
+  togglingId,
+  onToggleActive,
+  onTogglePublic,
+  onEdit,
+  onDelete,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: dept.id, disabled: isVisualizer || !isMounted });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.6 : undefined,
+    position: isDragging ? "relative" : undefined,
+  };
+
+  const dragHandleProps = isMounted && !isVisualizer ? { ...attributes, ...listeners } : {};
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "border-b border-slate-100 dark:border-slate-800/60 transition-colors",
+        !dept.isActive && "opacity-60 bg-muted/50",
+        isDragging && "bg-slate-100 dark:bg-slate-800 shadow-lg"
+      )}
+    >
+      {!isVisualizer && (
+        <TableCell className="w-10 px-2 text-center">
+          <button
+            type="button"
+            {...dragHandleProps}
+            className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-grab active:cursor-grabbing inline-flex items-center justify-center transition-colors"
+            title="Arrastrar para reordenar"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        </TableCell>
+      )}
+      <TableCell className="font-medium">
+        <div className="flex items-center gap-2">
+          {dept.color && (
+            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dept.color }} title="Color distintivo" />
+          )}
+          <div className="min-w-0">
+            <div className="truncate font-semibold text-slate-900 dark:text-slate-100">
+              {dept.name}
+              {dept.alias && <span className="text-muted-foreground font-normal ml-1">({dept.alias})</span>}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">{dept.address}</div>
+          </div>
+        </div>
+      </TableCell>
+      {defaultType !== 'PARKING' && (
+        <TableCell className="text-slate-800 dark:text-slate-200">
+          {dept.type === 'PARKING' ? (
+            <Badge variant="outline" className="text-xs bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200">Cochera</Badge>
+          ) : (
+            <>{dept.maxPeople}p / {dept.bedCount}c</>
+          )}
+        </TableCell>
+      )}
+      {defaultType !== 'PARKING' && (
+        <TableCell className="text-xs">
+          {dept.wifiName ? (
+            <div className="flex flex-col gap-0.5 max-w-[150px]">
+              <div className="flex items-center gap-1 font-medium truncate text-slate-800 dark:text-slate-200"><Wifi className="h-3 w-3 shrink-0" /> {dept.wifiName}</div>
+              <div className="text-muted-foreground select-all truncate">{dept.wifiPass}</div>
+            </div>
+          ) : "-"}
+        </TableCell>
+      )}
+      <TableCell className="text-xs">
+        {dept.lockBoxCode ? (
+          <div className="flex items-center gap-1" title="Código Locker">
+            <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+            <span className="font-mono select-all">{dept.lockBoxCode}</span>
+          </div>
+        ) : "-"}
+      </TableCell>
+      <TableCell className="text-xs">
+        <div className="flex gap-1 items-center">
+          {dept.googleMapsLink && (
+            <a
+              href={dept.googleMapsLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Google Maps"
+              className="hover:opacity-80 transition-opacity"
+            >
+              <img src="/icons/maps.png" alt="Maps" className="w-6 h-6 object-contain" />
+            </a>
+          )}
+          {dept.airbnbLink && (
+            <a
+              href={dept.airbnbLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Airbnb"
+              className="hover:opacity-80 transition-opacity"
+            >
+              <img src="/icons/airbnb.png" alt="Airbnb" className="w-6 h-6 object-contain" />
+            </a>
+          )}
+          {dept.bookingLink && (
+            <a
+              href={dept.bookingLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Booking.com"
+              className="hover:opacity-80 transition-opacity"
+            >
+              <img src="/icons/booking.png" alt="Booking" className="w-6 h-6 object-contain" />
+            </a>
+          )}
+          {!(dept.googleMapsLink || dept.airbnbLink || dept.bookingLink) && <span className="text-muted-foreground ml-2">-</span>}
+        </div>
+      </TableCell>
+      {defaultType === 'PARKING' ? (
+        <>
+          <TableCell className="text-xs">${dept.basePrice}</TableCell>
+          <TableCell className="text-xs text-muted-foreground">${dept.cleaningFee}</TableCell>
+        </>
+      ) : (
+        <TableCell className="text-xs">
+          <div>${dept.basePrice}</div>
+          <div className="text-muted-foreground">+${dept.cleaningFee} (Limp)</div>
+        </TableCell>
+      )}
+      {defaultType !== 'PARKING' && (
+        <TableCell className="text-xs font-medium text-red-600">
+          <div>${totalSuppliesCost}</div>
+        </TableCell>
+      )}
+      <TableCell>
+        <div className="flex flex-col gap-1 items-start">
+          <Badge variant={dept.isActive ? "default" : "secondary"}>
+            {dept.isActive ? "Activo" : "Inactivo"}
+          </Badge>
+          <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 dark:border-slate-700">
+            {dept.showOnPublic ? "Público" : "Oculto"}
+          </Badge>
+        </div>
+      </TableCell>
+      {!isVisualizer && (
+        <TableCell className="text-right">
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onToggleActive(dept)}
+              disabled={togglingId === dept.id}
+              title={dept.isActive ? "Desactivar" : "Activar"}
+            >
+              {dept.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onTogglePublic(dept)}
+              disabled={togglingId === dept.id}
+              title={dept.showOnPublic ? "Ocultar de web" : "Mostrar en web"}
+            >
+              {dept.showOnPublic ? <Globe className="h-4 w-4 text-blue-500" /> : <GlobeLock className="h-4 w-4 text-muted-foreground" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => onEdit(dept)} title="Editar">
+              <Pencil className="h-4 w-4" />
+            </Button>
+            {!dept.isActive && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="bg-red-500 hover:bg-red-600 text-black"
+                onClick={() => onDelete(dept.id)}
+                title="Eliminar (Archivar)"
+              >
+                <Trash className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </TableCell>
+      )}
+    </TableRow>
+  );
+};
+
+interface SortableDepartmentCardProps {
+  dept: Department;
+  isVisualizer: boolean;
+  isMounted: boolean;
+  togglingId: string | null;
+  onToggleActive: (dept: Department) => void;
+  onTogglePublic: (dept: Department) => void;
+  onEdit: (dept: Department) => void;
+}
+
+const SortableDepartmentCard: React.FC<SortableDepartmentCardProps> = ({
+  dept,
+  isVisualizer,
+  isMounted,
+  togglingId,
+  onToggleActive,
+  onTogglePublic,
+  onEdit,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: dept.id, disabled: isVisualizer || !isMounted });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.6 : undefined,
+  };
+
+  const dragHandleProps = isMounted && !isVisualizer ? { ...attributes, ...listeners } : {};
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900",
+        !dept.isActive && "opacity-60 bg-muted/50",
+        isDragging && "shadow-lg ring-2 ring-blue-500"
+      )}
+    >
+      <CardContent className="p-3 space-y-3">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2 min-w-0 flex-1">
+              {!isVisualizer && (
+                <button
+                  type="button"
+                  {...dragHandleProps}
+                  className="p-1 -ml-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-grab active:cursor-grabbing shrink-0"
+                  title="Arrastrar para reordenar"
+                >
+                  <GripVertical className="h-4 w-4" />
+                </button>
+              )}
+              {dept.color && (
+                <div className="w-3 h-3 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: dept.color }} />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-base whitespace-normal break-words leading-tight text-slate-900 dark:text-slate-100">
+                  {dept.name}
+                  {dept.alias && <span className="text-muted-foreground font-normal ml-1">({dept.alias})</span>}
+                </div>
+                <div className="text-xs text-muted-foreground whitespace-normal break-words mt-0.5">{dept.address}</div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1 items-end">
+              <Badge variant={dept.isActive ? "default" : "secondary"}>
+                {dept.isActive ? "Activo" : "Inactivo"}
+              </Badge>
+              <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 dark:border-slate-700">
+                {dept.showOnPublic ? "Público" : "Oculto"}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 pt-1 pl-3">
+          <div className="flex gap-3">
+            {dept.googleMapsLink && (
+              <a href={dept.googleMapsLink} target="_blank" rel="noopener noreferrer">
+                <img src="/icons/maps.png" alt="Maps" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
+              </a>
+            )}
+            {dept.airbnbLink && (
+              <a href={dept.airbnbLink} target="_blank" rel="noopener noreferrer">
+                <img src="/icons/airbnb.png" alt="Airbnb" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
+              </a>
+            )}
+            {dept.bookingLink && (
+              <a href={dept.bookingLink} target="_blank" rel="noopener noreferrer">
+                <img src="/icons/booking.png" alt="Booking" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
+              </a>
+            )}
+          </div>
+
+          {!isVisualizer && (
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" onClick={() => onToggleActive(dept)} disabled={togglingId === dept.id}>
+                {dept.isActive ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5 text-muted-foreground" />}
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => onTogglePublic(dept)} disabled={togglingId === dept.id}>
+                {dept.showOnPublic ? <Globe className="h-5 w-5 text-blue-500" /> : <GlobeLock className="h-5 w-5 text-muted-foreground" />}
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => onEdit(dept)}>
+                <Pencil className="h-5 w-5" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 interface DepartmentsClientProps {
   initialDepartments: Department[];
@@ -116,6 +468,48 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
   // Filter out archived departments
   const visibleData = departments.filter(d => !d.isArchived);
 
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = visibleData.findIndex((d) => d.id === active.id);
+    const newIndex = visibleData.findIndex((d) => d.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = arrayMove(visibleData, oldIndex, newIndex);
+    setDepartments(newOrder);
+
+    try {
+      const res = await fetch("/api/departments/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds: newOrder.map((d) => d.id) }),
+      });
+      if (!res.ok) throw new Error("Error al guardar");
+      toast.success("Orden actualizado correctamente");
+      router.refresh();
+    } catch (e) {
+      toast.error("Error al guardar el nuevo orden");
+      setDepartments(initialDepartments);
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col gap-6">
@@ -164,255 +558,84 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({ initialDep
           <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">Propiedades</h3>
           <p className="text-sm text-muted-foreground">Gestiona tus unidades de alquiler temporal. Los inactivos no aparecen en nuevas reservas.</p>
         </div>
-        {/* Desktop Table */}
-        <div className="hidden md:block rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800">
-                <TableHead className="w-[300px] text-slate-700 dark:text-slate-200">Nombre</TableHead>
-                {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Cap./Camas</TableHead>}
-                {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Wifi</TableHead>}
-                <TableHead className="text-slate-700 dark:text-slate-200">Cód. Locker</TableHead>
-                <TableHead className="text-slate-700 dark:text-slate-200">Links</TableHead>
-                {defaultType === 'PARKING' ? (
-                  <>
-                    <TableHead className="text-slate-700 dark:text-slate-200">Precio</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-200">Limpieza</TableHead>
-                  </>
-                ) : (
-                  <TableHead className="text-slate-700 dark:text-slate-200">Precios (Base/Limp)</TableHead>
-                )}
-                {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Insumos (Global)</TableHead>}
-                <TableHead className="text-slate-700 dark:text-slate-200">Estado</TableHead>
-                {!isVisualizer && <TableHead className="text-right text-slate-700 dark:text-slate-200">Acciones</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleData.map((dept) => (
-                <TableRow key={dept.id} className={cn("border-b border-slate-100 dark:border-slate-800/60", !dept.isActive && "opacity-60 bg-muted/50")}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {dept.color && (
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dept.color }} title="Color distintivo" />
-                      )}
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold text-slate-900 dark:text-slate-100">
-                          {dept.name}
-                          {dept.alias && <span className="text-muted-foreground font-normal ml-1">({dept.alias})</span>}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">{dept.address}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  {defaultType !== 'PARKING' && (
-                    <TableCell className="text-slate-800 dark:text-slate-200">
-                      {dept.type === 'PARKING' ? (
-                        <Badge variant="outline" className="text-xs bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200">Cochera</Badge>
-                      ) : (
-                        <>{dept.maxPeople}p / {dept.bedCount}c</>
-                      )}
-                    </TableCell>
-                  )}
-                  {defaultType !== 'PARKING' && (
-                    <TableCell className="text-xs">
-                      {dept.wifiName ? (
-                        <div className="flex flex-col gap-0.5 max-w-[150px]">
-                          <div className="flex items-center gap-1 font-medium truncate text-slate-800 dark:text-slate-200"><Wifi className="h-3 w-3 shrink-0" /> {dept.wifiName}</div>
-                          <div className="text-muted-foreground select-all truncate">{dept.wifiPass}</div>
-                        </div>
-                      ) : "-"}
-                    </TableCell>
-                  )}
-                  <TableCell className="text-xs">
-                    {dept.lockBoxCode ? (
-                      <div className="flex items-center gap-1" title="Código Locker">
-                        <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="font-mono select-all">{dept.lockBoxCode}</span>
-                      </div>
-                    ) : "-"}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    <div className="flex gap-1 items-center">
-                      {dept.googleMapsLink && (
-                        <a
-                          href={dept.googleMapsLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Google Maps"
-                          className="hover:opacity-80 transition-opacity"
-                        >
-                          <img src="/icons/maps.png" alt="Maps" className="w-6 h-6 object-contain" />
-                        </a>
-                      )}
-                      {dept.airbnbLink && (
-                        <a
-                          href={dept.airbnbLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Airbnb"
-                          className="hover:opacity-80 transition-opacity"
-                        >
-                          <img src="/icons/airbnb.png" alt="Airbnb" className="w-6 h-6 object-contain" />
-                        </a>
-                      )}
-                      {dept.bookingLink && (
-                        <a
-                          href={dept.bookingLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Booking.com"
-                          className="hover:opacity-80 transition-opacity"
-                        >
-                          <img src="/icons/booking.png" alt="Booking" className="w-6 h-6 object-contain" />
-                        </a>
-                      )}
-                      {!(dept.googleMapsLink || dept.airbnbLink || dept.bookingLink) && <span className="text-muted-foreground ml-2">-</span>}
-                    </div>
-                  </TableCell>
+
+        <DndContext id="departments-dnd" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          {/* Desktop Table */}
+          <div className="hidden md:block rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800">
+                  {!isVisualizer && <TableHead className="w-10 px-2 text-center text-slate-700 dark:text-slate-200" title="Arrastrar para ordenar"></TableHead>}
+                  <TableHead className="w-[300px] text-slate-700 dark:text-slate-200">Nombre</TableHead>
+                  {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Cap./Camas</TableHead>}
+                  {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Wifi</TableHead>}
+                  <TableHead className="text-slate-700 dark:text-slate-200">Cód. Locker</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-200">Links</TableHead>
                   {defaultType === 'PARKING' ? (
                     <>
-                      <TableCell className="text-xs">${dept.basePrice}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">${dept.cleaningFee}</TableCell>
+                      <TableHead className="text-slate-700 dark:text-slate-200">Precio</TableHead>
+                      <TableHead className="text-slate-700 dark:text-slate-200">Limpieza</TableHead>
                     </>
                   ) : (
-                    <TableCell className="text-xs">
-                      <div>${dept.basePrice}</div>
-                      <div className="text-muted-foreground">+${dept.cleaningFee} (Limp)</div>
-                    </TableCell>
+                    <TableHead className="text-slate-700 dark:text-slate-200">Precios (Base/Limp)</TableHead>
                   )}
-                  {defaultType !== 'PARKING' && (
-                    <TableCell className="text-xs font-medium text-red-600">
-                      <div>${totalSuppliesCost}</div>
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <div className="flex flex-col gap-1 items-start">
-                      <Badge variant={dept.isActive ? "default" : "secondary"}>
-                        {dept.isActive ? "Activo" : "Inactivo"}
-                      </Badge>
-                      <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 dark:border-slate-700">
-                        {dept.showOnPublic ? "Público" : "Oculto"}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  {!isVisualizer && (
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => toggleActive(dept)}
-                          disabled={togglingId === dept.id}
-                          title={dept.isActive ? "Desactivar" : "Activar"}
-                        >
-                          {dept.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => togglePublic(dept)}
-                          disabled={togglingId === dept.id}
-                          title={dept.showOnPublic ? "Ocultar de web" : "Mostrar en web"}
-                        >
-                          {dept.showOnPublic ? <Globe className="h-4 w-4 text-blue-500" /> : <GlobeLock className="h-4 w-4 text-muted-foreground" />}
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(dept)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        {!dept.isActive && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="bg-red-500 hover:bg-red-600 text-black"
-                            onClick={() => setDeleteId(dept.id)}
-                            title="Eliminar (Archivar)"
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  )}
+                  {defaultType !== 'PARKING' && <TableHead className="text-slate-700 dark:text-slate-200">Insumos (Global)</TableHead>}
+                  <TableHead className="text-slate-700 dark:text-slate-200">Estado</TableHead>
+                  {!isVisualizer && <TableHead className="text-right text-slate-700 dark:text-slate-200">Acciones</TableHead>}
                 </TableRow>
+              </TableHeader>
+              <SortableContext items={visibleData.map(d => d.id)} strategy={verticalListSortingStrategy}>
+                <TableBody>
+                  {visibleData.map((dept) => (
+                    <SortableDepartmentRow
+                      key={dept.id}
+                      dept={dept}
+                      defaultType={defaultType}
+                      totalSuppliesCost={totalSuppliesCost}
+                      isVisualizer={isVisualizer}
+                      isMounted={isMounted}
+                      togglingId={togglingId}
+                      onToggleActive={toggleActive}
+                      onTogglePublic={togglePublic}
+                      onEdit={handleEdit}
+                      onDelete={setDeleteId}
+                    />
+                  ))}
+                  {visibleData.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={12} className="text-center h-24 text-muted-foreground">
+                        No se encontraron {entityName.toLowerCase()}s.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </SortableContext>
+            </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            <SortableContext items={visibleData.map(d => d.id)} strategy={verticalListSortingStrategy}>
+              {visibleData.map((dept) => (
+                <SortableDepartmentCard
+                  key={dept.id}
+                  dept={dept}
+                  isVisualizer={isVisualizer}
+                  isMounted={isMounted}
+                  togglingId={togglingId}
+                  onToggleActive={toggleActive}
+                  onTogglePublic={togglePublic}
+                  onEdit={handleEdit}
+                />
               ))}
               {visibleData.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={!isVisualizer ? 9 : 8} className="text-center h-24 text-muted-foreground">
-                    No se encontraron {entityName.toLowerCase()}s.
-                  </TableCell>
-                </TableRow>
+                <div className="text-center py-6 text-muted-foreground text-sm">
+                  No se encontraron {entityName.toLowerCase()}s.
+                </div>
               )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden space-y-3">
-          {visibleData.map((dept) => (
-            <Card key={dept.id} className={cn("overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900", !dept.isActive && "opacity-60 bg-muted/50")}>
-              <CardContent className="p-3 space-y-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2 min-w-0 flex-1">
-                      {dept.color && (
-                        <div className="w-3 h-3 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: dept.color }} />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="font-bold text-base whitespace-normal break-words leading-tight text-slate-900 dark:text-slate-100">
-                          {dept.name}
-                          {dept.alias && <span className="text-muted-foreground font-normal ml-1">({dept.alias})</span>}
-                        </div>
-                        <div className="text-xs text-muted-foreground whitespace-normal break-words mt-0.5">{dept.address}</div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1 items-end">
-                      <Badge variant={dept.isActive ? "default" : "secondary"}>
-                        {dept.isActive ? "Activo" : "Inactivo"}
-                      </Badge>
-                      <Badge variant={dept.showOnPublic ? "outline" : "secondary"} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 dark:border-slate-700">
-                        {dept.showOnPublic ? "Público" : "Oculto"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 pt-1 pl-3">
-                  <div className="flex gap-3">
-                    {dept.googleMapsLink && (
-                      <a href={dept.googleMapsLink} target="_blank" rel="noopener noreferrer">
-                        <img src="/icons/maps.png" alt="Maps" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
-                      </a>
-                    )}
-                    {dept.airbnbLink && (
-                      <a href={dept.airbnbLink} target="_blank" rel="noopener noreferrer">
-                        <img src="/icons/airbnb.png" alt="Airbnb" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
-                      </a>
-                    )}
-                    {dept.bookingLink && (
-                      <a href={dept.bookingLink} target="_blank" rel="noopener noreferrer">
-                        <img src="/icons/booking.png" alt="Booking" className="w-8 h-8 object-contain hover:scale-110 transition-transform" />
-                      </a>
-                    )}
-                  </div>
-
-                  {!isVisualizer && (
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => toggleActive(dept)} disabled={togglingId === dept.id}>
-                        {dept.isActive ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5 text-muted-foreground" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => togglePublic(dept)} disabled={togglingId === dept.id}>
-                        {dept.showOnPublic ? <Globe className="h-5 w-5 text-blue-500" /> : <GlobeLock className="h-5 w-5 text-muted-foreground" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(dept)}>
-                        <Pencil className="h-5 w-5" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+            </SortableContext>
+          </div>
+        </DndContext>
 
         {/* Other Sessions Departments (SuperAdmin only) */}
         {otherSessionsDepts && otherSessionsDepts.length > 0 && (

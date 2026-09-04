@@ -1,15 +1,17 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CheckCircle2, XCircle, User, Phone, Calendar, Users, IdCard, Globe, Car, Building2, Clock, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, XCircle, User, Phone, Calendar, Users, IdCard, Globe, Car, Building2, Clock, AlertTriangle, ClipboardCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { AirbnbBookingReminderModal, ReminderItem } from '@/components/airbnb-booking-reminder-modal';
 
 type Reservation = {
   id: string;
   departmentId: string;
   sessionId: string | null;
   status: string;
+  source?: string;
   guestName: string;
   guestPhone: string | null;
   guestDni: string | null;
@@ -48,7 +50,14 @@ export function ApprovalsClient({
   } | null>(null);
   const [highlightedGroupIds, setHighlightedGroupIds] = useState<string[]>([]);
   const [confirmDeny, setConfirmDeny] = useState<string | null>(null);
+  const [reminderModal, setReminderModal] = useState<{ isOpen: boolean; items: ReminderItem[] } | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (!reminderModal) {
+      setApprovals(initialApprovals);
+    }
+  }, [initialApprovals, reminderModal]);
 
   const handleAction = async (groupId: string, action: 'approve' | 'reject', force = false) => {
     if (action === 'reject' && !force) {
@@ -79,10 +88,29 @@ export function ApprovalsClient({
           pendingConflicts: data.pendingConflicts || []
         });
       } else if (res.ok) {
+        const approvedGroup = approvals.find(g => g.groupId === groupId);
         setConflictWarning(null);
         setHighlightedGroupIds([]);
         setApprovals(prev => prev.filter(g => g.groupId !== groupId));
-        router.refresh();
+
+        if (action === 'approve' && approvedGroup) {
+          const allRes = approvedGroup.pendingForSession?.length ? approvedGroup.pendingForSession : approvedGroup.reservations || [];
+          const directReservations = allRes.filter(r => !r.source || r.source.toUpperCase() === 'DIRECT');
+          if (directReservations.length > 0) {
+            setReminderModal({
+              isOpen: true,
+              items: directReservations.map(r => ({
+                departmentName: r.department?.name || 'Departamento',
+                checkIn: r.checkIn,
+                checkOut: r.checkOut,
+              })),
+            });
+          } else {
+            router.refresh();
+          }
+        } else {
+          router.refresh();
+        }
       }
     } catch { }
     setLoading(null);
@@ -93,41 +121,78 @@ export function ApprovalsClient({
     if (!conflictWarning) return null;
     const hasConfirmed = conflictWarning.confirmedConflicts.length > 0;
     const hasPending = conflictWarning.pendingConflicts.length > 0;
+
+    const formatConflictDates = (checkIn: string, checkOut: string) => {
+      try {
+        const start = new Date(checkIn);
+        const end = new Date(checkOut);
+        return `del ${format(start, "d 'de' MMMM", { locale: es })} al ${format(end, "d 'de' MMMM, yyyy", { locale: es })}`;
+      } catch {
+        return `${checkIn} al ${checkOut}`;
+      }
+    };
+
     return (
-      <div className="fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-4" onClick={() => { setConflictWarning(null); setHighlightedGroupIds([]); }}>
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-red-100 dark:bg-red-950/60 rounded-full flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+      <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => { setConflictWarning(null); setHighlightedGroupIds([]); }}>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 bg-red-100 dark:bg-red-950/60 rounded-xl flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
-            <h3 className="font-bold text-slate-800 dark:text-slate-100">Conflicto de Disponibilidad</h3>
+            <div>
+              <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">Conflicto de Disponibilidad</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Se detectó superposición con las fechas solicitadas.</p>
+            </div>
           </div>
-          <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300 mb-5">
+
+          <div className="space-y-3 text-sm">
             {hasConfirmed && (
-              <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl">
-                <p className="font-semibold text-red-800 dark:text-red-300 mb-1">Superposición con reserva ya confirmada:</p>
+              <div className="p-3.5 bg-red-50/90 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl space-y-2.5">
+                <p className="font-bold text-xs uppercase tracking-wider text-red-800 dark:text-red-300">
+                  Reserva ya confirmada en esas fechas:
+                </p>
                 {conflictWarning.confirmedConflicts.map((c, i) => (
-                  <p key={i} className="text-xs text-red-700 dark:text-red-400">
-                    • <strong>{c.deptName}</strong>: {c.checkIn} al {c.checkOut}
-                  </p>
+                  <div key={i} className="text-xs text-red-800 dark:text-red-300 bg-white/80 dark:bg-slate-900/80 p-3 rounded-lg border border-red-200/80 dark:border-red-800/60 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-red-900 dark:text-red-200">
+                      <Building2 className="w-3.5 h-3.5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                      <span>{c.deptName}</span>
+                    </div>
+                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                      Ya hay una reserva confirmada {formatConflictDates(c.checkIn, c.checkOut)}
+                      {c.guestName ? (
+                        <> a nombre de <strong className="text-red-700 dark:text-red-400 font-semibold">"{c.guestName}"</strong>.</>
+                      ) : '.'}
+                    </p>
+                  </div>
                 ))}
               </div>
             )}
             {hasPending && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl">
-                <p className="font-semibold text-amber-800 dark:text-amber-300 mb-1">Superposición con otra solicitud pendiente:</p>
+              <div className="p-3.5 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl space-y-2.5">
+                <p className="font-bold text-xs uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                  Otra solicitud pendiente para esa fecha:
+                </p>
                 {conflictWarning.pendingConflicts.map((c, i) => (
-                  <p key={i} className="text-xs text-amber-700 dark:text-amber-400">
-                    • <strong>{c.deptName}</strong>: {c.checkIn} al {c.checkOut}
-                  </p>
+                  <div key={i} className="text-xs text-amber-800 dark:text-amber-300 bg-white/80 dark:bg-slate-900/80 p-3 rounded-lg border border-amber-200/80 dark:border-amber-800/60 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200">
+                      <Building2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                      <span>{c.deptName}</span>
+                    </div>
+                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                      Hay otra solicitud {formatConflictDates(c.checkIn, c.checkOut)}
+                      {c.guestName ? (
+                        <> a nombre de <strong className="text-amber-700 dark:text-amber-400 font-semibold">"{c.guestName}"</strong>.</>
+                      ) : '.'}
+                    </p>
+                  </div>
                 ))}
               </div>
             )}
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Si aprobás esta solicitud, las demás solicitudes en conflicto se denegarán automáticamente o podrían generar una sobreventa.
+              Si decidís aprobar esta solicitud de todas formas, tené en cuenta que se generará una superposición de fechas (overbooking).
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-2">
             <button
               onClick={() => { setConflictWarning(null); setHighlightedGroupIds([]); }}
               className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
@@ -136,7 +201,7 @@ export function ApprovalsClient({
             </button>
             <button
               onClick={() => { setConflictWarning(null); setHighlightedGroupIds([]); handleAction(conflictWarning.groupId, 'approve', true); }}
-              className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-colors cursor-pointer"
+              className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-colors cursor-pointer shadow-sm"
             >
               Aprobar de todas formas
             </button>
@@ -180,11 +245,23 @@ export function ApprovalsClient({
 
   if (approvals.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <CheckCircle2 className="w-16 h-16 text-emerald-400 mb-4" />
-        <h2 className="text-2xl font-bold text-slate-700 dark:text-slate-100 mb-2">¡Todo al día!</h2>
-        <p className="text-slate-500 dark:text-slate-400">No hay reservas pendientes de aprobación.</p>
-      </div>
+      <>
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xs border border-slate-200 dark:border-slate-800 p-12 text-center">
+          <ClipboardCheck className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-100">No hay reservas pendientes de aprobación</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">Las nuevas solicitudes web aparecerán aquí.</p>
+        </div>
+        {reminderModal && (
+          <AirbnbBookingReminderModal
+            isOpen={reminderModal.isOpen}
+            onClose={() => {
+              setReminderModal(null);
+              router.refresh();
+            }}
+            items={reminderModal.items}
+          />
+        )}
+      </>
     );
   }
 
@@ -262,7 +339,15 @@ export function ApprovalsClient({
                   {primaryReservation.guestPhone && (
                     <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
                       <Phone className="w-4 h-4 text-slate-400" />
-                      <a href={`https://wa.me/${primaryReservation.guestPhone.replace(/\D/g, '')}`} target="_blank" className="text-green-600 dark:text-green-400 hover:underline">{primaryReservation.guestPhone}</a>
+                      <a
+                        href={`https://wa.me/${primaryReservation.guestPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${primaryReservation.guestName}! Te contacto desde Alojamientos Di'Arte con respecto a tu solicitud de reserva en ${primaryReservation.department?.name || "el departamento"}.`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-600 dark:text-green-400 hover:underline"
+                        title="Escribir al huésped por WhatsApp"
+                      >
+                        {primaryReservation.guestPhone}
+                      </a>
                     </div>
                   )}
                   {primaryReservation.guestDni && (
@@ -387,6 +472,16 @@ export function ApprovalsClient({
         );
       })}
       </div>
+      {reminderModal && (
+        <AirbnbBookingReminderModal
+          isOpen={reminderModal.isOpen}
+          onClose={() => {
+            setReminderModal(null);
+            router.refresh();
+          }}
+          items={reminderModal.items}
+        />
+      )}
     </>
   );
 }

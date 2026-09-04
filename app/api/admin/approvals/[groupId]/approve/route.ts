@@ -34,47 +34,77 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
 
     // --- Check for date conflicts ---
     if (!forceApprove) {
-      const confirmedConflicts: { deptName: string; checkIn: string; checkOut: string }[] = [];
-      const pendingConflicts: { deptName: string; checkIn: string; checkOut: string; conflictGroupId: string }[] = [];
+      const confirmedConflicts: { deptName: string; checkIn: string; checkOut: string; guestName: string }[] = [];
+      const pendingConflicts: { deptName: string; checkIn: string; checkOut: string; conflictGroupId: string; guestName: string }[] = [];
 
       for (const res of toApprove) {
         const dept = await prisma.department.findUnique({ where: { id: res.departmentId }, select: { name: true } });
 
+        const resInStr = res.checkIn.toISOString().split('T')[0];
+        const resOutStr = res.checkOut.toISOString().split('T')[0];
+        const start = new Date(`${resInStr}T12:00:00.000Z`);
+        const end = new Date(`${resOutStr}T12:00:00.000Z`);
+
         // Check against confirmed reservations
-        const confirmedOverlap = await prisma.reservation.findFirst({
+        const confirmedCandidates = await prisma.reservation.findMany({
           where: {
             departmentId: res.departmentId,
             status: { notIn: ['CANCELLED', 'PENDING_APPROVAL'] },
-            checkIn: { lt: res.checkOut },
-            checkOut: { gt: res.checkIn },
-            id: { not: res.id }
+            id: { not: res.id },
+            checkIn: { lt: end },
+            checkOut: { gt: start },
+          },
+          select: {
+            id: true,
+            guestName: true,
+            checkIn: true,
+            checkOut: true,
           }
         });
-        if (confirmedOverlap) {
-          confirmedConflicts.push({
-            deptName: dept?.name || res.departmentId,
-            checkIn: confirmedOverlap.checkIn.toISOString(),
-            checkOut: confirmedOverlap.checkOut.toISOString()
-          });
+
+        for (const overlap of confirmedCandidates) {
+          const overlapInStr = overlap.checkIn.toISOString().split('T')[0];
+          const overlapOutStr = overlap.checkOut.toISOString().split('T')[0];
+          if (overlapInStr < resOutStr && overlapOutStr > resInStr) {
+            confirmedConflicts.push({
+              deptName: dept?.name || res.departmentId,
+              checkIn: overlap.checkIn.toISOString(),
+              checkOut: overlap.checkOut.toISOString(),
+              guestName: overlap.guestName || 'Reserva confirmada',
+            });
+          }
         }
 
         // Check against other PENDING_APPROVAL reservations (different group)
-        const pendingOverlap = await prisma.reservation.findFirst({
+        const pendingCandidates = await prisma.reservation.findMany({
           where: {
             departmentId: res.departmentId,
             status: 'PENDING_APPROVAL',
-            checkIn: { lt: res.checkOut },
-            checkOut: { gt: res.checkIn },
-            groupId: { not: groupId }
+            groupId: { not: groupId },
+            checkIn: { lt: end },
+            checkOut: { gt: start },
+          },
+          select: {
+            id: true,
+            guestName: true,
+            checkIn: true,
+            checkOut: true,
+            groupId: true,
           }
         });
-        if (pendingOverlap) {
-          pendingConflicts.push({
-            deptName: dept?.name || res.departmentId,
-            checkIn: pendingOverlap.checkIn.toISOString(),
-            checkOut: pendingOverlap.checkOut.toISOString(),
-            conflictGroupId: pendingOverlap.groupId || ''
-          });
+
+        for (const overlap of pendingCandidates) {
+          const overlapInStr = overlap.checkIn.toISOString().split('T')[0];
+          const overlapOutStr = overlap.checkOut.toISOString().split('T')[0];
+          if (overlapInStr < resOutStr && overlapOutStr > resInStr) {
+            pendingConflicts.push({
+              deptName: dept?.name || res.departmentId,
+              checkIn: overlap.checkIn.toISOString(),
+              checkOut: overlap.checkOut.toISOString(),
+              conflictGroupId: overlap.groupId || '',
+              guestName: overlap.guestName || 'Solicitud pendiente',
+            });
+          }
         }
       }
 

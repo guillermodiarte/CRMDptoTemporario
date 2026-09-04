@@ -53,6 +53,11 @@ export async function PUT(req: Request) {
       phoneWhatsApp: "site_phone_whatsapp",
       email: "site_email",
       whatsappDefaultMsg: "site_whatsapp_default_msg",
+      whatsappReservationGreeting: "site_whatsapp_reservation_greeting",
+      whatsappReservationFooter: "site_whatsapp_reservation_footer",
+      whatsappDepositNotice: "site_whatsapp_deposit_notice",
+      whatsappAdminMsgTemplate: "site_whatsapp_admin_msg_template",
+      whatsappRedirectDelay: "site_whatsapp_redirect_delay",
       address: "site_address",
       city: "site_city",
       province: "site_province",
@@ -62,6 +67,7 @@ export async function PUT(req: Request) {
       businessHours: "site_business_hours",
       instagramUrl: "site_instagram_url",
       facebookUrl: "site_facebook_url",
+      ogImageUrl: "site_og_image_url",
       seoDescription: "site_seo_description",
       footerCopyright: "site_footer_copyright",
       footerCredit: "site_footer_credit",
@@ -73,36 +79,7 @@ export async function PUT(req: Request) {
       guiaEnabled: "site_guia_enabled",
     };
 
-    const updates = [];
-
-    for (const [configKey, dbKey] of Object.entries(mapping)) {
-      const value = body[configKey as keyof SiteConfig];
-      if (value !== undefined) {
-        updates.push(
-          prisma.systemSettings.upsert({
-            where: {
-              sessionId_key: {
-                sessionId: "", // Some setups might have unique constraint with null or string, but schema says @@unique([sessionId, key])
-                key: dbKey,
-              },
-            },
-            update: {
-              value: String(value),
-              updatedBy: userEmail || "superadmin",
-            },
-            create: {
-              key: dbKey,
-              value: String(value),
-              sessionId: null,
-              updatedBy: userEmail || "superadmin",
-            },
-          })
-        );
-      }
-    }
-
-    // Because prisma @@unique([sessionId, key]) with null sessionId in SQLite / Postgres can vary,
-    // let's do a reliable upsert loop: find first with sessionId: null, then update or create.
+    // Reliable upsert loop for global settings (sessionId: null)
     const customOperations = Object.entries(mapping)
       .filter(([configKey]) => body[configKey as keyof SiteConfig] !== undefined)
       .map(async ([configKey, dbKey]) => {

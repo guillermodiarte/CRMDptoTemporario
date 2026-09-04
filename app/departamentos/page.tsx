@@ -8,9 +8,15 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
+  const title = `Departamentos | ${config.siteName}`;
+  const description = `Conocé todos los departamentos disponibles en ${config.siteName}. Fotos, comodidades, capacidad y precios.`;
   return {
-    title: `Departamentos | ${config.siteName}`,
-    description: `Conocé todos los departamentos disponibles en ${config.siteName}. Fotos, comodidades, capacidad y precios.`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+    },
   };
 }
 
@@ -28,6 +34,10 @@ export default async function DepartamentosPage() {
         { session: { isActive: true } }
       ]
     },
+    orderBy: [
+      { order: "asc" },
+      { createdAt: "desc" }
+    ],
     select: {
       id: true,
       name: true,

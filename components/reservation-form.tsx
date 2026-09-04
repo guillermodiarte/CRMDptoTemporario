@@ -70,9 +70,14 @@ interface ReservationFormProps {
   defaultDepartmentId?: string;
   defaultDate?: Date;
   initialData?: any; // Relaxed type to include relations if needed
+  onDirectCreated?: (info: {
+    departmentName?: string;
+    checkIn: string | Date;
+    checkOut: string | Date;
+  }) => void;
 }
 
-export function ReservationForm({ departments, setOpen, defaultDepartmentId, defaultDate, initialData }: ReservationFormProps) {
+export function ReservationForm({ departments, setOpen, defaultDepartmentId, defaultDate, initialData, onDirectCreated }: ReservationFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [overlapWarning, setOverlapWarning] = useState(false);
@@ -352,9 +357,22 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
       if (!res.ok) throw new Error("Error creando reserva");
 
+      const isNewDirect = !initialData && values.source === 'DIRECT';
+      const createdCheckIn = values.checkIn;
+      const createdCheckOut = values.checkOut;
+      const deptName = departments.find(d => d.id === values.departmentId)?.name;
+
       router.refresh();
       setOpen(false);
       form.reset();
+
+      if (isNewDirect && onDirectCreated) {
+        onDirectCreated({
+          departmentName: deptName || 'Departamento',
+          checkIn: createdCheckIn,
+          checkOut: createdCheckOut,
+        });
+      }
     } catch (error) {
       console.error(error);
       // alert("Error al guardar reserva"); 

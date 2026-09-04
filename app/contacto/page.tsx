@@ -6,9 +6,15 @@ import { getSiteConfig } from "@/lib/site-config-loader";
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
+  const title = `Contacto | ${config.siteName}`;
+  const description = `Ponete en contacto con ${config.siteName}. Estamos en ${config.city}, ${config.country}. Respondemos por WhatsApp, email y teléfono.`;
   return {
-    title: `Contacto | ${config.siteName}`,
-    description: `Ponete en contacto con ${config.siteName}. Estamos en ${config.city}, ${config.country}. Respondemos por WhatsApp, email y teléfono.`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+    },
   };
 }
 

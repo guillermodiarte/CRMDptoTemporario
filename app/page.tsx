@@ -32,6 +32,10 @@ export default async function Home({
         { session: { isActive: true } }
       ]
     },
+    orderBy: [
+      { order: "asc" },
+      { createdAt: "desc" }
+    ],
     select: {
       id: true,
       name: true,

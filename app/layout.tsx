@@ -21,12 +21,55 @@ export const viewport = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getSiteConfig();
+
+  let siteUrl = "https://alojamientosdiarte.com";
+  try {
+    const raw = config.siteUrl?.trim() || siteUrl;
+    const withProtocol = raw.startsWith("http") ? raw : `https://${raw}`;
+    new URL(withProtocol);
+    siteUrl = withProtocol;
+  } catch {
+    siteUrl = "https://alojamientosdiarte.com";
+  }
+
+  let ogImageUrl = config.ogImageUrl?.trim();
+  if (ogImageUrl) {
+    if (!ogImageUrl.startsWith("http")) {
+      ogImageUrl = `${siteUrl.replace(/\/$/, "")}${ogImageUrl.startsWith("/") ? "" : "/"}${ogImageUrl}`;
+    }
+  } else {
+    ogImageUrl = `${siteUrl.replace(/\/$/, "")}/icon.png?v=3`;
+  }
+
   return {
+    metadataBase: new URL(siteUrl),
     title: {
       default: config.siteName,
       template: `%s | ${config.siteName}`,
     },
     description: config.seoDescription,
+    openGraph: {
+      type: "website",
+      locale: "es_AR",
+      url: siteUrl,
+      siteName: config.siteName,
+      title: config.siteName,
+      description: config.seoDescription,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: config.siteName,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: config.siteName,
+      description: config.seoDescription,
+      images: [ogImageUrl],
+    },
     icons: {
       icon: "/icon.png?v=3",
       apple: "/icon.png?v=3",

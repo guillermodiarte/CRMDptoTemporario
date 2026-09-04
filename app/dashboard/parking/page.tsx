@@ -16,7 +16,10 @@ export default async function ParkingPage() {
       type: 'PARKING',
       sessionId
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [
+      { order: "asc" },
+      { createdAt: "desc" }
+    ],
   });
 
   const totalSuppliesCost = 0;

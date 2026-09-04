@@ -990,7 +990,13 @@ function ReservationRequestModal({
   const [phone, setPhone] = useState("");
   const [people, setPeople] = useState(data.people || 1);
   const [garage, setGarage] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [step, setStep] = useState<'form' | 'notice' | 'completed'>('form');
+  const [countdown, setCountdown] = useState(() => {
+    const delay = parseInt(config?.whatsappRedirectDelay ?? '4', 10);
+    return isNaN(delay) || delay < 1 ? 4 : Math.min(delay, 30);
+  });
+  const [whatsappUrl, setWhatsappUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const nights = differenceInDays(data.checkOut, data.checkIn);
 
@@ -1009,26 +1015,54 @@ function ReservationRequestModal({
       return acc + (d ? getPriceForPeople(d, people) * seg.nights : 0);
     }, 0);
 
+  // When entering the notice step, reset the countdown from config
+  useEffect(() => {
+    if (step === 'notice') {
+      const delay = parseInt(config?.whatsappRedirectDelay ?? '4', 10);
+      setCountdown(isNaN(delay) || delay < 1 ? 4 : Math.min(delay, 30));
+    }
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Countdown effect to redirect to WhatsApp after notice
+  useEffect(() => {
+    if (step !== 'notice') return;
+    if (countdown <= 0) {
+      // Use location.href instead of window.open() to avoid popup blockers
+      if (whatsappUrl) {
+        window.location.href = whatsappUrl;
+      }
+      setStep('completed');
+      return;
+    }
+    const timer = setTimeout(() => {
+      setCountdown(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [step, countdown, whatsappUrl]);
+
   const handleReserve = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     // Build segments for API call
     const segments = data.type === 'direct'
       ? [{
           deptId: data.dept!.id,
-          checkIn: data.checkIn.toISOString(),
-          checkOut: data.checkOut.toISOString(),
+          checkIn: format(data.checkIn, "yyyy-MM-dd"),
+          checkOut: format(data.checkOut, "yyyy-MM-dd"),
           totalAmount: getPriceForPeople(data.dept!, people) * nights,
         }]
       : data.comb!.segments.map(seg => {
           const d = departments.find(dep => dep.id === seg.deptId);
           return {
             deptId: seg.deptId,
-            checkIn: seg.checkIn.toISOString(),
-            checkOut: seg.checkOut.toISOString(),
+            checkIn: format(seg.checkIn, "yyyy-MM-dd"),
+            checkOut: format(seg.checkOut, "yyyy-MM-dd"),
             totalAmount: d ? getPriceForPeople(d, people) * seg.nights : 0,
           };
         });
 
-    // POST to API (fire and forget, but await so WhatsApp opens after)
+    // POST to API
     try {
       await fetch('/api/public/reservations', {
         method: 'POST',
@@ -1048,8 +1082,9 @@ function ReservationRequestModal({
       console.error('Error registering reservation request:', e);
     }
 
-    const wsNumber = config.phoneWhatsApp.replace(/\D/g, "") || "5493513146924";
-    let message = `¡Hola! Me gustaría solicitar una reserva.\n\n`;
+    const wsNumber = config?.phoneWhatsApp?.replace(/\D/g, "") || "5493513146924";
+    const greeting = config?.whatsappReservationGreeting?.trim() || "¡Hola! Me gustaría solicitar una reserva.";
+    let message = `${greeting}\n\n`;
     message += `*Datos Personales*\n`;
     message += `- Nombre: ${name}\n`;
     message += `- DNI/Cédula: ${dni}\n`;
@@ -1076,9 +1111,16 @@ function ReservationRequestModal({
     message += `- Cochera: ${garage ? 'Sí' : 'No'}\n`;
     message += `- Precio Total: $${totalPrice.toLocaleString()}\n`;
 
+    if (config?.whatsappReservationFooter?.trim()) {
+      message += `\n${config.whatsappReservationFooter.trim()}\n`;
+    }
+
     const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/${wsNumber}?text=${encoded}`, '_blank');
-    setSent(true);
+    const url = `https://wa.me/${wsNumber}?text=${encoded}`;
+    setWhatsappUrl(url);
+    setCountdown(4);
+    setStep('notice');
+    setIsSubmitting(false);
   };
 
   // Ensure people doesn't exceed max if user selects combination that has lower max
@@ -1089,27 +1131,81 @@ function ReservationRequestModal({
   return (
     <div className={`fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto ${isHidden ? 'hidden' : ''}`} onClick={onClose}>
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-6 md:p-8 relative my-auto shadow-2xl transition-colors" onClick={e => e.stopPropagation()}>
-        <button onClick={() => { onClose(); if (sent) window.location.reload(); }} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white cursor-pointer">
+        <button onClick={() => { onClose(); if (step === 'completed') window.location.reload(); }} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white cursor-pointer">
           <X className="w-5 h-5" />
         </button>
 
-        {sent ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-500/20 rounded-full flex items-center justify-center mb-5">
-              <svg className="w-10 h-10 text-green-500 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        {step === 'notice' ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            {/* Animated WhatsApp icon */}
+            <div className="relative">
+              <div className="w-20 h-20 bg-green-100 dark:bg-green-500/20 rounded-full flex items-center justify-center text-green-500 dark:text-green-400 shadow-inner">
+                <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.528 5.845L0 24l6.335-1.508A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.87 9.87 0 01-5.031-1.375l-.361-.214-3.742.981.999-3.648-.235-.374A9.861 9.861 0 012.118 12C2.118 6.545 6.545 2.118 12 2.118S21.882 6.545 21.882 12 17.455 21.882 12 21.882z" />
+                </svg>
+              </div>
+              <span className="absolute -bottom-1 -right-1 flex h-6 w-6">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-6 w-6 bg-green-500 text-white text-xs font-bold items-center justify-center">
+                  {countdown}
+                </span>
+              </span>
+            </div>
+
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+              ¡Aviso importante!
+            </h2>
+
+            {/* Notice Card */}
+            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 p-5 rounded-2xl max-w-md text-slate-700 dark:text-slate-200 text-sm sm:text-base leading-relaxed space-y-2.5 shadow-xs">
+              <p className="font-semibold text-slate-900 dark:text-slate-100">
+                Te contactaremos por WhatsApp a la brevedad para confirmar tu reserva.
+              </p>
+              <p className="text-amber-800 dark:text-amber-300 font-medium text-xs sm:text-sm">
+                {config?.whatsappDepositNotice?.trim() || "Recordá que las fechas quedan bloqueadas únicamente luego de recibir el adelanto de seña."}
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center gap-2.5 pt-1 w-full max-w-xs">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Abriendo WhatsApp en {countdown} {countdown === 1 ? 'segundo' : 'segundos'}...
+              </p>
+              {/* Use <a> tag so the click is a direct user gesture — never blocked by popup blockers */}
+              <a
+                href={whatsappUrl || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setStep('completed')}
+                className="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl transition-all shadow-md shadow-green-500/20 flex items-center justify-center gap-2 cursor-pointer text-sm no-underline"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.528 5.845L0 24l6.335-1.508A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.87 9.87 0 01-5.031-1.375l-.361-.214-3.742.981.999-3.648-.235-.374A9.861 9.861 0 012.118 12C2.118 6.545 6.545 2.118 12 2.118S21.882 6.545 21.882 12 17.455 21.882 12 21.882z" />
+                </svg>
+                Abrir WhatsApp ahora
+              </a>
+            </div>
+          </div>
+        ) : step === 'completed' ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-500/20 rounded-full flex items-center justify-center mb-1">
+              <svg className="w-10 h-10 text-green-500 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">¡Solicitud enviada!</h2>
-            <p className="text-slate-600 dark:text-slate-300 max-w-sm mb-2">
-              Gracias por elegir Alojamientos Di&apos;Arte. Tu solicitud fue registrada exitosamente.
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+              ¡Gracias por tu reserva!
+            </h2>
+            <p className="text-slate-600 dark:text-slate-300 max-w-sm leading-relaxed text-sm sm:text-base">
+              Gracias por elegir Alojamientos Di&apos;Arte. Tu solicitud fue registrada exitosamente y el mensaje para WhatsApp fue preparado.
             </p>
-            <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mb-6">
-              📱 Te contactaremos por WhatsApp a la brevedad para <strong>confirmar tu reserva</strong>. Recordá que las fechas quedan bloqueadas únicamente luego de recibir el adelanto de $10.000.
+            <p className="text-xs text-slate-400 dark:text-slate-500 max-w-xs">
+              Nos pondremos en contacto contigo a la brevedad para confirmar tu estadía.
             </p>
             <button
               onClick={() => { onClose(); window.location.reload(); }}
-              className="px-8 py-3 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-2xl transition-colors shadow-lg cursor-pointer"
+              className="mt-3 px-8 py-3 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-2xl transition-colors shadow-lg cursor-pointer"
             >
               Cerrar
             </button>
@@ -1291,11 +1387,11 @@ function ReservationRequestModal({
 
           <button
             onClick={handleReserve}
-            disabled={!name.trim() || !dni.trim() || !phone.trim()}
+            disabled={!name.trim() || !dni.trim() || !phone.trim() || isSubmitting}
             className="w-full py-4 bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl font-bold text-lg shadow-lg shadow-green-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.528 5.845L0 24l6.335-1.508A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.87 9.87 0 01-5.031-1.375l-.361-.214-3.742.981.999-3.648-.235-.374A9.861 9.861 0 012.118 12C2.118 6.545 6.545 2.118 12 2.118S21.882 6.545 21.882 12 17.455 21.882 12 21.882z" /></svg>
-            Reservar por WhatsApp
+            {isSubmitting ? "Procesando solicitud..." : "Reservar por WhatsApp"}
           </button>
           </div>
           </>

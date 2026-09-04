@@ -55,7 +55,14 @@ export const SITE_CONFIG_DEFAULTS = {
   phoneDisplay: "+54 9 351 314-6924",
   phoneWhatsApp: "5493513146924", // Solo números con código de país (ej. 549...)
   email: "contacto@alojamientosdiarte.com",
+
+  // Configuración de WhatsApp y Mensajes
   whatsappDefaultMsg: "Hola! Me gustaría consultar sobre la disponibilidad de los departamentos.",
+  whatsappReservationGreeting: "¡Hola! Me gustaría solicitar una reserva.",
+  whatsappReservationFooter: "Aguardo su confirmación y datos para el pago del adelanto de seña. ¡Muchas gracias!",
+  whatsappDepositNotice: "Recordá que las fechas quedan bloqueadas únicamente luego de recibir el adelanto de seña.",
+  whatsappAdminMsgTemplate: "¡Hola {huesped}! Te contacto desde {sitio} con respecto a tu solicitud de reserva en {departamento}.",
+  whatsappRedirectDelay: "4", // Segundos antes de redirigir a WhatsApp tras mostrar el aviso (1-30)
 
   // Ubicación física
   address: "Antártida Argentina 1035",
@@ -72,7 +79,8 @@ export const SITE_CONFIG_DEFAULTS = {
   instagramUrl: "https://www.instagram.com/",
   facebookUrl: "",
 
-  // SEO & Metadatos
+  // SEO & Metadatos (WhatsApp / Redes Sociales)
+  ogImageUrl: "",
   seoDescription: "Departamentos temporarios premium en Formosa, Argentina. Totalmente equipados para tu comodidad. Reservas directas y atención personalizada.",
 
   // Footer

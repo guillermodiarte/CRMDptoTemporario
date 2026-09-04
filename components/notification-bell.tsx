@@ -54,7 +54,25 @@ export function NotificationBell() {
     }
   }, [pulse]);
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const count = groups.length;
+
+  if (!mounted) {
+    return (
+      <button
+        className="relative p-2 rounded-full hover:bg-muted transition-colors outline-none"
+        title="Sin notificaciones"
+        type="button"
+      >
+        <Bell className="w-5 h-5 text-muted-foreground" />
+      </button>
+    );
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

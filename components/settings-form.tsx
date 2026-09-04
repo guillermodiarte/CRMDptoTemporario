@@ -39,6 +39,8 @@ import {
   Send,
   FolderOpen,
   Compass,
+  Share2,
+  RotateCcw,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -69,7 +71,7 @@ interface SettingsFormProps {
   activeParkingCount?: number;
 }
 
-type TabType = "general" | "insumos" | "identidad" | "slides" | "contacto" | "smtp";
+type TabType = "general" | "insumos" | "identidad" | "slides" | "whatsapp" | "contacto" | "smtp";
 
 export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
   const { data: session } = useSession();
@@ -230,7 +232,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
         const parsed = typeof siteConfig.heroSlides === "string" ? JSON.parse(siteConfig.heroSlides) : siteConfig.heroSlides;
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch (e) {}
+    } catch (e) { }
     return DEFAULT_HERO_SLIDES;
   })();
 
@@ -583,22 +585,20 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
       <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-200/70 dark:bg-slate-800/80 rounded-2xl border border-slate-300/60 dark:border-slate-700/60 w-full overflow-x-auto shadow-xs">
         <button
           onClick={() => setActiveTab("general")}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
-            activeTab === "general"
-              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
-              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-          }`}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${activeTab === "general"
+            ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }`}
         >
           <Settings className="w-4 h-4 text-slate-500" /> General & Sistema
         </button>
 
         <button
           onClick={() => setActiveTab("insumos")}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
-            activeTab === "insumos"
-              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
-              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-          }`}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${activeTab === "insumos"
+            ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }`}
         >
           <Package className="w-4 h-4 text-amber-500" /> Insumos Globales
         </button>
@@ -607,44 +607,50 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
           <>
             <button
               onClick={() => setActiveTab("identidad")}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
-                activeTab === "identidad"
-                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              }`}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${activeTab === "identidad"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
             >
               <Sparkles className="w-4 h-4 text-sky-500" /> Identidad & Login
             </button>
 
             <button
               onClick={() => setActiveTab("slides")}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
-                activeTab === "slides"
-                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              }`}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${activeTab === "slides"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
             >
               <ImageIcon className="w-4 h-4 text-indigo-500" /> Slides de Portada ({heroSlidesList.length})
             </button>
 
             <button
+              onClick={() => setActiveTab("whatsapp")}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${activeTab === "whatsapp"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+            >
+              <MessageSquare className="w-4 h-4 text-emerald-500" /> WhatsApp
+            </button>
+
+            <button
               onClick={() => setActiveTab("contacto")}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
-                activeTab === "contacto"
-                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              }`}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${activeTab === "contacto"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
             >
               <PhoneCall className="w-4 h-4 text-emerald-500" /> Contacto & Ubicación
             </button>
 
             <button
               onClick={() => setActiveTab("smtp")}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
-                activeTab === "smtp"
-                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              }`}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${activeTab === "smtp"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
             >
               <Mail className="w-4 h-4 text-violet-500" /> Correo SMTP
             </button>
@@ -978,13 +984,21 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="font-semibold text-slate-800 dark:text-slate-200">Eslogan / Frase Principal</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="font-semibold text-slate-800 dark:text-slate-200">Eslogan / Frase Principal</Label>
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    Sincronizado con WhatsApp y SEO
+                  </span>
+                </div>
                 <textarea
                   rows={2}
                   value={siteConfig.siteSlogan}
-                  onChange={e => setSiteConfig(prev => ({ ...prev, siteSlogan: e.target.value }))}
+                  onChange={e => setSiteConfig(prev => ({ ...prev, siteSlogan: e.target.value, seoDescription: e.target.value }))}
                   className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Esta frase se muestra en el pie de página de la web y acompaña al enlace cuando lo compartís por WhatsApp y redes sociales.
+                </p>
               </div>
 
               <hr className="border-slate-200 dark:border-slate-800 my-4" />
@@ -992,236 +1006,236 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
               {/* Logo Pickers - each one has a Light Mode and Dark Mode variant */}
               {/* Helper: reusable logo picker pair */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
-              {[
-                {
-                  title: "Logo Web / Navbar",
-                  iconColor: "text-sky-500",
-                  accentColor: "sky",
-                  fieldLight: "logoUrl" as const,
-                  fieldDark: "logoUrlDark" as const,
-                  sizeField: "logoSize" as const,
-                  sizeLabel: "Alto en Navbar",
-                  sizeMin: 20,
-                  sizeMax: 120,
-                  sizeStep: 2,
-                  defaultSize: "40",
-                  sizeUnit: "px",
-                  sizeDesc: "Alto en barra de navegación pública",
-                  folder: "logos",
-                  defaultLight: "Sin logo personalizado",
-                  defaultDark: "Igual que el claro si no se configura",
-                },
-                {
-                  title: "Logo Admin (Sidebar)",
-                  iconColor: "text-teal-500",
-                  accentColor: "teal",
-                  fieldLight: "adminLogoUrl" as const,
-                  fieldDark: "adminLogoUrlDark" as const,
-                  sizeField: "adminLogoSize" as const,
-                  sizeLabel: "Alto en Sidebar",
-                  sizeMin: 24,
-                  sizeMax: 120,
-                  sizeStep: 2,
-                  defaultSize: "46",
-                  sizeUnit: "px",
-                  sizeDesc: "Alto en menú lateral del panel",
-                  folder: "logos",
-                  defaultLight: "Default: Di'Arte Horizontal",
-                  defaultDark: "Igual que el claro si no se configura",
-                },
-                {
-                  title: "Logo Pantalla Login",
-                  iconColor: "text-indigo-500",
-                  accentColor: "indigo",
-                  fieldLight: "loginLogoUrl" as const,
-                  fieldDark: "loginLogoUrlDark" as const,
-                  sizeField: "loginLogoSize" as const,
-                  sizeLabel: "Ancho en Login",
-                  sizeMin: 100,
-                  sizeMax: 400,
-                  sizeStep: 4,
-                  defaultSize: "208",
-                  sizeUnit: "px",
-                  sizeDesc: "Ancho en tarjeta de inicio de sesión",
-                  folder: "logos",
-                  defaultLight: "Default: Di'Arte Vertical",
-                  defaultDark: "Igual que el claro si no se configura",
-                },
-              ].map(({
-                title,
-                iconColor,
-                fieldLight,
-                fieldDark,
-                sizeField,
-                sizeLabel,
-                sizeMin,
-                sizeMax,
-                sizeStep,
-                defaultSize,
-                sizeUnit,
-                sizeDesc,
-                folder,
-                defaultLight,
-                defaultDark,
-              }) => {
-                const currentVal = Number(siteConfig[sizeField]) || Number(defaultSize);
+                {[
+                  {
+                    title: "Logo Web / Navbar",
+                    iconColor: "text-sky-500",
+                    accentColor: "sky",
+                    fieldLight: "logoUrl" as const,
+                    fieldDark: "logoUrlDark" as const,
+                    sizeField: "logoSize" as const,
+                    sizeLabel: "Alto en Navbar",
+                    sizeMin: 20,
+                    sizeMax: 120,
+                    sizeStep: 2,
+                    defaultSize: "40",
+                    sizeUnit: "px",
+                    sizeDesc: "Alto en barra de navegación pública",
+                    folder: "logos",
+                    defaultLight: "Sin logo personalizado",
+                    defaultDark: "Igual que el claro si no se configura",
+                  },
+                  {
+                    title: "Logo Admin (Sidebar)",
+                    iconColor: "text-teal-500",
+                    accentColor: "teal",
+                    fieldLight: "adminLogoUrl" as const,
+                    fieldDark: "adminLogoUrlDark" as const,
+                    sizeField: "adminLogoSize" as const,
+                    sizeLabel: "Alto en Sidebar",
+                    sizeMin: 24,
+                    sizeMax: 120,
+                    sizeStep: 2,
+                    defaultSize: "46",
+                    sizeUnit: "px",
+                    sizeDesc: "Alto en menú lateral del panel",
+                    folder: "logos",
+                    defaultLight: "Default: Di'Arte Horizontal",
+                    defaultDark: "Igual que el claro si no se configura",
+                  },
+                  {
+                    title: "Logo Pantalla Login",
+                    iconColor: "text-indigo-500",
+                    accentColor: "indigo",
+                    fieldLight: "loginLogoUrl" as const,
+                    fieldDark: "loginLogoUrlDark" as const,
+                    sizeField: "loginLogoSize" as const,
+                    sizeLabel: "Ancho en Login",
+                    sizeMin: 100,
+                    sizeMax: 400,
+                    sizeStep: 4,
+                    defaultSize: "208",
+                    sizeUnit: "px",
+                    sizeDesc: "Ancho en tarjeta de inicio de sesión",
+                    folder: "logos",
+                    defaultLight: "Default: Di'Arte Vertical",
+                    defaultDark: "Igual que el claro si no se configura",
+                  },
+                ].map(({
+                  title,
+                  iconColor,
+                  fieldLight,
+                  fieldDark,
+                  sizeField,
+                  sizeLabel,
+                  sizeMin,
+                  sizeMax,
+                  sizeStep,
+                  defaultSize,
+                  sizeUnit,
+                  sizeDesc,
+                  folder,
+                  defaultLight,
+                  defaultDark,
+                }) => {
+                  const currentVal = Number(siteConfig[sizeField]) || Number(defaultSize);
 
-                return (
-                  <div key={fieldLight} className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label className={`font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide`}>
-                          <ImageIcon className={`w-4 h-4 ${iconColor}`} /> {title}
-                        </Label>
-                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                          {currentVal}{sizeUnit}
-                        </span>
+                  return (
+                    <div key={fieldLight} className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className={`font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide`}>
+                            <ImageIcon className={`w-4 h-4 ${iconColor}`} /> {title}
+                          </Label>
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                            {currentVal}{sizeUnit}
+                          </span>
+                        </div>
+
+                        {/* Light Mode Logo */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-300 border border-amber-400"></span>
+                            Modo Claro
+                          </div>
+                          <div className="h-20 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white flex items-center justify-center overflow-hidden p-2">
+                            {siteConfig[fieldLight] ? (
+                              <img
+                                src={siteConfig[fieldLight]}
+                                alt={`${title} Claro`}
+                                style={
+                                  sizeField === "loginLogoSize"
+                                    ? { width: `${Math.min(currentVal * 0.45, 140)}px`, maxHeight: "100%" }
+                                    : { height: `${Math.min(currentVal * 0.8, 64)}px`, maxWidth: "100%" }
+                                }
+                                className="object-contain transition-all duration-150"
+                              />
+                            ) : (
+                              <span className="text-xs text-slate-400 text-center px-2">{defaultLight}</span>
+                            )}
+                          </div>
+                          <div className="flex gap-1.5">
+                            <Button size="sm" variant="outline" onClick={() => openPicker(fieldLight, folder)}
+                              className="flex-1 text-xs cursor-pointer font-semibold h-7 px-2">
+                              <FolderOpen className={`w-3 h-3 mr-1 ${iconColor}`} /> Galería
+                            </Button>
+                            <label className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold cursor-pointer h-7">
+                              <Upload className="w-3 h-3" /> Subir
+                              <input type="file" accept="image/*" onChange={e => handleDirectUpload(fieldLight, folder, e)} className="hidden" />
+                            </label>
+                            {siteConfig[fieldLight] && (
+                              <button onClick={() => setSiteConfig(prev => ({ ...prev, [fieldLight]: "" }))}
+                                className="h-7 w-7 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg border border-red-200 dark:border-red-900/60 cursor-pointer transition-colors" title="Quitar logo">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Dark Mode Logo */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-700 border border-slate-500"></span>
+                            Modo Oscuro
+                          </div>
+                          <div className="h-20 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-950 flex items-center justify-center overflow-hidden p-2">
+                            {siteConfig[fieldDark] ? (
+                              <img
+                                src={siteConfig[fieldDark]}
+                                alt={`${title} Oscuro`}
+                                style={
+                                  sizeField === "loginLogoSize"
+                                    ? { width: `${Math.min(currentVal * 0.45, 140)}px`, maxHeight: "100%" }
+                                    : { height: `${Math.min(currentVal * 0.8, 64)}px`, maxWidth: "100%" }
+                                }
+                                className="object-contain transition-all duration-150"
+                              />
+                            ) : (
+                              <span className="text-xs text-slate-500 text-center px-2">{defaultDark}</span>
+                            )}
+                          </div>
+                          <div className="flex gap-1.5">
+                            <Button size="sm" variant="outline" onClick={() => openPicker(fieldDark, folder)}
+                              className="flex-1 text-xs cursor-pointer font-semibold h-7 px-2 border-slate-700 text-slate-300">
+                              <FolderOpen className="w-3 h-3 mr-1 text-slate-400" /> Galería
+                            </Button>
+                            <label className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold cursor-pointer h-7">
+                              <Upload className="w-3 h-3" /> Subir
+                              <input type="file" accept="image/*" onChange={e => handleDirectUpload(fieldDark, folder, e)} className="hidden" />
+                            </label>
+                            {siteConfig[fieldDark] && (
+                              <button onClick={() => setSiteConfig(prev => ({ ...prev, [fieldDark]: "" }))}
+                                className="h-7 w-7 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg border border-red-200 dark:border-red-900/60 cursor-pointer transition-colors" title="Quitar logo oscuro">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Light Mode Logo */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                          <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-300 border border-amber-400"></span>
-                          Modo Claro
-                        </div>
-                        <div className="h-20 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white flex items-center justify-center overflow-hidden p-2">
-                          {siteConfig[fieldLight] ? (
-                            <img
-                              src={siteConfig[fieldLight]}
-                              alt={`${title} Claro`}
-                              style={
-                                sizeField === "loginLogoSize"
-                                  ? { width: `${Math.min(currentVal * 0.45, 140)}px`, maxHeight: "100%" }
-                                  : { height: `${Math.min(currentVal * 0.8, 64)}px`, maxWidth: "100%" }
-                              }
-                              className="object-contain transition-all duration-150"
+                      {/* Dimensiones / Control de Tamaño */}
+                      <div className="pt-3 mt-1 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                            <Sliders className="w-3 h-3 text-slate-400" /> {sizeLabel}
+                          </Label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min={sizeMin}
+                              max={sizeMax}
+                              step={sizeStep}
+                              value={siteConfig[sizeField] || defaultSize}
+                              onChange={e => setSiteConfig(prev => ({ ...prev, [sizeField]: e.target.value }))}
+                              className="w-14 h-6 text-center text-xs font-mono font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-500"
                             />
-                          ) : (
-                            <span className="text-xs text-slate-400 text-center px-2">{defaultLight}</span>
-                          )}
+                            <span className="text-[10px] text-slate-400 font-semibold">{sizeUnit}</span>
+                          </div>
                         </div>
-                        <div className="flex gap-1.5">
-                          <Button size="sm" variant="outline" onClick={() => openPicker(fieldLight, folder)}
-                            className="flex-1 text-xs cursor-pointer font-semibold h-7 px-2">
-                            <FolderOpen className={`w-3 h-3 mr-1 ${iconColor}`} /> Galería
-                          </Button>
-                          <label className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold cursor-pointer h-7">
-                            <Upload className="w-3 h-3" /> Subir
-                            <input type="file" accept="image/*" onChange={e => handleDirectUpload(fieldLight, folder, e)} className="hidden" />
-                          </label>
-                          {siteConfig[fieldLight] && (
-                            <button onClick={() => setSiteConfig(prev => ({ ...prev, [fieldLight]: "" }))}
-                              className="h-7 w-7 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg border border-red-200 dark:border-red-900/60 cursor-pointer transition-colors" title="Quitar logo">
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Dark Mode Logo */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                          <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-700 border border-slate-500"></span>
-                          Modo Oscuro
-                        </div>
-                        <div className="h-20 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-950 flex items-center justify-center overflow-hidden p-2">
-                          {siteConfig[fieldDark] ? (
-                            <img
-                              src={siteConfig[fieldDark]}
-                              alt={`${title} Oscuro`}
-                              style={
-                                sizeField === "loginLogoSize"
-                                  ? { width: `${Math.min(currentVal * 0.45, 140)}px`, maxHeight: "100%" }
-                                  : { height: `${Math.min(currentVal * 0.8, 64)}px`, maxWidth: "100%" }
-                              }
-                              className="object-contain transition-all duration-150"
-                            />
-                          ) : (
-                            <span className="text-xs text-slate-500 text-center px-2">{defaultDark}</span>
-                          )}
-                        </div>
-                        <div className="flex gap-1.5">
-                          <Button size="sm" variant="outline" onClick={() => openPicker(fieldDark, folder)}
-                            className="flex-1 text-xs cursor-pointer font-semibold h-7 px-2 border-slate-700 text-slate-300">
-                            <FolderOpen className="w-3 h-3 mr-1 text-slate-400" /> Galería
-                          </Button>
-                          <label className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold cursor-pointer h-7">
-                            <Upload className="w-3 h-3" /> Subir
-                            <input type="file" accept="image/*" onChange={e => handleDirectUpload(fieldDark, folder, e)} className="hidden" />
-                          </label>
-                          {siteConfig[fieldDark] && (
-                            <button onClick={() => setSiteConfig(prev => ({ ...prev, [fieldDark]: "" }))}
-                              className="h-7 w-7 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg border border-red-200 dark:border-red-900/60 cursor-pointer transition-colors" title="Quitar logo oscuro">
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          )}
+                        <input
+                          type="range"
+                          min={sizeMin}
+                          max={sizeMax}
+                          step={sizeStep}
+                          value={currentVal}
+                          onChange={e => setSiteConfig(prev => ({ ...prev, [sizeField]: e.target.value }))}
+                          className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                        />
+                        <div className="flex justify-between items-center text-[9px] text-slate-400">
+                          <span>{sizeMin}{sizeUnit}</span>
+                          <span className="text-[9px] text-slate-500 dark:text-slate-400 truncate max-w-[130px] text-center" title={sizeDesc}>{sizeDesc}</span>
+                          <span>{sizeMax}{sizeUnit}</span>
                         </div>
                       </div>
                     </div>
+                  );
+                })}
 
-                    {/* Dimensiones / Control de Tamaño */}
-                    <div className="pt-3 mt-1 border-t border-slate-200 dark:border-slate-800 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                          <Sliders className="w-3 h-3 text-slate-400" /> {sizeLabel}
-                        </Label>
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            min={sizeMin}
-                            max={sizeMax}
-                            step={sizeStep}
-                            value={siteConfig[sizeField] || defaultSize}
-                            onChange={e => setSiteConfig(prev => ({ ...prev, [sizeField]: e.target.value }))}
-                            className="w-14 h-6 text-center text-xs font-mono font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-500"
-                          />
-                          <span className="text-[10px] text-slate-400 font-semibold">{sizeUnit}</span>
-                        </div>
-                      </div>
-                      <input
-                        type="range"
-                        min={sizeMin}
-                        max={sizeMax}
-                        step={sizeStep}
-                        value={currentVal}
-                        onChange={e => setSiteConfig(prev => ({ ...prev, [sizeField]: e.target.value }))}
-                        className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
-                      />
-                      <div className="flex justify-between items-center text-[9px] text-slate-400">
-                        <span>{sizeMin}{sizeUnit}</span>
-                        <span className="text-[9px] text-slate-500 dark:text-slate-400 truncate max-w-[130px] text-center" title={sizeDesc}>{sizeDesc}</span>
-                        <span>{sizeMax}{sizeUnit}</span>
-                      </div>
+                {/* Login Background (single — no dark variant) */}
+                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                      <ImageIcon className="w-4 h-4 text-amber-500" /> Fondo Pantalla Login
+                    </Label>
+                    <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-1">
+                      {siteConfig.loginBgUrl ? (
+                        <img src={siteConfig.loginBgUrl} alt="Fondo Login" className="w-full h-full object-cover rounded-lg" />
+                      ) : (
+                        <span className="text-xs text-slate-400">Sin fondo personalizado</span>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-
-              {/* Login Background (single — no dark variant) */}
-              <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
-                <div className="space-y-3">
-                  <Label className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wide">
-                    <ImageIcon className="w-4 h-4 text-amber-500" /> Fondo Pantalla Login
-                  </Label>
-                  <div className="h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-1">
-                    {siteConfig.loginBgUrl ? (
-                      <img src={siteConfig.loginBgUrl} alt="Fondo Login" className="w-full h-full object-cover rounded-lg" />
-                    ) : (
-                      <span className="text-xs text-slate-400">Sin fondo personalizado</span>
-                    )}
+                  <div className="flex gap-2 pt-2">
+                    <Button size="sm" variant="outline" onClick={() => openPicker("loginBgUrl", "general")}
+                      className="flex-1 text-xs cursor-pointer font-semibold">
+                      <FolderOpen className="w-3.5 h-3.5 mr-1 text-amber-500" /> Galería
+                    </Button>
+                    <label className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs">
+                      <Upload className="w-3.5 h-3.5" /> Subir
+                      <input type="file" accept="image/*" onChange={e => handleDirectUpload("loginBgUrl", "general", e)} className="hidden" />
+                    </label>
                   </div>
                 </div>
-                <div className="flex gap-2 pt-2">
-                  <Button size="sm" variant="outline" onClick={() => openPicker("loginBgUrl", "general")}
-                    className="flex-1 text-xs cursor-pointer font-semibold">
-                    <FolderOpen className="w-3.5 h-3.5 mr-1 text-amber-500" /> Galería
-                  </Button>
-                  <label className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs">
-                    <Upload className="w-3.5 h-3.5" /> Subir
-                    <input type="file" accept="image/*" onChange={e => handleDirectUpload("loginBgUrl", "general", e)} className="hidden" />
-                  </label>
-                </div>
-              </div>
               </div>
 
               <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
@@ -1259,7 +1273,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <label className="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                     </svg>
                     Velocidad del carrusel
                   </label>
@@ -1286,11 +1300,10 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                       key={ms}
                       type="button"
                       onClick={() => setSiteConfig(prev => ({ ...prev, heroSlideInterval: String(ms) }))}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
-                        Number(siteConfig.heroSlideInterval) === ms
-                          ? "bg-indigo-600 text-white border-indigo-600"
-                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
-                      }`}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${Number(siteConfig.heroSlideInterval) === ms
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
+                        }`}
                     >
                       {ms / 1000}s
                     </button>
@@ -1306,7 +1319,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <label className="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 8v8"/><path d="M8 12h8"/>
+                      <circle cx="12" cy="12" r="10" /><path d="M12 2a10 10 0 0 1 0 20" /><path d="M12 8v8" /><path d="M8 12h8" />
                     </svg>
                     Tenue del fondo de slide
                   </label>
@@ -1333,11 +1346,10 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                       key={pct}
                       type="button"
                       onClick={() => setSiteConfig(prev => ({ ...prev, heroOverlayOpacity: String(pct) }))}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
-                        Number(siteConfig.heroOverlayOpacity) === pct
-                          ? "bg-indigo-600 text-white border-indigo-600"
-                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
-                      }`}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${Number(siteConfig.heroOverlayOpacity) === pct
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
+                        }`}
                     >
                       {pct}%
                     </button>
@@ -1488,6 +1500,528 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
         </div>
       )}
 
+      {/* ── TAB: WHATSAPP Y REDES SOCIALES ── */}
+      {isSuperAdmin && activeTab === "whatsapp" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Header Banner */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shrink-0">
+                <MessageSquare className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base sm:text-lg">
+                  Centro de Configuración de WhatsApp
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                  Gestioná la imagen de vista previa que se muestra al compartir el enlace, el mensaje de consulta y los textos de reserva.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                📱 Número vinculado: <strong className="font-mono">{siteConfig.phoneWhatsApp || "Sin configurar"}</strong>
+              </span>
+            </div>
+          </div>
+
+          {/* ── CARD 1: PREVISUALIZACIÓN AL COMPARTIR ENLACE (OPEN GRAPH) ── */}
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2 text-lg">
+                    <Share2 className="w-5 h-5 text-emerald-500" />
+                    Vista Previa al Compartir en WhatsApp y Redes Sociales
+                  </CardTitle>
+                  <CardDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+                    Personalizá la imagen de portada y el texto que verán tus contactos cuando compartas el enlace de tu web en WhatsApp, Facebook y mensajerías.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Open Graph Activo
+                  </span>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-5 sm:p-6 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* COLUMNA IZQUIERDA: CONTROLES DE EDICIÓN */}
+                <div className="lg:col-span-7 space-y-5">
+                  {/* Selector de Imagen */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <ImageIcon className="w-4 h-4 text-emerald-500" /> Imagen de Portada / Miniatura (og:image)
+                      </Label>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                        Recomendado: 1200 × 630 px
+                      </span>
+                    </div>
+
+                    <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-4 bg-slate-50/50 dark:bg-slate-800/30 hover:border-emerald-400/50 transition-colors">
+                      {siteConfig.ogImageUrl ? (
+                        <div className="space-y-3">
+                          <div className="relative aspect-[1.91/1] w-full rounded-xl overflow-hidden bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-inner group">
+                            <img
+                              src={siteConfig.ogImageUrl}
+                              alt="Vista previa WhatsApp"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                              <span className="text-white text-xs font-medium truncate">
+                                {siteConfig.ogImageUrl}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openPicker("ogImageUrl", "general")}
+                              className="text-xs cursor-pointer font-semibold h-8"
+                            >
+                              <FolderOpen className="w-3.5 h-3.5 mr-1.5 text-emerald-500" /> Cambiar desde Galería
+                            </Button>
+                            <label className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-lg text-xs font-semibold cursor-pointer h-8 transition-colors">
+                              <Upload className="w-3.5 h-3.5" /> Subir Nueva
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={e => handleDirectUpload("ogImageUrl", "general", e)}
+                                className="hidden"
+                              />
+                            </label>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setSiteConfig(prev => ({ ...prev, ogImageUrl: "" }))}
+                              className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 h-8 ml-auto cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-1" /> Quitar imagen
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="py-8 flex flex-col items-center justify-center text-center space-y-3">
+                          <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 dark:text-emerald-400 flex items-center justify-center shadow-inner">
+                            <ImageIcon className="w-7 h-7" />
+                          </div>
+                          <div className="max-w-sm space-y-1">
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                              Sin imagen personalizada configurada
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              Actualmente WhatsApp está mostrando la casita azul por defecto (el ícono del sitio). Subí una foto atractiva de tu complejo o departamento para destacar tus enlaces.
+                            </p>
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openPicker("ogImageUrl", "general")}
+                              className="text-xs cursor-pointer font-semibold h-8"
+                            >
+                              <FolderOpen className="w-3.5 h-3.5 mr-1.5 text-emerald-500" /> Galería
+                            </Button>
+                            <label className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold cursor-pointer h-8 shadow-xs transition-colors">
+                              <Upload className="w-3.5 h-3.5" /> Subir Imagen
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={e => handleDirectUpload("ogImageUrl", "general", e)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Descripción para WhatsApp / SEO */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider">
+                        Texto Descriptivo al Compartir (Eslogan)
+                      </Label>
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        Sincronizado con Eslogan Web
+                      </span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={siteConfig.seoDescription}
+                      onChange={e => setSiteConfig(prev => ({ ...prev, seoDescription: e.target.value, siteSlogan: e.target.value }))}
+                      placeholder="Departamentos temporarios premium en Formosa, Argentina. Totalmente equipados para tu comodidad. Reservas directas y atención personalizada."
+                      className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-slate-400"
+                    />
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                      <span>Acompaña el título debajo de la foto al compartir por WhatsApp y en Google.</span>
+                      <span className={`font-mono ${(siteConfig.seoDescription || "").length > 160 ? "text-amber-500 font-semibold" : "text-slate-400"
+                        }`}>
+                        {(siteConfig.seoDescription || "").length} / 160 sugeridos
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* COLUMNA DERECHA: MOCKUP INTERACTIVO EN TIEMPO REAL ESTILO WHATSAPP */}
+                <div className="lg:col-span-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5 text-emerald-500" /> Simulación en WhatsApp
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      Vista previa en vivo
+                    </span>
+                  </div>
+
+                  {/* WhatsApp Chat Preview Canvas */}
+                  <div className="rounded-2xl p-4 bg-[#0b141a] border border-[#202c33] shadow-lg relative overflow-hidden font-sans">
+                    <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+
+                    {/* WhatsApp Outgoing Message Bubble */}
+                    <div className="relative max-w-[320px] mx-auto sm:max-w-none rounded-2xl bg-[#005c4b] p-1.5 text-white shadow-md space-y-1">
+                      {/* Enlace de texto */}
+                      <div className="px-2 pt-1 pb-0.5">
+                        <span className="text-xs text-sky-200 underline break-all font-medium">
+                          {siteConfig.siteUrl?.replace(/\/$/, "") || "https://alojamientosdiarte.com"}
+                        </span>
+                      </div>
+
+                      {/* Card de Previsualización (WhatsApp Card) */}
+                      <div className="rounded-xl overflow-hidden bg-[#025144] border border-[#056153]/60 shadow-xs">
+                        {/* Imagen de la tarjeta */}
+                        <div className="aspect-[1.91/1] w-full bg-[#0b141a] flex items-center justify-center overflow-hidden">
+                          {siteConfig.ogImageUrl ? (
+                            <img
+                              src={siteConfig.ogImageUrl}
+                              alt="WhatsApp Preview"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 p-4 text-center">
+                              <img src="/icon.png?v=3" alt="Icono por defecto" className="w-16 h-16 object-contain mb-1 opacity-90" />
+                              <span className="text-[10px] text-slate-400 font-medium">Ícono por defecto (/icon.png)</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Texto de la tarjeta */}
+                        <div className="p-3 space-y-1 bg-[#025144]">
+                          <h4 className="font-bold text-sm text-slate-100 leading-snug line-clamp-1">
+                            {siteConfig.siteName || "Alojamientos Di'Arte"}
+                          </h4>
+                          <p className="text-[11px] text-slate-300 leading-relaxed line-clamp-3 font-normal">
+                            {siteConfig.seoDescription || "Departamentos temporarios premium en Formosa, Argentina. Totalmente equipados para tu comodidad. Reservas directas y atención personalizada."}
+                          </p>
+                          <div className="flex items-center gap-1 text-[11px] text-slate-400 pt-1">
+                            <Globe className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="truncate">
+                              {siteConfig.siteUrl ? siteConfig.siteUrl.replace(/^https?:\/\//, '').replace(/\/.*$/, '') : "alojamientosdiarte.com"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Hora y Visto del mensaje */}
+                      <div className="flex items-center justify-end gap-1 px-1.5 text-[10px] text-emerald-200/80">
+                        <span>10:11</span>
+                        <span className="text-sky-300">✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* WhatsApp Cache Notice Alert */}
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs space-y-1">
+                    <p className="font-semibold flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      Tip sobre la caché de WhatsApp:
+                    </p>
+                    <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                      WhatsApp almacena la vista previa en caché. Si ya compartiste tu enlace antes, para forzar que WhatsApp actualice de inmediato la tarjeta en tus conversaciones podés enviar la URL con una versión al final, por ejemplo:{" "}
+                      <code className="font-mono bg-amber-500/20 px-1 py-0.5 rounded text-[10px]">
+                        {(siteConfig.siteUrl?.replace(/\/$/, "") || "alojamientosdiarte.com") + "/?v=2"}
+                      </code>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── CARD 2: MENSAJES Y TEXTOS AUTOMATIZADOS DE WHATSAPP ── */}
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-800/30">
+              <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2 text-lg">
+                <Send className="w-5 h-5 text-emerald-500" />
+                Mensajes Automatizados y Plantillas de Reserva
+              </CardTitle>
+              <CardDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
+                Personalizá los textos que se pre-cargan automáticamente cuando los huéspedes te escriben o consultan disponibilidad.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="p-5 sm:p-6 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+                {/* COLUMNA IZQUIERDA: CONTROLES DE MENSAJES (7 cols) */}
+                <div className="lg:col-span-7 space-y-4">
+
+                  {/* 1. Mensaje de Consulta Rápida (antes en Contacto) */}
+                  <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <MessageSquare className="w-4 h-4 text-emerald-500" /> 1. Mensaje para Consultas Generales
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => setSiteConfig(prev => ({ ...prev, whatsappDefaultMsg: "Hola! Me gustaría consultar sobre la disponibilidad de los departamentos." }))}
+                        className="text-[11px] text-slate-400 hover:text-emerald-500 flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Restaurar texto por defecto"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Restaurar
+                      </button>
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={siteConfig.whatsappDefaultMsg}
+                      onChange={e => setSiteConfig(prev => ({ ...prev, whatsappDefaultMsg: e.target.value }))}
+                      placeholder="Hola! Me gustaría consultar sobre la disponibilidad de los departamentos."
+                      className="w-full p-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                    />
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Texto predeterminado al presionar <em>"Consultar por WhatsApp"</em> en la página pública o pie de página.
+                    </p>
+                  </div>
+
+                  {/* 2. Saludo / Encabezado de la Reserva */}
+                  <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-sky-500" /> 2. Saludo / Encabezado en Solicitud de Reserva
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => setSiteConfig(prev => ({ ...prev, whatsappReservationGreeting: "¡Hola! Me gustaría solicitar una reserva." }))}
+                        className="text-[11px] text-slate-400 hover:text-sky-500 flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Restaurar texto por defecto"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Restaurar
+                      </button>
+                    </div>
+                    <Input
+                      value={siteConfig.whatsappReservationGreeting}
+                      onChange={e => setSiteConfig(prev => ({ ...prev, whatsappReservationGreeting: e.target.value }))}
+                      placeholder="¡Hola! Me gustaría solicitar una reserva."
+                      className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-medium"
+                    />
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Primera línea del mensaje que envía el huésped al solicitar reserva, antes de los datos personales y fechas.
+                    </p>
+                  </div>
+
+                  {/* 3. Cierre / Recordatorio de Seña al pie del mensaje */}
+                  <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <FileSpreadsheet className="w-4 h-4 text-indigo-500" /> 3. Texto al Pie de la Reserva (Instrucciones / Seña)
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => setSiteConfig(prev => ({ ...prev, whatsappReservationFooter: "Aguardo su confirmación y datos para el pago del adelanto de seña. ¡Muchas gracias!" }))}
+                        className="text-[11px] text-slate-400 hover:text-indigo-500 flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Restaurar texto por defecto"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Restaurar
+                      </button>
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={siteConfig.whatsappReservationFooter}
+                      onChange={e => setSiteConfig(prev => ({ ...prev, whatsappReservationFooter: e.target.value }))}
+                      placeholder="Aguardo su confirmación y datos para el pago del adelanto de seña. ¡Muchas gracias!"
+                      className="w-full p-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                    />
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Texto que se agrega al final del mensaje de WhatsApp del huésped, después del precio total.
+                    </p>
+                  </div>
+
+                  {/* 4. Aviso de Seña en el Modal Web */}
+                  <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <AlertCircle className="w-4 h-4 text-amber-500" /> 4. Aviso de Seña en la Pantalla Web del Huésped
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => setSiteConfig(prev => ({ ...prev, whatsappDepositNotice: "Recordá que las fechas quedan bloqueadas únicamente luego de recibir el adelanto de seña." }))}
+                        className="text-[11px] text-slate-400 hover:text-amber-500 flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Restaurar texto por defecto"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Restaurar
+                      </button>
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={siteConfig.whatsappDepositNotice}
+                      onChange={e => setSiteConfig(prev => ({ ...prev, whatsappDepositNotice: e.target.value }))}
+                      placeholder="Recordá que las fechas quedan bloqueadas únicamente luego de recibir el adelanto de seña."
+                      className="w-full p-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                    />
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Mensaje informativo que se le muestra al huésped en la web tras pulsar solicitar reserva (ideal para indicar porcentaje de seña o políticas).
+                    </p>
+                  </div>
+
+                  {/* 5. Tiempo de Espera antes de Redirigir a WhatsApp */}
+                  <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="text-base">⏱</span> 5. Tiempo de Espera antes de Abrir WhatsApp
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => setSiteConfig(prev => ({ ...prev, whatsappRedirectDelay: "4" }))}
+                        className="text-[11px] text-slate-400 hover:text-emerald-500 flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Restaurar valor por defecto"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Restaurar
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={siteConfig.whatsappRedirectDelay ?? "4"}
+                        onChange={e => setSiteConfig(prev => ({ ...prev, whatsappRedirectDelay: e.target.value }))}
+                        className="w-28 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono text-center"
+                      />
+                      <span className="text-sm text-slate-500 dark:text-slate-400">segundos</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Cuántos segundos se muestra el aviso de seña en pantalla antes de que WhatsApp se abra automáticamente. Valor recomendado: 4. Mínimo: 1, Máximo: 30.
+                    </p>
+                  </div>
+
+                  {/* 6. Plantilla de Contacto del Administrador al Huésped */}
+                  <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <PhoneCall className="w-4 h-4 text-teal-500" /> 6. Plantilla al Contactar al Huésped desde el Panel
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => setSiteConfig(prev => ({ ...prev, whatsappAdminMsgTemplate: "¡Hola {huesped}! Te contacto desde {sitio} con respecto a tu solicitud de reserva en {departamento}." }))}
+                        className="text-[11px] text-slate-400 hover:text-teal-500 flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Restaurar texto por defecto"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Restaurar
+                      </button>
+                    </div>
+                    <Input
+                      value={siteConfig.whatsappAdminMsgTemplate}
+                      onChange={e => setSiteConfig(prev => ({ ...prev, whatsappAdminMsgTemplate: e.target.value }))}
+                      placeholder="¡Hola {huesped}! Te contacto desde {sitio} con respecto a tu solicitud de reserva en {departamento}."
+                      className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-medium"
+                    />
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Variables que se completan solas al hacer clic en el teléfono del huésped: <code className="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px]">{"{huesped}"}</code>, <code className="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px]">{"{departamento}"}</code>, <code className="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px]">{"{sitio}"}</code>.
+                    </p>
+                  </div>
+                </div>
+
+                {/* COLUMNA DERECHA: PREVISUALIZACIÓN DEL MENSAJE DE RESERVA (5 cols) */}
+                <div className="lg:col-span-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5 text-emerald-500" /> Simulación del Mensaje de Reserva
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      Formato WhatsApp
+                    </span>
+                  </div>
+
+                  {/* Chat Container */}
+                  <div className="rounded-2xl p-4 bg-[#0b141a] border border-[#202c33] shadow-lg relative overflow-hidden font-sans">
+                    <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+
+                    {/* Mensaje de entrada del Huésped */}
+                    <div className="relative max-w-[320px] mx-auto sm:max-w-none rounded-2xl bg-[#005c4b] p-3.5 text-white shadow-md space-y-2 text-xs leading-relaxed">
+                      <p className="font-semibold text-emerald-100">
+                        {siteConfig.whatsappReservationGreeting || "¡Hola! Me gustaría solicitar una reserva."}
+                      </p>
+
+                      <div className="border-t border-emerald-600/40 pt-1.5 space-y-0.5 text-[11px] text-slate-100">
+                        <p className="font-bold text-emerald-200">Datos Personales</p>
+                        <p>• Nombre: Juan Pérez</p>
+                        <p>• DNI/Cédula: 35.123.456</p>
+                        <p>• Nacionalidad: Argentina</p>
+                        <p>• Teléfono: +54 9 11 4000-0000</p>
+                      </div>
+
+                      <div className="border-t border-emerald-600/40 pt-1.5 space-y-0.5 text-[11px] text-slate-100">
+                        <p className="font-bold text-emerald-200">Detalles de la Reserva</p>
+                        <p>• Departamento: Departamento 1</p>
+                        <p>• Precio por día (2 personas): $59.900</p>
+                        <p>• Check-in: 15/09/2026</p>
+                        <p>• Check-out: 18/09/2026</p>
+                        <p>• Noches: 3 | Personas: 2 | Cochera: Sí</p>
+                        <p className="font-bold text-emerald-300 pt-0.5">• Precio Total: $179.700</p>
+                      </div>
+
+                      {siteConfig.whatsappReservationFooter && (
+                        <div className="border-t border-emerald-600/40 pt-1.5 text-[11px] text-emerald-100 italic">
+                          {siteConfig.whatsappReservationFooter}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-end gap-1 pt-1 text-[10px] text-emerald-200/80">
+                        <span>10:14</span>
+                        <span className="text-sky-300">✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 space-y-1.5">
+                    <p className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-500" /> Integración Automática
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      Cuando un huésped presiona <strong>"Reservar por WhatsApp"</strong> en la web, el sistema ensambla el saludo configurado, los datos calculados de la estadía y tu texto de cierre o instrucciones de pago, dejando el mensaje listo para enviar en un clic.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón Guardar Todo WhatsApp */}
+              <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Al guardar, se actualizarán los textos, mensajes y la imagen de vista previa en toda la web.
+                </span>
+                <Button
+                  onClick={handleSaveSiteConfig}
+                  disabled={savingSiteConfig}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+                >
+                  {savingSiteConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Guardar Configuración de WhatsApp
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* ── TAB 5: CONTACTO & UBICACIÓN ── */}
       {isSuperAdmin && activeTab === "contacto" && (
         <div className="space-y-6 animate-in fade-in duration-200">
@@ -1519,6 +2053,9 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     placeholder="5493513146924"
                     className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono"
                   />
+                  <p className="text-[11px] text-slate-400">
+                    Número que recibe consultas. Mensajes y portada en la solapa <button type="button" onClick={() => setActiveTab("whatsapp")} className="text-emerald-600 dark:text-emerald-400 font-bold underline hover:no-underline cursor-pointer">WhatsApp</button>.
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="font-semibold text-slate-800 dark:text-slate-200">Email de Contacto</Label>
@@ -1528,15 +2065,6 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-slate-800 dark:text-slate-200">Mensaje por Defecto de WhatsApp</Label>
-                <Input
-                  value={siteConfig.whatsappDefaultMsg}
-                  onChange={e => setSiteConfig(prev => ({ ...prev, whatsappDefaultMsg: e.target.value }))}
-                  className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -1717,11 +2245,10 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
                 {smtpTestResult && (
                   <div
-                    className={`p-3 rounded-lg text-xs font-semibold ${
-                      smtpTestResult.success
-                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900"
-                        : "bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-900"
-                    }`}
+                    className={`p-3 rounded-lg text-xs font-semibold ${smtpTestResult.success
+                      ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900"
+                      : "bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-900"
+                      }`}
                   >
                     {smtpTestResult.success ? "✅ " : "❌ "}
                     {smtpTestResult.message}

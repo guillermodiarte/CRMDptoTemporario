@@ -15,7 +15,10 @@ export default async function DepartmentsPage() {
       type: 'APARTMENT',
       sessionId
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [
+      { order: "asc" },
+      { createdAt: "desc" }
+    ],
   });
 
   // Calculate Global Active Supplies Cost for display
@@ -32,7 +35,10 @@ export default async function DepartmentsPage() {
       include: {
         departments: {
           where: { type: 'APARTMENT' },
-          orderBy: { createdAt: "desc" }
+          orderBy: [
+            { order: "asc" },
+            { createdAt: "desc" }
+          ]
         }
       }
     });

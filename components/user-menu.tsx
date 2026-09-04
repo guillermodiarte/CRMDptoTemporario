@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +23,26 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ user }: UserMenuProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const userImage = user?.image;
+
+  if (!mounted) {
+    return (
+      <Button variant="secondary" size="icon" className="rounded-full overflow-hidden" type="button">
+        {userImage ? (
+          <img src={userImage} alt="Avatar" className="h-full w-full object-cover" />
+        ) : (
+          <CircleUser className="h-5 w-5" />
+        )}
+        <span className="sr-only">Toggle user menu</span>
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu>

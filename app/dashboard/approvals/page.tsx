@@ -60,9 +60,14 @@ export default async function ApprovalsPage() {
       const r1 = allRelated[i];
       if (r1.status !== 'PENDING_APPROVAL' || r1.sessionId !== sessionId) continue;
 
+      const r1In = r1.checkIn.toISOString().split('T')[0];
+      const r1Out = r1.checkOut.toISOString().split('T')[0];
+
       // check blocking
       for (const b of blockingReservations) {
-        if (r1.departmentId === b.departmentId && r1.checkIn < b.checkOut && r1.checkOut > b.checkIn) {
+        const bIn = b.checkIn.toISOString().split('T')[0];
+        const bOut = b.checkOut.toISOString().split('T')[0];
+        if (r1.departmentId === b.departmentId && r1In < bOut && r1Out > bIn) {
            adj[r1.id].push(r1.id); // self-edge means it's in a conflict
            break;
         }
@@ -73,7 +78,9 @@ export default async function ApprovalsPage() {
         const r2 = allRelated[j];
         if (r2.status !== 'PENDING_APPROVAL' || r2.sessionId !== sessionId) continue;
         
-        if (r1.departmentId === r2.departmentId && r1.checkIn < r2.checkOut && r1.checkOut > r2.checkIn) {
+        const r2In = r2.checkIn.toISOString().split('T')[0];
+        const r2Out = r2.checkOut.toISOString().split('T')[0];
+        if (r1.departmentId === r2.departmentId && r1In < r2Out && r1Out > r2In) {
           adj[r1.id].push(r2.id);
           adj[r2.id].push(r1.id);
         }
@@ -126,15 +133,7 @@ export default async function ApprovalsPage() {
         <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Aprobaciones Pendientes</h1>
       </div>
 
-      {approvals.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xs border border-slate-200 dark:border-slate-800 p-12 text-center">
-          <ClipboardCheck className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-100">No hay reservas pendientes de aprobación</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-2">Las nuevas solicitudes web aparecerán aquí.</p>
-        </div>
-      ) : (
-        <ApprovalsClient initialApprovals={approvals} currentSessionId={sessionId} />
-      )}
+      <ApprovalsClient initialApprovals={approvals} currentSessionId={sessionId} />
     </div>
   );
 }

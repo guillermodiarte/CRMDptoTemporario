@@ -2,7 +2,7 @@
 
 import { useState, cloneElement, isValidElement, useEffect } from "react";
 import { Department, Reservation } from "@prisma/client";
-import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble, X, Home, MoreHorizontal, ShieldAlert, DollarSign, Ban, UserX, XCircle, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble, X, Home, ShieldAlert, DollarSign, Ban, UserX, XCircle, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ReservationForm } from "@/components/reservation-form";
+import { AirbnbBookingReminderModal, ReminderItem } from "@/components/airbnb-booking-reminder-modal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -34,14 +35,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -90,6 +83,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [editingRes, setEditingRes] = useState<ReservationWithDept | null>(null);
+  const [reminderModal, setReminderModal] = useState<{ isOpen: boolean; items: ReminderItem[] } | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const isVisualizer = role === 'VISUALIZER';
@@ -336,6 +330,18 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
               departments={departments}
               setOpen={setOpen}
               initialData={editingRes}
+              onDirectCreated={(info) => {
+                setTimeout(() => {
+                  setReminderModal({
+                    isOpen: true,
+                    items: [{
+                      departmentName: info.departmentName,
+                      checkIn: info.checkIn,
+                      checkOut: info.checkOut,
+                    }],
+                  });
+                }, 150);
+              }}
             />
           </DialogContent>
         </Dialog>
@@ -407,9 +413,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 {/* Merged Status Column */}
                 <TableHead className="text-center text-slate-700 dark:text-slate-200">Estado</TableHead>
                 <TableHead className="text-right text-slate-700 dark:text-slate-200">Total</TableHead>
-                <TableHead className="text-right text-slate-700 dark:text-slate-200">Gastos (Limp+Ins)</TableHead>
                 <TableHead className="text-right text-slate-700 dark:text-slate-200">Deuda</TableHead>
-                <TableHead className="text-right text-slate-700 dark:text-slate-200">Acciones</TableHead>
+                <TableHead className="text-right text-slate-700 dark:text-slate-200 w-[260px] min-w-[260px]">Acciones</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -451,6 +456,10 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 const debt = res.totalAmount - (res.depositAmount || 0);
                 const groupDebt = (res.groupTotalAmount ?? res.totalAmount) - (res.groupDepositAmount ?? res.depositAmount ?? 0);
                 const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid && (res.paymentStatus as any) !== 'CANCELLED';
+                const canEdit = res.department.isActive && !res.department.isArchived;
+                const canMarkPaid = !isPaid && !isNoShow && (res.paymentStatus as any) !== 'CANCELLED';
+                const canCancel = (res.paymentStatus as any) !== 'CANCELLED' && new Date(res.checkIn) >= today && !isNoShow;
+                const disabledBtnClass = "h-8 w-8 p-0 rounded-lg border border-slate-200/50 dark:border-slate-800 text-slate-400 dark:text-slate-600 opacity-30 dark:opacity-35 cursor-not-allowed disabled:pointer-events-auto hover:bg-transparent dark:hover:bg-transparent hover:text-slate-400 dark:hover:text-slate-600";
 
                 return (
                   <TableRow key={res.id} className={rowClass}>
@@ -563,20 +572,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex flex-col items-end">
-                        <span className="text-muted-foreground">
-                          {(res.paymentStatus as any) === 'CANCELLED'
-                            ? '-'
-                            : (res.cleaningFee ? formatCurrency(res.cleaningFee) : '-')}
-                        </span>
-                        {(res.paymentStatus as any) !== 'CANCELLED' && (res.amenitiesFee || 0) > 0 && !isParkingUnit && (
-                          <span className="text-xs text-red-600" title="Insumos (Informativo)">
-                            +{formatCurrency(res.amenitiesFee || 0)}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
+
                     <TableCell className="text-right text-red-600 dark:text-red-400 font-medium">
                       {(res.paymentStatus as any) === 'CANCELLED'
                         ? '-'
@@ -592,111 +588,117 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           ) : '-')
                       }
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right w-[260px] min-w-[260px]">
                       <div className="flex items-center justify-end gap-1">
-                        {!isVisualizer && res.department.isActive && !res.department.isArchived && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(res)}
-                            className="h-8 w-8 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 shadow-xs border border-blue-200 dark:border-blue-800/60 rounded-lg cursor-pointer"
-                            title="Editar Reserva"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                        {!isVisualizer && (
+                          <>
+                            {/* 1. Editar */}
+                            {canEdit ? (
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => handleEdit(res)}
+                                className="h-8 w-8 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 shadow-xs border border-blue-200 dark:border-blue-800/60 rounded-lg cursor-pointer"
+                                title="Editar Reserva"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button variant="ghost" size="sm" disabled className={disabledBtnClass} title="No editable">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {/* 2. Ver Nota */}
+                            {res.notes ? (
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => setViewNotesRes(res)}
+                                className="h-8 w-8 p-0 rounded-lg cursor-pointer border border-amber-200 dark:border-amber-800/60 text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                                title="Ver Nota"
+                              >
+                                <NotepadText className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button variant="ghost" size="sm" disabled className={disabledBtnClass} title="Sin notas">
+                                <NotepadText className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {/* 3. Marcar Pagado */}
+                            {canMarkPaid ? (
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => handleMarkPaidClick(res.id, res.totalAmount)}
+                                className="h-8 w-8 p-0 rounded-lg cursor-pointer border border-emerald-200 dark:border-emerald-800/60 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                title="Marcar Pagado"
+                              >
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button variant="ghost" size="sm" disabled className={disabledBtnClass} title={isPaid ? "Ya pagado" : isNoShow ? "No presentado" : "Reserva cancelada"}>
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {/* 4. Marcar No Presentado */}
+                            {canMarkNoShow ? (
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => handleNoShowClick(res.id)}
+                                className="h-8 w-8 p-0 rounded-lg cursor-pointer border border-orange-200 dark:border-orange-800/60 text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/40"
+                                title="Marcar No Presentado"
+                              >
+                                <UserX className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button variant="ghost" size="sm" disabled className={disabledBtnClass} title={isNoShow ? "Huésped marcado como no presentado" : "Marcar No Presentado (no disponible)"}>
+                                <UserX className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {/* 5. Lista Negra */}
+                            {!isBlacklisted ? (
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => setReportBlacklistData(res)}
+                                className="h-8 w-8 p-0 rounded-lg cursor-pointer border border-red-200 dark:border-red-800/60 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                                title="Reportar a Lista Negra"
+                              >
+                                <ShieldAlert className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button variant="ghost" size="sm" disabled className={disabledBtnClass} title="Huésped ya en lista negra">
+                                <ShieldAlert className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {/* 6. Cancelar */}
+                            {canCancel ? (
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => handleCancelReservationClick(res.id)}
+                                className="h-8 w-8 p-0 rounded-lg cursor-pointer border border-red-200 dark:border-red-800/60 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                                title="Cancelar Reserva"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button variant="ghost" size="sm" disabled className={disabledBtnClass} title={isCancelled ? "Reserva ya cancelada" : "No cancelable"}>
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {/* 7. Eliminar */}
+                            <Button
+                              variant="ghost" size="sm"
+                              onClick={() => handleDeleteClick(res.id)}
+                              className="h-8 w-8 p-0 rounded-lg cursor-pointer border border-red-200 dark:border-red-800/60 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                              title="Eliminar"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </>
                         )}
-                        {(() => {
-                          const actions = [];
-
-                          if (res.notes) {
-                            actions.push({
-                              label: "Ver Nota",
-                              icon: <NotepadText className="h-4 w-4 text-blue-500" />,
-                              onClick: () => setViewNotesRes(res),
-                              title: "Ver nota"
-                            });
-                          }
-
-                          if (!isVisualizer) {
-                            if (!isPaid && !isNoShow && (res.paymentStatus as any) !== 'CANCELLED') {
-                              actions.push({
-                                label: "Marcar Pagado",
-                                icon: <DollarSign className="h-4 w-4 text-emerald-600" />,
-                                onClick: () => handleMarkPaidClick(res.id, res.totalAmount),
-                                title: "Marcar Pagado"
-                              });
-                            }
-
-                            if (canMarkNoShow) {
-                              actions.push({
-                                label: "Marcar No Presentado",
-                                icon: <UserX className="h-4 w-4 text-orange-500" />,
-                                onClick: () => handleNoShowClick(res.id),
-                                title: "Marcar No Presentado"
-                              });
-                            }
-
-                            if (isBlacklisted) {
-                              actions.push({
-                                label: "En Lista Negra",
-                                icon: <Ban className="h-4 w-4 text-red-500" />,
-                                onClick: () => { },
-                                disabled: true,
-                                title: "Huésped ya en lista negra"
-                              });
-                            } else {
-                              actions.push({
-                                label: "Reportar",
-                                icon: <ShieldAlert className="h-4 w-4 text-red-500" />,
-                                onClick: () => setReportBlacklistData(res),
-                                title: "Reportar a Lista Negra"
-                              });
-                            }
-
-                            const canCancel = (res.paymentStatus as any) !== 'CANCELLED' && new Date(res.checkIn) >= today && !isNoShow;
-
-                            if (canCancel) {
-                              actions.push({
-                                label: "Cancelar Reserva",
-                                icon: <XCircle className="h-4 w-4 text-red-600" />,
-                                onClick: () => handleCancelReservationClick(res.id),
-                                title: "Cancelar Reserva"
-                              });
-                            }
-
-                            actions.push({
-                              label: "Eliminar",
-                              icon: <Trash className="h-4 w-4 text-red-600" />,
-                              onClick: () => handleDeleteClick(res.id),
-                              title: "Eliminar"
-                            });
-                          }
-
-                          return (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg cursor-pointer border border-slate-200 dark:border-slate-800">
-                                  <span className="sr-only">Abrir menú</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                {actions.map((action, idx) => (
-                                  <DropdownMenuItem
-                                    key={idx}
-                                    onClick={action.onClick}
-                                    disabled={action.disabled}
-                                    className="cursor-pointer flex items-center gap-2 text-xs py-2"
-                                  >
-                                    {action.icon}
-                                    <span>{action.label}</span>
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          );
-                        })()}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -704,7 +706,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
               })}
               {sortedData.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={!isVisualizer ? 11 : 10} className="text-center h-24">
+                  <TableCell colSpan={!isVisualizer ? 10 : 9} className="text-center h-24">
                     No se encontraron reservas.
                   </TableCell>
                 </TableRow>
@@ -1054,6 +1056,13 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
           )}
         </DialogContent>
       </Dialog>
+      {reminderModal && (
+        <AirbnbBookingReminderModal
+          isOpen={reminderModal.isOpen}
+          onClose={() => setReminderModal(null)}
+          items={reminderModal.items}
+        />
+      )}
     </>
   );
 };

@@ -32,6 +32,9 @@ export async function POST(req: NextRequest) {
         cleaningFee = settings ? parseFloat(settings.value) : 0;
       }
 
+      const inDateStr = typeof seg.checkIn === 'string' ? seg.checkIn.split('T')[0] : new Date(seg.checkIn).toISOString().split('T')[0];
+      const outDateStr = typeof seg.checkOut === 'string' ? seg.checkOut.split('T')[0] : new Date(seg.checkOut).toISOString().split('T')[0];
+
       const reservation = await prisma.reservation.create({
         data: {
           departmentId: dept.id,
@@ -44,8 +47,8 @@ export async function POST(req: NextRequest) {
           guestPhone,
           guestPeopleCount: people,
           bedsRequired: people,
-          checkIn: new Date(seg.checkIn),
-          checkOut: new Date(seg.checkOut),
+          checkIn: new Date(`${inDateStr}T12:00:00.000Z`),
+          checkOut: new Date(`${outDateStr}T12:00:00.000Z`),
           totalAmount: seg.totalAmount,
           depositAmount: 0,
           cleaningFee: cleaningFee,
