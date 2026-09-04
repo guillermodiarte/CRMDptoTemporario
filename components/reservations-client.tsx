@@ -369,23 +369,23 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
         <div className="flex flex-wrap gap-4 mb-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-50 border border-yellow-200 rounded"></div>
+            <div className="w-4 h-4 bg-yellow-100 dark:bg-amber-400 border border-yellow-300 dark:border-amber-400 rounded"></div>
             <span>Pendiente</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-50 border border-green-200 rounded"></div>
+            <div className="w-4 h-4 bg-green-100 dark:bg-emerald-500 border border-green-300 dark:border-emerald-500 rounded"></div>
             <span>Pagado</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-50 border border-blue-200 rounded"></div>
+            <div className="w-4 h-4 bg-blue-100 dark:bg-blue-500 border border-blue-300 dark:border-blue-500 rounded"></div>
             <span>Parcial</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
+            <div className="w-4 h-4 bg-red-100 dark:bg-rose-500 border border-red-300 dark:border-rose-500 rounded"></div>
             <span>Cancelado</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-orange-50 border border-orange-200 rounded"></div>
+            <div className="w-4 h-4 bg-orange-100 dark:bg-orange-500 border border-orange-300 dark:border-orange-500 rounded"></div>
             <span>No Presentado</span>
           </div>
           <div className="flex items-center gap-2">
@@ -427,20 +427,20 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
                 const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
 
-                let rowClass = "border-b border-slate-100 dark:border-slate-800/60 transition-colors ";
+                let rowClass = "border-b border-slate-100 dark:border-slate-700/60 transition-colors ";
                 if (isNoShow) {
-                  rowClass += "bg-orange-50/70 dark:bg-orange-950/20 hover:bg-orange-100/80 dark:hover:bg-orange-900/30 text-muted-foreground";
+                  rowClass += "bg-orange-50/70 dark:bg-orange-900/30 hover:bg-orange-100/80 dark:hover:bg-orange-800/40 text-muted-foreground";
                 } else if (isBlacklisted) {
-                  rowClass += "bg-red-50/80 dark:bg-red-950/30 hover:bg-red-100/90 dark:hover:bg-red-900/40 border-l-4 border-red-500 text-slate-900 dark:text-slate-100";
+                  rowClass += "bg-red-50/80 dark:bg-red-900/40 hover:bg-red-100/90 dark:hover:bg-red-800/50 border-l-4 border-red-500 text-slate-900 dark:text-slate-100";
                 } else if (isPaid) {
-                  rowClass += "bg-green-50/70 dark:bg-emerald-950/20 hover:bg-green-100/80 dark:hover:bg-emerald-900/30 text-slate-900 dark:text-slate-100";
+                  rowClass += "bg-green-50/70 dark:bg-emerald-900/30 hover:bg-green-100/80 dark:hover:bg-emerald-800/40 text-slate-900 dark:text-slate-100";
                 } else if (isPartial) {
-                  rowClass += "bg-blue-50/70 dark:bg-blue-950/20 hover:bg-blue-100/80 dark:hover:bg-blue-900/30 text-slate-900 dark:text-slate-100";
+                  rowClass += "bg-blue-50/70 dark:bg-blue-900/30 hover:bg-blue-100/80 dark:hover:bg-blue-800/40 text-slate-900 dark:text-slate-100";
                 } else if ((res.paymentStatus as any) === 'CANCELLED') {
-                  rowClass += "bg-red-50/60 dark:bg-rose-950/20 hover:bg-red-100/70 dark:hover:bg-rose-900/30 text-muted-foreground";
+                  rowClass += "bg-red-50/60 dark:bg-rose-900/25 hover:bg-red-100/70 dark:hover:bg-rose-800/35 text-muted-foreground";
                 } else {
-                  // Pending is default
-                  rowClass += "bg-yellow-50/70 dark:bg-amber-950/20 hover:bg-yellow-100/80 dark:hover:bg-amber-900/30 text-slate-900 dark:text-slate-100";
+                  // Pending
+                  rowClass += "bg-yellow-50/70 dark:bg-amber-900/30 hover:bg-yellow-100/80 dark:hover:bg-amber-800/40 text-slate-900 dark:text-slate-100";
                 }
 
                 if (isNext) {
@@ -527,12 +527,12 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     <TableCell className="text-center">
                       <div className="flex flex-col items-center gap-1">
                         <Badge
-                          variant={isPaid ? "default" : "secondary"} // Default is black for Paid
+                          variant={isPaid ? "default" : "secondary"}
                           className={
-                            (res.paymentStatus as any) === 'CANCELLED' ? "bg-red-500 hover:bg-red-600 text-white" :
-                              isPaid ? "" : // Let variant="default" handle it (Black)
-                                isPartial ? "bg-blue-500 hover:bg-blue-600 text-white" :
-                                  "bg-yellow-500 hover:bg-yellow-600 text-white"
+                            (res.paymentStatus as any) === 'CANCELLED' ? "bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-500" :
+                              isPaid ? "bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-slate-900 font-bold" :
+                                isPartial ? "bg-blue-500 hover:bg-blue-600 text-white dark:bg-blue-400 dark:hover:bg-blue-300 dark:text-slate-900 font-bold" :
+                                  "bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-400 dark:hover:bg-amber-300 dark:text-slate-900 font-bold"
                           }
                         >
                           {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PENDIENTE'}
@@ -577,7 +577,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right text-red-600 font-medium">
+                    <TableCell className="text-right text-red-600 dark:text-red-400 font-medium">
                       {(res.paymentStatus as any) === 'CANCELLED'
                         ? '-'
                         : (!isPaid && !isNoShow ? (
@@ -729,19 +729,19 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
             const isCancelled = (res.paymentStatus as any) === 'CANCELLED';
 
-            let cardClass = "text-sm border border-slate-200 dark:border-slate-800 ";
+            let cardClass = "text-sm border border-slate-200 dark:border-slate-700 ";
             if (isNoShow) {
-              cardClass += "bg-orange-50/70 dark:bg-orange-950/30 opacity-90";
+              cardClass += "bg-orange-50/70 dark:bg-orange-900/30 opacity-90";
             } else if (isBlacklisted) {
-              cardClass += "bg-red-50/80 dark:bg-red-950/30 border-l-4 border-red-500";
+              cardClass += "bg-red-50/80 dark:bg-red-900/40 border-l-4 border-red-500";
             } else if (isPaid) {
-              cardClass += "bg-green-50/70 dark:bg-emerald-950/30";
+              cardClass += "bg-green-50/70 dark:bg-emerald-900/30";
             } else if (isPartial) {
-              cardClass += "bg-blue-50/70 dark:bg-blue-950/30";
+              cardClass += "bg-blue-50/70 dark:bg-blue-900/30";
             } else if ((res.paymentStatus as any) === 'CANCELLED') {
-              cardClass += "bg-red-50/50 dark:bg-rose-950/20";
+              cardClass += "bg-red-50/50 dark:bg-rose-900/20";
             } else {
-              cardClass += "bg-yellow-50/70 dark:bg-amber-950/30";
+              cardClass += "bg-yellow-50/70 dark:bg-amber-900/30";
             }
 
             if (isNext) cardClass += " ring-2 ring-blue-500";
@@ -782,10 +782,10 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap 
-                          ${(res.paymentStatus as any) === 'CANCELLED' ? "bg-red-100 text-red-700 border-red-200" :
-                            isPaid ? "bg-gray-900 text-white border-gray-900 dark:bg-emerald-600 dark:border-emerald-600" : // Black for paid
-                              isPartial ? "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700" :
-                                "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700"
+                          ${(res.paymentStatus as any) === 'CANCELLED' ? "bg-red-100 text-red-700 border-red-200 dark:bg-red-600 dark:text-white dark:border-red-600" :
+                            isPaid ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500 dark:text-slate-900 dark:border-emerald-500 font-extrabold" :
+                              isPartial ? "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500 dark:text-white dark:border-blue-400 font-extrabold" :
+                                "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-400 dark:text-slate-900 dark:border-amber-400 font-extrabold"
                           }`}>
                           {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PEND.'}
                         </span>
