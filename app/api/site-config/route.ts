@@ -46,6 +46,7 @@ export async function PUT(req: Request) {
       loginLogoUrl: "site_login_logo_url",
       loginLogoUrlDark: "site_login_logo_url_dark",
       loginLogoSize: "site_login_logo_size",
+      appIconUrl: "site_app_icon_url",
       heroSlides: "site_hero_slides",
       heroSlideInterval: "site_hero_slide_interval",
       heroOverlayOpacity: "site_hero_overlay_opacity",
@@ -116,6 +117,8 @@ export async function PUT(req: Request) {
     revalidatePath("/admin");
     revalidatePath("/dashboard", "layout");
     revalidatePath("/dashboard/settings");
+    revalidatePath("/manifest.webmanifest");
+    revalidatePath("/api/manifest-admin");
 
     const updatedConfig = await getSiteConfig();
     return NextResponse.json({ success: true, config: updatedConfig });

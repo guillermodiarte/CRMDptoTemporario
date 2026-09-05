@@ -41,6 +41,9 @@ import {
   Compass,
   Share2,
   RotateCcw,
+  Smartphone,
+  Info,
+  HelpCircle,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -612,7 +615,7 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
             >
-              <Sparkles className="w-4 h-4 text-sky-500" /> Identidad & Login
+              <Sparkles className="w-4 h-4 text-sky-500" /> Identidad, Login & App
             </button>
 
             <button
@@ -1242,6 +1245,235 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                 <Button onClick={handleSaveSiteConfig} disabled={savingSiteConfig} className="bg-sky-600 hover:bg-sky-500 text-white font-bold cursor-pointer">
                   {savingSiteConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                   Guardar Identidad
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card: Ícono de la Aplicación Instalable (PWA / Móvil) */}
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/20 pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2 text-base sm:text-lg">
+                  <div className="p-2 rounded-xl bg-sky-500/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400">
+                    <Smartphone className="w-5 h-5" />
+                  </div>
+                  Ícono de la Aplicación Instalable (PWA / Móvil)
+                </CardTitle>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 w-fit">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Android • iOS • Windows
+                </span>
+              </div>
+              <CardDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
+                Personalizá el ícono oficial que se mostrará al instalar la aplicación en la pantalla de inicio de celulares y computadoras.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-6 pt-6">
+              {/* Box de Especificaciones Técnicas, Formatos y Medidas Óptimas */}
+              <div className="rounded-2xl border border-sky-100 dark:border-sky-900/40 bg-sky-50/40 dark:bg-sky-950/20 p-4 sm:p-5 space-y-4">
+                <div className="flex items-center gap-2 text-sky-900 dark:text-sky-200 font-bold text-sm">
+                  <Info className="w-4 h-4 text-sky-500 shrink-0" />
+                  Requisitos de Formato y Medidas Óptimas Recomendadas
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                  {/* Formatos */}
+                  <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900/80 border border-sky-100/80 dark:border-slate-800 space-y-1.5 shadow-xs">
+                    <div className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300 flex items-center justify-between">
+                      <span>Formatos Permitidos</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 font-mono">PNG / SVG</span>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      <strong className="text-slate-900 dark:text-white font-semibold">PNG (.png):</strong> Formato <span className="text-emerald-600 dark:text-emerald-400 font-bold">altamente recomendado</span> por compatibilidad total con Android y Apple (soporta transparencia).
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      También podés subir <strong className="text-slate-700 dark:text-slate-300">SVG</strong> (vectorial), <strong className="text-slate-700 dark:text-slate-300">WebP</strong> o <strong className="text-slate-700 dark:text-slate-300">JPG</strong>.
+                    </p>
+                  </div>
+
+                  {/* Dimensiones */}
+                  <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900/80 border border-sky-100/80 dark:border-slate-800 space-y-1.5 shadow-xs">
+                    <div className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300 flex items-center justify-between">
+                      <span>Medidas Óptimas</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-mono">512 × 512 px</span>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      <strong className="text-slate-900 dark:text-white font-semibold">512 × 512 px</strong> es la resolución óptima estándar para pantallas Retina y pantallas de bienvenida.
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Mínimo requerido: <strong className="text-slate-700 dark:text-slate-300">192 × 192 px</strong>. Proporción cuadrada obligatoria (<strong className="text-slate-700 dark:text-slate-300">1:1</strong>).
+                    </p>
+                  </div>
+
+                  {/* Zona Segura */}
+                  <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900/80 border border-sky-100/80 dark:border-slate-800 space-y-1.5 shadow-xs">
+                    <div className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300 flex items-center justify-between">
+                      <span>Zona Segura (Margen)</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 font-mono">10% - 15%</span>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Android recorta los íconos en círculos o esquinas curvas según el modelo de celular.
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Mantené el logo centrado dejando un margen del <strong className="text-slate-700 dark:text-slate-300">10-15%</strong> en los 4 bordes para evitar que se recorte.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Selector Visual del Ícono y Simulador en Pantalla de Celular */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                {/* Lado Izquierdo: Gestión del Ícono Actual */}
+                <div className="lg:col-span-7 space-y-4 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                        Ícono Seleccionado
+                      </Label>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {siteConfig.appIconUrl && siteConfig.appIconUrl !== "/icon.png"
+                          ? "Ícono personalizado activo"
+                          : "Usando ícono predeterminado del sistema"}
+                      </p>
+                    </div>
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                      {siteConfig.appIconUrl ? siteConfig.appIconUrl.split("/").pop() : "icon.png"}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                    {/* Caja de previsualización cuadrada con patrón ajedrezado para transparencias */}
+                    <div className="relative w-28 h-28 rounded-2xl border-2 border-dashed border-sky-400 dark:border-sky-600 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:8px_8px] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] flex items-center justify-center p-2.5 overflow-hidden shadow-inner shrink-0 group">
+                      <img
+                        src={siteConfig.appIconUrl || "/icon.png"}
+                        alt="Ícono de App"
+                        className="w-full h-full object-contain transition-transform group-hover:scale-105 duration-200"
+                      />
+                    </div>
+
+                    <div className="flex-1 space-y-2.5 w-full">
+                      <div className="text-xs text-slate-600 dark:text-slate-300">
+                        Elegí un ícono de la galería de archivos o cargá uno directamente desde tu dispositivo:
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openPicker("appIconUrl", "icons")}
+                          className="text-xs font-semibold cursor-pointer h-8 px-3 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        >
+                          <FolderOpen className="w-3.5 h-3.5 mr-1.5 text-sky-500" /> Galería
+                        </Button>
+
+                        <label className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold cursor-pointer h-8 shadow-xs transition-colors">
+                          <Upload className="w-3.5 h-3.5" /> Subir Ícono
+                          <input
+                            type="file"
+                            accept="image/png,image/svg+xml,image/webp,image/jpeg"
+                            onChange={e => handleDirectUpload("appIconUrl", "icons", e)}
+                            className="hidden"
+                          />
+                        </label>
+
+                        {siteConfig.appIconUrl && siteConfig.appIconUrl !== "/icon.png" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setSiteConfig(prev => ({ ...prev, appIconUrl: "/icon.png" }))}
+                            className="text-xs text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 h-8 px-2.5 cursor-pointer"
+                            title="Restaurar ícono por defecto"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 mr-1 text-slate-400" /> Restaurar Defecto
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lado Derecho: Maqueta de Pantalla Móvil (Mobile Home Screen Simulation) */}
+                <div className="lg:col-span-5 flex flex-col items-center">
+                  <div className="w-full max-w-[280px] rounded-3xl p-4 bg-gradient-to-b from-slate-900 to-slate-950 border-4 border-slate-700 dark:border-slate-800 shadow-xl text-white space-y-4">
+                    {/* Barra de estado simulada */}
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 px-1">
+                      <span>09:41</span>
+                      <div className="w-16 h-3 bg-black/60 rounded-full mx-auto" />
+                      <span>100%</span>
+                    </div>
+
+                    <div className="text-center text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                      Simulación en Pantalla de Inicio
+                    </div>
+
+                    {/* Fila de íconos en pantalla con la app resaltada */}
+                    <div className="grid grid-cols-3 gap-3 items-center justify-items-center py-2">
+                      {/* App dummy 1 */}
+                      <div className="flex flex-col items-center gap-1 opacity-40">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/80 flex items-center justify-center text-white text-[10px] font-bold shadow-md">
+                          Tel
+                        </div>
+                        <span className="text-[10px] text-slate-400">Teléfono</span>
+                      </div>
+
+                      {/* NUESTRA APP (App Principal Instalada) */}
+                      <div className="flex flex-col items-center gap-1.5 animate-in zoom-in-95 duration-200">
+                        <div className="relative group">
+                          <div className="w-14 h-14 rounded-2xl bg-white p-2 shadow-lg ring-2 ring-sky-400/80 flex items-center justify-center overflow-hidden transition-transform group-hover:scale-110">
+                            <img
+                              src={siteConfig.appIconUrl || "/icon.png"}
+                              alt="Ícono Móvil"
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-bold text-white drop-shadow-sm tracking-tight">
+                          Di'Arte
+                        </span>
+                      </div>
+
+                      {/* App dummy 2 */}
+                      <div className="flex flex-col items-center gap-1 opacity-40">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/80 flex items-center justify-center text-white text-[10px] font-bold shadow-md">
+                          Msj
+                        </div>
+                        <span className="text-[10px] text-slate-400">Mensajes</span>
+                      </div>
+                    </div>
+
+                    {/* Previsualización en formato circular (Android / Samsung) */}
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-300 px-1">
+                      <span className="text-[10px] text-slate-400">Variante Circular:</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-white p-1 overflow-hidden shadow-inner flex items-center justify-center">
+                          <img
+                            src={siteConfig.appIconUrl || "/icon.png"}
+                            alt="Circular"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <span className="text-[10px] font-medium text-slate-300">Samsung / Pixel</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón Guardar */}
+              <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
+                <Button
+                  onClick={handleSaveSiteConfig}
+                  disabled={savingSiteConfig}
+                  className="bg-sky-600 hover:bg-sky-500 text-white font-bold cursor-pointer"
+                >
+                  {savingSiteConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Guardar Ícono de la App
                 </Button>
               </div>
             </CardContent>

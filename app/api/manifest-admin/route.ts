@@ -1,24 +1,25 @@
-import { MetadataRoute } from 'next'
-import { getSiteConfig } from '@/lib/site-config-loader'
-import { SITE_CONFIG_DEFAULTS } from '@/lib/site.config'
+import { NextResponse } from 'next/server';
+import { getSiteConfig } from '@/lib/site-config-loader';
 
 export const dynamic = 'force-dynamic';
 
-export default async function manifest(): Promise<MetadataRoute.Manifest> {
+export async function GET() {
   const config = await getSiteConfig();
   const iconSrc = config.appIconUrl || '/icon.png';
   const isSvg = iconSrc.toLowerCase().endsWith('.svg');
   const isWebp = iconSrc.toLowerCase().endsWith('.webp');
   const iconType = isSvg ? 'image/svg+xml' : isWebp ? 'image/webp' : 'image/png';
 
-  return {
-    name: config.siteName || SITE_CONFIG_DEFAULTS.siteName,
+  const manifest = {
+    name: "Di'Arte — Panel Admin",
     short_name: "Di'Arte",
-    description: config.seoDescription || SITE_CONFIG_DEFAULTS.seoDescription,
-    start_url: '/',
+    description: "Panel de administración de reservas Di'Arte",
+    start_url: '/dashboard',
+    scope: '/dashboard',
     display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#ffffff',
+    background_color: '#0f172a',
+    theme_color: '#0f172a',
+    orientation: 'portrait',
     icons: [
       {
         src: iconSrc,
@@ -39,5 +40,12 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
         purpose: 'any maskable',
       },
     ],
-  }
+  };
+
+  return new NextResponse(JSON.stringify(manifest), {
+    headers: {
+      'Content-Type': 'application/manifest+json',
+      'Cache-Control': 'no-store, max-age=0',
+    },
+  });
 }

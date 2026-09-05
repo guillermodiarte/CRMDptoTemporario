@@ -45,6 +45,7 @@ export const SITE_CONFIG_DEFAULTS = {
   loginLogoUrl: "",
   loginLogoUrlDark: "",
   loginLogoSize: "208", // px width for login card logo (w-52 = 208px)
+  appIconUrl: "/icon.png", // Ícono de la aplicación instalable (PWA / Android / iOS)
 
   // Slides / Carrusel de Portada
   heroSlides: JSON.stringify(DEFAULT_HERO_SLIDES),

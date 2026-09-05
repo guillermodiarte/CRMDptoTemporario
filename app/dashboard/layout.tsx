@@ -34,9 +34,22 @@ import { AdminThemeProvider } from "@/components/admin-theme-provider";
 import { AdminThemeToggle } from "@/components/admin-theme-toggle";
 import Image from "next/image";
 
+import type { Metadata } from "next";
 import { getSiteConfig } from "@/lib/site-config-loader";
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await getSiteConfig();
+  const icon = config.appIconUrl || "/icon.png?v=3";
+  return {
+    manifest: '/api/manifest-admin',
+    icons: {
+      icon,
+      apple: icon,
+    },
+  };
+}
 
 export default async function DashboardLayout({
   children,

@@ -71,8 +71,8 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [ogImageUrl],
     },
     icons: {
-      icon: "/icon.png?v=3",
-      apple: "/icon.png?v=3",
+      icon: config.appIconUrl || "/icon.png?v=3",
+      apple: config.appIconUrl || "/icon.png?v=3",
     },
   };
 }

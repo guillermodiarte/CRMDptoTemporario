@@ -57,12 +57,17 @@ export async function POST(req: NextRequest) {
       let extension = isSvg ? "svg" : "webp";
 
       if (!isSvg) {
-        // Auto-resize and compress to webp for ultra fast loading and low bandwidth
+        // For icons folder, preserve original format (especially PNG with alpha channel for PWA icons)
+        const isIconFolder = subDir === "icons";
+        const isPng = file.type === "image/png" || file.name.toLowerCase().endsWith(".png");
+        const format = (isIconFolder && isPng) ? "original" : "webp";
+
+        // Auto-resize and compress for optimal performance
         const { buffer: optimizedBuffer, extension: optExt } = await optimizeImageBuffer(rawBuffer, {
-          maxWidth: 1600,
-          maxHeight: 1200,
-          quality: 82,
-          format: "webp",
+          maxWidth: isIconFolder ? 1024 : 1600,
+          maxHeight: isIconFolder ? 1024 : 1200,
+          quality: isIconFolder ? 92 : 82,
+          format,
         });
         bufferToWrite = optimizedBuffer;
         extension = optExt;
