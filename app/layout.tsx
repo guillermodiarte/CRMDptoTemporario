@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
@@ -15,8 +15,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const viewport = {
+export const viewport: Viewport = {
   themeColor: "#ffffff",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -73,6 +76,11 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: {
       icon: config.appIconUrl || "/icon.png?v=3",
       apple: config.appIconUrl || "/icon.png?v=3",
+    },
+    appleWebApp: {
+      capable: true,
+      title: "Di'Arte",
+      statusBarStyle: "default",
     },
   };
 }

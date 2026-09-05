@@ -169,9 +169,9 @@ export default async function DashboardPage() {
   };
 
   return (
-    <div className="flex-1 space-y-4">
+    <div className="flex-1 space-y-4 min-w-0 w-full max-w-full">
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Panel General</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Panel General</h2>
       </div>
 
       {/* ═══════════════════════════════════════════════════════
@@ -180,12 +180,12 @@ export default async function DashboardPage() {
                  Ingresos Mes | Ocupación → Pagos | Próximo →
                  Notas → Clima → Dólar
       ═══════════════════════════════════════════════════════ */}
-      <div className="md:hidden space-y-4">
+      <div className="md:hidden space-y-4 min-w-0 w-full">
 
         {/* Quick Actions */}
         <Card className="bg-white dark:bg-slate-900 shadow-sm border-slate-200 dark:border-slate-800">
-          <CardContent className="p-4">
-            <div className={`grid gap-3 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <CardContent className="p-3 sm:p-4">
+            <div className={`grid gap-2 sm:gap-3 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
               {/* Create Reservation — ADMIN only */}
               {isAdmin && (
                 <Link href="/dashboard/reservations?new=true" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 active:scale-95 transition-transform">
@@ -228,7 +228,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             {todaysCheckouts.length > 0 ? (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {todaysCheckouts.map(res => {
                   const checkInDate = new Date(res.checkIn);
                   const month = checkInDate.getMonth();
@@ -237,16 +237,16 @@ export default async function DashboardPage() {
                     <Link
                       key={res.id}
                       href={`/dashboard/reservations?month=${month}&year=${year}&highlight=${res.id}`}
-                      className="flex items-center justify-between rounded-xl bg-rose-50/90 hover:bg-rose-100/90 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-200/80 dark:border-rose-900/60 px-4 py-3 transition-all active:scale-[0.98] shadow-xs cursor-pointer group"
+                      className="flex items-center justify-between rounded-xl bg-rose-50/90 hover:bg-rose-100/90 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-200/80 dark:border-rose-900/60 px-3 sm:px-4 py-2.5 sm:py-3 transition-all active:scale-[0.98] shadow-xs cursor-pointer group min-w-0 w-full"
                     >
-                      <span className="text-base font-bold text-slate-800 dark:text-slate-100 truncate max-w-[58%] group-hover:text-rose-700 dark:group-hover:text-rose-300 transition-colors">
+                      <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 truncate min-w-0 flex-1 mr-2 group-hover:text-rose-700 dark:group-hover:text-rose-300 transition-colors">
                         {res.guestName}
                       </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-sm text-rose-600 dark:text-rose-400 font-semibold">
+                      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                        <span className="text-xs sm:text-sm text-rose-600 dark:text-rose-400 font-semibold whitespace-nowrap">
                           {res.department.type === 'PARKING' ? '🚗 Cochera' : `🏠 ${res.department.name}`}
                         </span>
-                        <ChevronRight className="h-4 w-4 text-rose-400 group-hover:text-rose-600 group-hover:translate-x-0.5 transition-all" />
+                        <ChevronRight className="h-4 w-4 text-rose-400 group-hover:text-rose-600 group-hover:translate-x-0.5 transition-all shrink-0" />
                       </div>
                     </Link>
                   );
@@ -273,7 +273,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             {todaysCheckins.length > 0 ? (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {todaysCheckins.map(res => {
                   const checkInDate = new Date(res.checkIn);
                   const month = checkInDate.getMonth();
@@ -282,16 +282,16 @@ export default async function DashboardPage() {
                     <Link
                       key={res.id}
                       href={`/dashboard/reservations?month=${month}&year=${year}&highlight=${res.id}`}
-                      className="flex items-center justify-between rounded-xl bg-emerald-50/90 hover:bg-emerald-100/90 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 border border-emerald-200/80 dark:border-emerald-900/60 px-4 py-3 transition-all active:scale-[0.98] shadow-xs cursor-pointer group"
+                      className="flex items-center justify-between rounded-xl bg-emerald-50/90 hover:bg-emerald-100/90 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 border border-emerald-200/80 dark:border-emerald-900/60 px-3 sm:px-4 py-2.5 sm:py-3 transition-all active:scale-[0.98] shadow-xs cursor-pointer group min-w-0 w-full"
                     >
-                      <span className="text-base font-bold text-slate-800 dark:text-slate-100 truncate max-w-[58%] group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
+                      <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 truncate min-w-0 flex-1 mr-2 group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
                         {res.guestName}
                       </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-sm text-emerald-600 dark:text-emerald-400 font-semibold">
+                      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                        <span className="text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-semibold whitespace-nowrap">
                           {res.department.type === 'PARKING' ? '🚗 Cochera' : `🏠 ${res.department.name}`}
                         </span>
-                        <ChevronRight className="h-4 w-4 text-emerald-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
+                        <ChevronRight className="h-4 w-4 text-emerald-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all shrink-0" />
                       </div>
                     </Link>
                   );
