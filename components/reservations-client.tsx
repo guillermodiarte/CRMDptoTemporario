@@ -155,10 +155,49 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   useEffect(() => {
     if (searchParams.get("new") === "true") {
       setOpen(true);
-      // Optional: Clean URL
-      // router.replace("/dashboard/reservations");
     }
   }, [searchParams]);
+
+  // Auto-open "Edit/View Reservation" if edit query param exists
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (editId && data.length > 0) {
+      const target = data.find(r => r.id === editId);
+      if (target) {
+        handleEdit(target);
+        setTimeout(() => {
+          const el = document.getElementById(`res-${editId}`) || document.getElementById(`res-mobile-${editId}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      }
+    }
+  }, [searchParams, data]);
+
+  // Scroll to and highlight a reservation without opening edit (for visualizer-safe navigation)
+  useEffect(() => {
+    const highlightId = searchParams.get("highlight");
+    if (!highlightId || data.length === 0) return;
+
+    let attempts = 0;
+    const MAX_ATTEMPTS = 15;
+
+    const tryScroll = () => {
+      const el =
+        document.getElementById(`res-mobile-${highlightId}`) ||
+        document.getElementById(`res-${highlightId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (attempts < MAX_ATTEMPTS) {
+        attempts++;
+        setTimeout(tryScroll, 200);
+      }
+    };
+
+    // First attempt after a short delay to let React paint
+    setTimeout(tryScroll, 150);
+  }, [searchParams, data]);
 
   const confirmNoShow = async () => {
     if (!noShowConfirmationId) return;
@@ -256,7 +295,14 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
       {!isVisualizer ? (
         <Dialog open={open} onOpenChange={(val) => {
           setOpen(val);
-          if (!val) setEditingRes(null);
+          if (!val) {
+            setEditingRes(null);
+            if (searchParams.get("edit")) {
+              const url = new URL(window.location.href);
+              url.searchParams.delete("edit");
+              window.history.replaceState({}, '', url.toString());
+            }
+          }
         }}>
           <div className="flex flex-col gap-4 mb-6">
             {/* Top Row: Title (Desktop: Title + MonthSelector) */}
@@ -453,6 +499,12 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   // Use ring (shadow) instead of border to avoid table collapse issues
                   rowClass += " ring-2 ring-inset ring-blue-500 z-10 relative shadow-md";
                 }
+                if (searchParams.get("edit") === res.id) {
+                  rowClass += " ring-2 ring-emerald-500/80";
+                }
+                if (searchParams.get("highlight") === res.id) {
+                  rowClass += " ring-2 ring-blue-500/80";
+                }
 
                 const debt = res.totalAmount - (res.depositAmount || 0);
                 const groupDebt = (res.groupTotalAmount ?? res.totalAmount) - (res.groupDepositAmount ?? res.depositAmount ?? 0);
@@ -463,7 +515,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 const disabledBtnClass = "h-8 w-8 p-0 rounded-lg border border-slate-200/50 dark:border-slate-800 text-slate-400 dark:text-slate-600 opacity-30 dark:opacity-35 cursor-not-allowed disabled:pointer-events-auto hover:bg-transparent dark:hover:bg-transparent hover:text-slate-400 dark:hover:text-slate-600";
 
                 return (
-                  <TableRow key={res.id} className={rowClass}>
+                  <TableRow key={res.id} id={`res-${res.id}`} className={rowClass}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
                         {/* Icono Izquierda */}
@@ -504,7 +556,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     </TableCell>
                     <TableCell className={`text-center ${isCancelled ? "line-through text-muted-foreground" : ""}`}>
                       {format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}
-                      {res.groupId && (
+                      {res.groupId && res.groupTotalAmount != null && (
                         <span title="Parte de una reserva dividida" className="ml-2 inline-block">
                           <LinkIcon className="h-3 w-3 text-blue-500" />
                         </span>
@@ -558,7 +610,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     <TableCell className="text-right">
                       <div className="flex flex-col items-end">
                         <span className={isNoShow || (res.paymentStatus as any) === 'CANCELLED' ? "line-through text-muted-foreground" : ""}>
-                          {res.groupId && res.groupTotalAmount != null && (
+                          {res.groupId && res.groupTotalAmount != null && res.groupTotalAmount !== res.totalAmount && (
                             <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none text-right" title="Monto de este mes">
                               Mes: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
                             </div>
@@ -579,7 +631,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         ? '-'
                         : (!isPaid && !isNoShow ? (
                             <div className="flex flex-col items-end">
-                              {res.groupId && res.groupTotalAmount != null && (
+                              {res.groupId && res.groupTotalAmount != null && groupDebt !== debt && (
                                 <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none text-right" title="Deuda de este mes">
                                   Mes: {res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)}
                                 </div>
@@ -748,9 +800,11 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             }
 
             if (isNext) cardClass += " ring-2 ring-blue-500";
+            if (searchParams.get("edit") === res.id) cardClass += " ring-2 ring-emerald-500/80";
+            if (searchParams.get("highlight") === res.id) cardClass += " ring-2 ring-blue-500/80";
 
             return (
-              <Card key={res.id} className={cardClass}>
+              <Card key={res.id} id={`res-mobile-${res.id}`} className={cardClass}>
                 <CardContent className="p-4 space-y-3">
                   {/* Header: Name, Dept, Status (Wrapped) */}
                   <div className="flex flex-col gap-2">
@@ -840,7 +894,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     <div className="col-span-2 flex justify-between items-end sm:hidden mt-2">
                       {/* Mobile Row for Financials */}
                       <div className="flex flex-col">
-                        {res.groupId && res.groupTotalAmount != null && (
+                        {res.groupId && res.groupTotalAmount != null && res.groupTotalAmount !== res.totalAmount && (
                           <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none">
                             Mes: {res.currency === 'USD' ? `US$ ${res.totalAmount}` : formatCurrency(res.totalAmount)}
                           </div>
@@ -856,7 +910,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
                       {((res.paymentStatus as any) !== 'CANCELLED' && !isNoShow) && (
                         <div className="flex flex-col items-end">
-                          {res.groupId && res.groupTotalAmount != null && !isPaid && (
+                          {res.groupId && res.groupTotalAmount != null && groupDebt !== debt && !isPaid && (
                             <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none text-right">
                               Mes: {res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)}
                             </div>

@@ -21,8 +21,10 @@ export default async function FinancePage({
   // Adjust for Argentina Time (UTC-3)
   const today = new Date(Date.now() - 3 * 60 * 60 * 1000);
   const params = await searchParams;
-  const selectedYear = params?.year ? parseInt(params.year) : today.getFullYear();
-  const selectedMonth = params?.month ? parseInt(params.month) : today.getMonth();
+  const parsedYear = params?.year ? parseInt(params.year) : NaN;
+  const parsedMonth = params?.month ? parseInt(params.month) : NaN;
+  const selectedYear = !isNaN(parsedYear) ? parsedYear : today.getFullYear();
+  const selectedMonth = !isNaN(parsedMonth) ? parsedMonth : today.getMonth();
 
   const startDate = new Date(selectedYear, selectedMonth, 1);
   const endDate = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);

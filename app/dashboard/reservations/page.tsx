@@ -20,8 +20,10 @@ export default async function ReservationsPage({
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  const selectedMonth = params?.month ? parseInt(params.month) : currentMonth;
-  const selectedYear = params?.year ? parseInt(params.year) : currentYear;
+  const parsedMonth = params?.month ? parseInt(params.month) : NaN;
+  const parsedYear = params?.year ? parseInt(params.year) : NaN;
+  const selectedMonth = !isNaN(parsedMonth) ? parsedMonth : currentMonth;
+  const selectedYear = !isNaN(parsedYear) ? parsedYear : currentYear;
 
   const startDate = new Date(selectedYear, selectedMonth, 1);
   const endDate = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
@@ -50,13 +52,14 @@ export default async function ReservationsPage({
     
     groupTotals = groupParts.reduce((acc, curr) => {
       if (!acc[curr.groupId!]) {
-        acc[curr.groupId!] = { totalAmount: 0, depositAmount: 0, isMultiDept: false, _deptIds: new Set() } as any;
+        acc[curr.groupId!] = { totalAmount: 0, depositAmount: 0, isMultiDept: false, count: 0, _deptIds: new Set() } as any;
       }
       acc[curr.groupId!].totalAmount += curr.totalAmount;
       acc[curr.groupId!].depositAmount += curr.depositAmount;
+      acc[curr.groupId!].count += 1;
       (acc[curr.groupId!] as any)._deptIds.add(curr.departmentId);
       return acc;
-    }, {} as Record<string, { totalAmount: number, depositAmount: number, isMultiDept: boolean, _deptIds?: Set<string> }>);
+    }, {} as Record<string, { totalAmount: number, depositAmount: number, isMultiDept: boolean, count: number, _deptIds?: Set<string> }>);
 
     // Mark groups with more than one distinct department
     for (const groupId in groupTotals) {
@@ -69,8 +72,9 @@ export default async function ReservationsPage({
   const enhancedReservations = reservations.map(r => {
     if (r.groupId && groupTotals[r.groupId]) {
       const group = groupTotals[r.groupId];
-      // Only show group total for same-dept splits (month splits), not multi-dept combinations
-      if (!group.isMultiDept) {
+      // Only show group total for same-dept splits (month splits), not multi-dept combinations,
+      // and only if the reservation actually has multiple parts (spans multiple months)
+      if (!group.isMultiDept && group.count > 1) {
         return {
           ...r,
           groupTotalAmount: group.totalAmount,

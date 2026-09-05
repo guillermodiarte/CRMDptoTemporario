@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, CreditCard, CalendarDays, Activity, Car, Plus, List, LogOut, LogIn } from "lucide-react";
+import { Users, CreditCard, CalendarDays, Activity, Car, Plus, List, LogOut, LogIn, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -98,6 +98,8 @@ export default async function DashboardPage() {
     select: {
       id: true,
       guestName: true,
+      checkIn: true,
+      checkOut: true,
       department: { select: { name: true, type: true } }
     },
     orderBy: { checkOut: "asc" }
@@ -113,6 +115,8 @@ export default async function DashboardPage() {
     select: {
       id: true,
       guestName: true,
+      checkIn: true,
+      checkOut: true,
       department: { select: { name: true, type: true } }
     },
     orderBy: { checkIn: "asc" }
@@ -224,15 +228,29 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             {todaysCheckouts.length > 0 ? (
-              <div className="space-y-1.5">
-                {todaysCheckouts.map(res => (
-                  <div key={res.id} className="flex items-center justify-between rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 px-3 py-1.5">
-                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[60%]">{res.guestName}</span>
-                    <span className="text-xs text-rose-600 dark:text-rose-400 font-medium">
-                      {res.department.type === 'PARKING' ? '🚗 Cochera' : `🏠 ${res.department.name}`}
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-2.5">
+                {todaysCheckouts.map(res => {
+                  const checkInDate = new Date(res.checkIn);
+                  const month = checkInDate.getMonth();
+                  const year = checkInDate.getFullYear();
+                  return (
+                    <Link
+                      key={res.id}
+                      href={`/dashboard/reservations?month=${month}&year=${year}&highlight=${res.id}`}
+                      className="flex items-center justify-between rounded-xl bg-rose-50/90 hover:bg-rose-100/90 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-200/80 dark:border-rose-900/60 px-4 py-3 transition-all active:scale-[0.98] shadow-xs cursor-pointer group"
+                    >
+                      <span className="text-base font-bold text-slate-800 dark:text-slate-100 truncate max-w-[58%] group-hover:text-rose-700 dark:group-hover:text-rose-300 transition-colors">
+                        {res.guestName}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-sm text-rose-600 dark:text-rose-400 font-semibold">
+                          {res.department.type === 'PARKING' ? '🚗 Cochera' : `🏠 ${res.department.name}`}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-rose-400 group-hover:text-rose-600 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No hay retiros programados para hoy</p>
@@ -255,15 +273,29 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             {todaysCheckins.length > 0 ? (
-              <div className="space-y-1.5">
-                {todaysCheckins.map(res => (
-                  <div key={res.id} className="flex items-center justify-between rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 px-3 py-1.5">
-                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[60%]">{res.guestName}</span>
-                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                      {res.department.type === 'PARKING' ? '🚗 Cochera' : `🏠 ${res.department.name}`}
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-2.5">
+                {todaysCheckins.map(res => {
+                  const checkInDate = new Date(res.checkIn);
+                  const month = checkInDate.getMonth();
+                  const year = checkInDate.getFullYear();
+                  return (
+                    <Link
+                      key={res.id}
+                      href={`/dashboard/reservations?month=${month}&year=${year}&highlight=${res.id}`}
+                      className="flex items-center justify-between rounded-xl bg-emerald-50/90 hover:bg-emerald-100/90 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 border border-emerald-200/80 dark:border-emerald-900/60 px-4 py-3 transition-all active:scale-[0.98] shadow-xs cursor-pointer group"
+                    >
+                      <span className="text-base font-bold text-slate-800 dark:text-slate-100 truncate max-w-[58%] group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
+                        {res.guestName}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-sm text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {res.department.type === 'PARKING' ? '🚗 Cochera' : `🏠 ${res.department.name}`}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-emerald-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No hay llegadas programadas para hoy</p>
@@ -360,14 +392,14 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
+        {/* Cotización Dólar */}
+        <DollarWidget data={dollarData} />
+
         {/* Notas Rápidas */}
         <NotesWidget />
 
         {/* Clima */}
         <WeatherWidget data={weatherData} />
-
-        {/* Cotización Dólar */}
-        <DollarWidget data={dollarData} />
       </div>
 
       {/* ═══════════════════════════════════════════════════════
@@ -481,14 +513,26 @@ export default async function DashboardPage() {
             <CardContent>
               {todaysCheckouts.length > 0 ? (
                 <div className="space-y-1.5">
-                  {todaysCheckouts.map(res => (
-                    <div key={res.id} className="flex items-center justify-between rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 px-3 py-1.5">
-                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[60%]">{res.guestName}</span>
-                      <span className="text-xs text-rose-600 dark:text-rose-400 font-medium">
-                        {res.department.type === 'PARKING' ? '🚗 Cochera' : `🏠 ${res.department.name}`}
-                      </span>
-                    </div>
-                  ))}
+                  {todaysCheckouts.map(res => {
+                    const checkInDate = new Date(res.checkIn);
+                    const month = checkInDate.getMonth();
+                    const year = checkInDate.getFullYear();
+                    return (
+                      <Link
+                        key={res.id}
+                        href={`/dashboard/reservations?month=${month}&year=${year}&highlight=${res.id}`}
+                        className="flex items-center justify-between rounded-lg bg-rose-50 hover:bg-rose-100/90 dark:bg-rose-950/30 dark:hover:bg-rose-900/50 border border-rose-100 dark:border-rose-900/50 px-3 py-1.5 transition-colors cursor-pointer group"
+                      >
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[60%] group-hover:text-rose-700 dark:group-hover:text-rose-300 transition-colors">{res.guestName}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                            {res.department.type === 'PARKING' ? '🚗 Cochera' : `🏠 ${res.department.name}`}
+                          </span>
+                          <ChevronRight className="h-3.5 w-3.5 text-rose-400 group-hover:text-rose-600 group-hover:translate-x-0.5 transition-all" />
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No hay retiros programados para hoy</p>
@@ -512,15 +556,27 @@ export default async function DashboardPage() {
             <CardContent>
               {todaysCheckins.length > 0 ? (
                 <div className="space-y-1.5">
-                  {todaysCheckins.map(res => (
-                    <div key={res.id} className="flex items-center justify-between rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 px-3 py-1.5">
-                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[60%]">{res.guestName}</span>
-                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                        {res.department.type === 'PARKING' ? '🚗 Cochera' : `🏠 ${res.department.name}`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {todaysCheckins.map(res => {
+                  const checkInDate = new Date(res.checkIn);
+                  const month = checkInDate.getMonth();
+                  const year = checkInDate.getFullYear();
+                  return (
+                    <Link
+                      key={res.id}
+                      href={`/dashboard/reservations?month=${month}&year=${year}&highlight=${res.id}`}
+                      className="flex items-center justify-between rounded-lg bg-emerald-50 hover:bg-emerald-100/90 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/50 border border-emerald-100 dark:border-emerald-900/50 px-3 py-1.5 transition-colors cursor-pointer group"
+                    >
+                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[60%] group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">{res.guestName}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                          {res.department.type === 'PARKING' ? '🚗 Cochera' : `🏠 ${res.department.name}`}
+                        </span>
+                        <ChevronRight className="h-3.5 w-3.5 text-emerald-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No hay llegadas programadas para hoy</p>
               )}

@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { auth } from '@/auth';
 import { requireSessionId } from '@/lib/auth-helper';
 import { revalidatePath } from 'next/cache';
+import { calculateReservationSplits } from '@/lib/reservation-logic';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ groupId: string }> }) {
   try {
@@ -130,15 +131,78 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
         newNotes = newNotes ? `${newNotes}\n${depositNote}` : depositNote;
       }
 
-      await prisma.reservation.update({
-        where: { id: res.id },
-        data: {
-          status: 'CONFIRMED',
-          depositAmount: resDeposit,
-          paymentStatus: paymentStatus,
-          notes: newNotes
+      // Check if this reservation crosses month boundaries
+      const splits = calculateReservationSplits(
+        res.checkIn,
+        res.checkOut,
+        res.totalAmount,
+        res.cleaningFee || 0,
+        resDeposit,
+        res.amenitiesFee || 0
+      );
+
+      if (splits.length > 1) {
+        // Multi-month reservation: assign a unique split groupId and save all parts
+        const splitGroupId = crypto.randomUUID();
+
+        // Update first part
+        await prisma.reservation.update({
+          where: { id: res.id },
+          data: {
+            status: 'CONFIRMED',
+            checkIn: splits[0].checkIn,
+            checkOut: splits[0].checkOut,
+            totalAmount: splits[0].totalAmount,
+            depositAmount: splits[0].depositAmount,
+            cleaningFee: splits[0].cleaningFee,
+            amenitiesFee: splits[0].amenitiesFee,
+            paymentStatus,
+            notes: newNotes,
+            groupId: splitGroupId,
+          }
+        });
+
+        // Create remaining parts
+        for (let i = 1; i < splits.length; i++) {
+          await prisma.reservation.create({
+            data: {
+              departmentId: res.departmentId,
+              sessionId: res.sessionId,
+              source: res.source,
+              status: 'CONFIRMED',
+              guestName: res.guestName,
+              guestDni: res.guestDni,
+              guestNationality: res.guestNationality,
+              guestPhone: res.guestPhone,
+              guestPeopleCount: res.guestPeopleCount,
+              bedsRequired: res.bedsRequired,
+              checkIn: splits[i].checkIn,
+              checkOut: splits[i].checkOut,
+              totalAmount: splits[i].totalAmount,
+              depositAmount: splits[i].depositAmount,
+              cleaningFee: splits[i].cleaningFee,
+              amenitiesFee: splits[i].amenitiesFee,
+              currency: res.currency,
+              paymentStatus: paymentStatus === 'PAID' ? 'PAID' : 'UNPAID',
+              hasParking: res.hasParking,
+              groupId: splitGroupId,
+              notes: res.notes,
+            }
+          });
         }
-      });
+      } else {
+        // Same month reservation: no month split, groupId must be null
+        await prisma.reservation.update({
+          where: { id: res.id },
+          data: {
+            status: 'CONFIRMED',
+            depositAmount: resDeposit,
+            paymentStatus,
+            notes: newNotes,
+            groupId: null,
+          }
+        });
+      }
     }
 
     revalidatePath('/dashboard/approvals');
