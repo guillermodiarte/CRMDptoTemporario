@@ -28,16 +28,22 @@ export async function GET() {
         purpose: 'any',
       },
       {
-        src: iconSrc,
+        src: '/api/app-icon?size=192',
         sizes: '192x192',
-        type: iconType,
+        type: 'image/png',
         purpose: 'any',
       },
       {
-        src: iconSrc,
+        src: '/api/app-icon?size=512',
         sizes: '512x512',
-        type: iconType,
+        type: 'image/png',
         purpose: 'any',
+      },
+      {
+        src: '/api/app-icon?maskable=1&size=512',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
       },
     ],
   };
