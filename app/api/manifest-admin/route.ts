@@ -37,7 +37,7 @@ export async function GET() {
         src: iconSrc,
         sizes: '512x512',
         type: iconType,
-        purpose: 'any maskable',
+        purpose: 'any',
       },
     ],
   };
