@@ -32,7 +32,14 @@ export function DollarWidget({ data }: DollarWidgetProps) {
   // Find specific rates
   const oficial = data.find(item => item.casa === 'oficial');
   const blue = data.find(item => item.casa === 'blue');
-  const cripto = data.find(item => item.casa === 'cripto');
+
+  const promOficial = oficial ? (oficial.compra + oficial.venta) / 2 : null;
+  const promBlue = blue ? (blue.compra + blue.venta) / 2 : null;
+
+  const formatPrice = (val: number | null | undefined) => {
+    if (val === null || val === undefined) return "-";
+    return (val % 1 === 0 ? val.toString() : val.toFixed(1)).replace('.', ',');
+  };
 
   return (
     <Card className="h-full">
@@ -50,30 +57,42 @@ export function DollarWidget({ data }: DollarWidgetProps) {
           {/* Oficial */}
           <div className="text-left">
             <div className="text-sm font-medium">Oficial</div>
-            <div className="text-[10px] text-muted-foreground">Bna</div>
+            <div className="text-[10px] text-muted-foreground">BNA</div>
           </div>
-          <div className="font-bold text-sm">${oficial?.compra}</div>
-          <div className="font-bold text-sm">${oficial?.venta}</div>
+          <div className="font-bold text-sm">${oficial?.compra ?? "-"}</div>
+          <div className="font-bold text-sm">${oficial?.venta ?? "-"}</div>
 
           <div className="col-span-3 h-px bg-muted my-1" />
 
           {/* Blue */}
           <div className="text-left">
-            <div className="text-sm font-medium text-blue-600">Blue</div>
+            <div className="text-sm font-medium text-blue-600 dark:text-blue-400">Blue</div>
             <div className="text-[10px] text-muted-foreground">Informal</div>
           </div>
-          <div className="font-bold text-sm text-blue-700">${blue?.compra}</div>
-          <div className="font-bold text-sm text-blue-700">${blue?.venta}</div>
+          <div className="font-bold text-sm text-blue-700 dark:text-blue-300">${blue?.compra ?? "-"}</div>
+          <div className="font-bold text-sm text-blue-700 dark:text-blue-300">${blue?.venta ?? "-"}</div>
 
           <div className="col-span-3 h-px bg-muted my-1" />
 
-          {/* Cripto */}
+          {/* Promedio Oficial */}
           <div className="text-left">
-            <div className="text-sm font-medium text-orange-600">Cripto</div>
-            <div className="text-[10px] text-muted-foreground">USDT</div>
+            <div className="text-sm font-medium text-purple-600 dark:text-purple-400">Prom. Oficial</div>
+            <div className="text-[10px] text-muted-foreground">Compra / Venta</div>
           </div>
-          <div className="font-bold text-sm text-orange-700">${Math.round(cripto?.compra ?? 0)}</div>
-          <div className="font-bold text-sm text-orange-700">${Math.round(cripto?.venta ?? 0)}</div>
+          <div className="col-span-2 text-center font-bold text-sm text-purple-700 dark:text-purple-300">
+            ${formatPrice(promOficial)}
+          </div>
+
+          <div className="col-span-3 h-px bg-muted my-1" />
+
+          {/* Promedio Blue */}
+          <div className="text-left">
+            <div className="text-sm font-medium text-purple-600 dark:text-purple-400">Prom. Blue</div>
+            <div className="text-[10px] text-muted-foreground">Compra / Venta</div>
+          </div>
+          <div className="col-span-2 text-center font-bold text-sm text-purple-700 dark:text-purple-300">
+            ${formatPrice(promBlue)}
+          </div>
         </div>
       </CardContent>
     </Card>
