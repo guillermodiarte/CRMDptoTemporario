@@ -15,10 +15,10 @@ export async function GET() {
     short_name: "Di'Arte",
     description: "Panel de administración de reservas Di'Arte",
     start_url: '/dashboard',
-    scope: '/dashboard',
+    scope: '/',
     display: 'standalone',
-    background_color: '#0f172a',
-    theme_color: '#0f172a',
+    background_color: '#ffffff',
+    theme_color: '#ffffff',
     orientation: 'portrait',
     icons: [
       {

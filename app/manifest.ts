@@ -37,9 +37,10 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     short_name: "Di'Arte",
     description: config.seoDescription || SITE_CONFIG_DEFAULTS.seoDescription,
     start_url: startUrl,
+    scope: '/',
     display: 'standalone',
-    background_color: startUrl === '/dashboard' ? '#0f172a' : '#ffffff',
-    theme_color: startUrl === '/dashboard' ? '#0f172a' : '#ffffff',
+    background_color: '#ffffff',
+    theme_color: '#ffffff',
     icons: [
       {
         src: iconSrc,
