@@ -129,16 +129,7 @@ input[type="number"] {
   * {
     @apply border-border outline-ring/50;
   }
-  html {
-    background-color: var(--background);
-    color-scheme: light;
-  }
-  html.dark {
-    background-color: #020617;
-    color-scheme: dark;
-  }
   body {
     @apply bg-background text-foreground transition-colors duration-700 ease-in-out;
-    background-color: inherit;
   }
 }

@@ -16,14 +16,10 @@ const geistMono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#020617" },
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-  ],
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  viewportFit: "cover",
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -106,15 +102,10 @@ export default function RootLayout({
                   var isAdmin = path.startsWith('/dashboard') || path.startsWith('/admin');
                   var key = isAdmin ? 'crm-admin-theme-preference' : 'crm-theme-preference';
                   var saved = localStorage.getItem(key);
-                  var isDark = saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-                  if (isDark) {
+                  if (saved === 'dark') {
                     document.documentElement.classList.add('dark');
-                    document.documentElement.style.colorScheme = 'dark';
-                    document.documentElement.style.backgroundColor = '#020617';
-                  } else {
+                  } else if (saved === 'light') {
                     document.documentElement.classList.remove('dark');
-                    document.documentElement.style.colorScheme = 'light';
-                    document.documentElement.style.backgroundColor = '#ffffff';
                   }
                 } catch (e) {}
               })();
