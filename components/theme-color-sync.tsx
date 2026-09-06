@@ -6,29 +6,35 @@ export function ThemeColorSync() {
   useEffect(() => {
     const applyThemeColor = () => {
       const isDark = document.documentElement.classList.contains("dark");
-      // Dark slate navy (#020617) matching the dark header/background, or pure white (#ffffff)
       const color = isDark ? "#020617" : "#ffffff";
 
-      // 1. Update or create the default meta theme-color tag
-      let defaultMeta = document.querySelector('meta[name="theme-color"]:not([media])') as HTMLMetaElement | null;
-      if (!defaultMeta) {
-        defaultMeta = document.createElement("meta");
-        defaultMeta.name = "theme-color";
-        document.head.appendChild(defaultMeta);
-      }
-      defaultMeta.content = color;
+      // 1. Find all theme-color meta tags
+      const metas = document.querySelectorAll('meta[name="theme-color"]');
+      let targetMeta: HTMLMetaElement | null = null;
 
-      // 2. Also keep any media-query specific theme-color metas synchronized so Android status bar reacts immediately
-      const mediaMetas = document.querySelectorAll('meta[name="theme-color"][media]');
-      mediaMetas.forEach((m) => {
-        m.setAttribute("content", color);
+      // Keep only the first non-media meta, remove all others (especially media-based ones that block dynamic updates)
+      metas.forEach((m, idx) => {
+        if (idx === 0 && !m.hasAttribute("media")) {
+          targetMeta = m as HTMLMetaElement;
+        } else {
+          m.remove();
+        }
       });
+
+      if (!targetMeta) {
+        targetMeta = document.createElement("meta");
+        targetMeta.name = "theme-color";
+        document.head.appendChild(targetMeta);
+      }
+
+      // Always set the exact hex color matching current active theme
+      targetMeta.setAttribute("content", color);
     };
 
-    // Run immediately on client hydration
+    // Run immediately on client mount
     applyThemeColor();
 
-    // Listen for any class change on <html class="dark">
+    // Observe changes on documentElement class (e.g. 'dark' added/removed)
     const observer = new MutationObserver(() => {
       applyThemeColor();
     });

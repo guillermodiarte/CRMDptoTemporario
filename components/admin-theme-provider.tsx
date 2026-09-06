@@ -34,11 +34,22 @@ export function AdminThemeProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!mounted) return;
-    if (theme === "dark") {
+    const isDarkTheme = theme === "dark";
+    if (isDarkTheme) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
+
+    try {
+      let meta = document.querySelector('meta[name="theme-color"]:not([media])') as HTMLMetaElement | null;
+      if (!meta) {
+        meta = document.createElement("meta");
+        meta.name = "theme-color";
+        document.head.appendChild(meta);
+      }
+      meta.content = isDarkTheme ? "#020617" : "#ffffff";
+    } catch (e) {}
 
     return () => {
       // When unmounting dashboard (e.g. navigating to public site), restore public theme

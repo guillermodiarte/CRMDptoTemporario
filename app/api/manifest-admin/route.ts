@@ -17,8 +17,8 @@ export async function GET() {
     start_url: '/dashboard',
     scope: '/',
     display: 'standalone',
-    background_color: '#020617',
-    theme_color: '#020617',
+    background_color: '#ffffff',
+    theme_color: '#ffffff',
     orientation: 'portrait',
     icons: [
       {

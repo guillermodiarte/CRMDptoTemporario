@@ -17,10 +17,6 @@ const geistMono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#020617" },
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -96,6 +92,32 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var path = window.location.pathname;
+                  var isAdmin = path.startsWith('/dashboard') || path.startsWith('/admin');
+                  var key = isAdmin ? 'crm-admin-theme-preference' : 'crm-theme-preference';
+                  var saved = localStorage.getItem(key);
+                  var isDark = saved === 'dark';
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                  } else if (saved === 'light') {
+                    document.documentElement.classList.remove('dark');
+                  }
+                  var meta = document.createElement('meta');
+                  meta.name = 'theme-color';
+                  meta.content = isDark ? '#020617' : '#ffffff';
+                  document.head.appendChild(meta);
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
