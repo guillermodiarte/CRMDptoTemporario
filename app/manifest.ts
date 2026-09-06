@@ -39,8 +39,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     start_url: startUrl,
     scope: '/',
     display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#ffffff',
+    background_color: startUrl === '/dashboard' ? '#020617' : '#ffffff',
+    theme_color: startUrl === '/dashboard' ? '#020617' : '#ffffff',
     icons: [
       {
         src: iconSrc,

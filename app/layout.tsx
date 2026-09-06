@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { getSiteConfig } from "@/lib/site-config-loader";
+import { ThemeColorSync } from "@/components/theme-color-sync";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,7 +17,10 @@ const geistMono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -95,6 +99,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ThemeColorSync />
         <Providers>{children}</Providers>
         <Toaster />
       </body>
