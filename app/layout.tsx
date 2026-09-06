@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { getSiteConfig } from "@/lib/site-config-loader";
-import { ThemeColorSync } from "@/components/theme-color-sync";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,6 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -102,16 +102,11 @@ export default function RootLayout({
                   var isAdmin = path.startsWith('/dashboard') || path.startsWith('/admin');
                   var key = isAdmin ? 'crm-admin-theme-preference' : 'crm-theme-preference';
                   var saved = localStorage.getItem(key);
-                  var isDark = saved === 'dark';
-                  if (isDark) {
+                  if (saved === 'dark') {
                     document.documentElement.classList.add('dark');
                   } else if (saved === 'light') {
                     document.documentElement.classList.remove('dark');
                   }
-                  var meta = document.createElement('meta');
-                  meta.name = 'theme-color';
-                  meta.content = isDark ? '#020617' : '#ffffff';
-                  document.head.appendChild(meta);
                 } catch (e) {}
               })();
             `,
@@ -121,7 +116,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeColorSync />
         <Providers>{children}</Providers>
         <Toaster />
       </body>
