@@ -259,8 +259,8 @@ export default async function DashboardLayout({
             </div>
           </div>
         </div>
-        <div className="flex flex-col min-w-0 w-full overflow-x-hidden">
-          <header className="sticky top-0 z-50 flex h-14 items-center gap-2 sm:gap-4 border-b bg-muted/40 px-2.5 sm:px-4 backdrop-blur-md lg:h-[60px] lg:px-6 min-w-0 w-full">
+        <div className="flex flex-col min-w-0 w-full">
+          <header className="sticky top-0 z-50 flex h-14 items-center gap-2 sm:gap-4 border-b bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/85 px-2.5 sm:px-4 lg:h-[60px] lg:px-6 min-w-0 w-full shadow-xs">
             <MobileNav
               role={role}
               user={userForMenu}
