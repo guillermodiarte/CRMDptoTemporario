@@ -33,6 +33,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Department, Reservation } from "@prisma/client";
 import { format, addDays } from "date-fns";
+import { RotateCcw } from "lucide-react";
 
 // Removed Alert import
 
@@ -247,6 +248,36 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const checkOutDate = form.watch("checkOut");
   const guestPeopleCount = form.watch("guestPeopleCount");
 
+  const recalculateAutoTotal = () => {
+    setIsTotalManuallyModified(false);
+    if (!selectedDepartmentId || !checkInDate || !checkOutDate) return;
+
+    const start = new Date(checkInDate);
+    const end = new Date(checkOutDate);
+    if (start >= end) return;
+
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    const dept = departments.find(d => d.id === selectedDepartmentId);
+    if (dept) {
+      let pricePerNight = dept.basePrice || 0;
+      let pricesObj: Record<string, number> = {};
+      try {
+        if ((dept as any).prices) {
+          pricesObj = JSON.parse((dept as any).prices);
+        }
+      } catch {}
+
+      if (pricesObj[guestPeopleCount] !== undefined && pricesObj[guestPeopleCount] > 0) {
+        pricePerNight = pricesObj[guestPeopleCount];
+      }
+
+      const newTotal = nights * pricePerNight;
+      form.setValue("totalAmount", newTotal);
+    }
+  };
+
   useEffect(() => {
     // Skip auto-calc for Airbnb (manual pricing or 0)
     if (source === "AIRBNB") return;
@@ -267,6 +298,11 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       }
     }
 
+    // Do NOT overwrite total if user manually typed or modified the price
+    if (isTotalManuallyModified) {
+      return;
+    }
+
     const start = new Date(checkInDate);
     const end = new Date(checkOutDate);
 
@@ -277,12 +313,6 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
     const dept = departments.find(d => d.id === selectedDepartmentId);
     if (dept) {
-      // Check if manually modified and not 0
-      const currentTotal = form.getValues("totalAmount");
-      // If we manually typed a total, we don't overwrite UNLESS they just changed dept, dates, or guests.
-      // But since those are dependencies, it's hard to know if they manually typed or if state changed.
-      // We'll trust the auto-update here for a smoother experience.
-
       let pricePerNight = dept.basePrice || 0;
       let pricesObj: Record<string, number> = {};
       try {
@@ -297,9 +327,8 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
       const newTotal = nights * pricePerNight;
       form.setValue("totalAmount", newTotal);
-      setIsTotalManuallyModified(false);
     }
-  }, [selectedDepartmentId, checkInDate, checkOutDate, guestPeopleCount, departments, form, source, initialData]);
+  }, [selectedDepartmentId, checkInDate, checkOutDate, guestPeopleCount, departments, form, source, initialData, isTotalManuallyModified]);
 
   async function onSubmit(values: z.infer<typeof formSchema>, forceOverlap: boolean = false, ignoreCapacity: boolean = false, forceBlacklist: boolean = false) {
     setLoading(true);
@@ -694,7 +723,27 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
             name="totalAmount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Total</FormLabel>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FormLabel>Total</FormLabel>
+                    {isTotalManuallyModified && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium border border-amber-500/20">
+                        Manual
+                      </span>
+                    )}
+                  </div>
+                  {isTotalManuallyModified && (
+                    <button
+                      type="button"
+                      onClick={recalculateAutoTotal}
+                      className="text-xs text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 flex items-center gap-1 hover:underline cursor-pointer transition-colors"
+                      title="Calcular automáticamente según noches y cantidad de personas"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Auto-calcular
+                    </button>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-muted-foreground">$</span>
                   <FormControl>
@@ -706,7 +755,12 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                       {...field}
                       onChange={(e) => {
                         field.onChange(e);
-                        setIsTotalManuallyModified(true);
+                        const val = e.target.value;
+                        if (val === "") {
+                          setIsTotalManuallyModified(false);
+                        } else {
+                          setIsTotalManuallyModified(true);
+                        }
                       }}
                       value={field.value ?? ""}
                     />
