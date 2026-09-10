@@ -80,9 +80,11 @@ export const SITE_CONFIG_DEFAULTS = {
   instagramUrl: "https://www.instagram.com/",
   facebookUrl: "",
 
-  // SEO & Metadatos (WhatsApp / Redes Sociales)
+  // SEO & Metadatos (Google / WhatsApp / Redes Sociales)
   ogImageUrl: "",
-  seoDescription: "Departamentos temporarios premium en Formosa, Argentina. Totalmente equipados para tu comodidad. Reservas directas y atención personalizada.",
+  seoDescription: "Alquiler de departamentos temporarios y amoblados en Formosa, Argentina. Alojamientos premium equipados con cocina, WiFi y aire acondicionado. Cerca de atractivos turísticos, Bañado La Estrella y tour a Paraguay.",
+  seoKeywords: "alojamientos en formosa, departamentos en formosa, alquileres temporarios formosa, departamentos amoblados formosa, alojamientos temporarios, formosa, departamentos amoblados, alquileres temporarios, turismo formosa, bañado las estrellas, bañado la estrella, tour a paraguay, alquiler por dia formosa, hospedaje formosa, departamentos equipados formosa",
+  googleVerification: "",
 
   // Footer
   footerCopyright: "Alojamientos Di'Arte",

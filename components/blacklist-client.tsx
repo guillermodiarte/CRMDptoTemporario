@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { BlacklistActions } from "./blacklist-actions";
+import { phoneMatchesQuery } from "@/lib/phone-utils";
 
 // Extending BlacklistEntry to include reportedBy
 type BlacklistEntryWithUser = BlacklistEntry & { reportedBy?: { name: string | null; email: string | null } | null };
@@ -52,12 +53,12 @@ export function BlacklistClient({ data, currentUserRole }: BlacklistClientProps)
   const isAdmin = currentUserRole === "ADMIN";
 
   const filteredData = data.filter((entry) => {
-    // ... search logic remains same ...
     const s = search.toLowerCase();
     return (
       entry.guestName.toLowerCase().includes(s) ||
-      entry.guestPhone.includes(s) ||
-      entry.reason.toLowerCase().includes(s)
+      entry.reason.toLowerCase().includes(s) ||
+      phoneMatchesQuery(entry.guestPhone, search) ||
+      entry.guestPhone.toLowerCase().includes(s)
     );
   });
 

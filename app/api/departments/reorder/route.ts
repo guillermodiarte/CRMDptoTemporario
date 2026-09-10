@@ -3,6 +3,46 @@ import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireSessionId } from "@/lib/auth-helper";
 
+export async function GET() {
+  try {
+    const session = await auth();
+    // @ts-ignore
+    if (session?.user?.role !== "ADMIN") {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+
+    const departments = await prisma.department.findMany({
+      where: {
+        type: 'APARTMENT',
+        isActive: true,
+        showOnPublic: true,
+        isArchived: false,
+        OR: [
+          { sessionId: null },
+          { session: { isActive: true } }
+        ]
+      },
+      orderBy: [
+        { order: "asc" },
+        { createdAt: "desc" }
+      ],
+      include: {
+        session: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json(departments);
+  } catch (error) {
+    console.error("[DEPARTMENTS_REORDER_GET]", error);
+    return new NextResponse("Internal Error", { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const session = await auth();
@@ -12,7 +52,9 @@ export async function POST(req: Request) {
     }
     const sessionId = await requireSessionId();
     // @ts-ignore
-    const isSuperAdmin = session?.user?.email === "guillermo.diarte@gmail.com";
+    const userEmail = session?.user?.email?.toLowerCase().trim();
+    // @ts-ignore
+    const isSuperAdmin = userEmail === "guillermo.diarte@gmail.com" || (session?.user as any)?.isSuperAdmin === true;
 
     const body = await req.json();
     const { orderedIds } = body;
@@ -42,3 +84,4 @@ export async function POST(req: Request) {
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
+

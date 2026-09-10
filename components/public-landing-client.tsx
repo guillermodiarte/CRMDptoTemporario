@@ -3,7 +3,21 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { format, addDays, isSameDay, isWithinInterval, startOfDay, endOfDay, differenceInDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, isBefore, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarDays, MapPin, Users, Bed, ChevronRight, AlertTriangle, ChevronLeft, X } from "lucide-react";
+import Link from "next/link";
+import {
+  CalendarDays,
+  MapPin,
+  Users,
+  Bed,
+  ChevronRight,
+  AlertTriangle,
+  ChevronLeft,
+  X,
+  Sparkles,
+  Compass,
+  ArrowUpRight,
+  HelpCircle,
+} from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 
@@ -11,6 +25,7 @@ import { ImageCarousel, DepartmentModal, SharedDepartment } from "./shared-ui";
 import { PublicFooter } from "./public-footer";
 import { SiteConfig, SITE_CONFIG_DEFAULTS, HeroSlide } from "@/lib/site.config";
 import { DepartmentLocationMap } from "@/components/department-location-map";
+import { formatNumber } from "@/lib/utils";
 
 type Reservation = {
   id: string;
@@ -1074,6 +1089,7 @@ function ReservationRequestModal({
           guestNationality: nationality,
           guestPhone: phone,
           people,
+          bedsRequired: people <= 2 ? 1 : Math.max(1, people - 1),
           hasParking: garage,
           segments,
         })
@@ -1095,13 +1111,13 @@ function ReservationRequestModal({
     if (data.type === 'direct') {
       const dailyPrice = getPriceForPeople(data.dept!, people);
       message += `- Departamento: ${data.dept!.name}\n`;
-      message += `- Precio por día (${people} ${people === 1 ? 'persona' : 'personas'}): $${dailyPrice.toLocaleString('de-DE')}\n`;
+      message += `- Precio por día (${people} ${people === 1 ? 'persona' : 'personas'}): $${formatNumber(dailyPrice)}\n`;
     } else {
       message += `- Tipo: Reserva Combinada\n`;
       data.comb!.segments.forEach((seg, i) => {
         const d = departments.find(dep => dep.id === seg.deptId);
         const segDaily = d ? getPriceForPeople(d, people) : 0;
-        message += `  ${i + 1}. ${seg.deptName} (${format(seg.checkIn, 'dd/MM')} al ${format(seg.checkOut, 'dd/MM')}) - $${segDaily.toLocaleString('de-DE')}/día\n`;
+        message += `  ${i + 1}. ${seg.deptName} (${format(seg.checkIn, 'dd/MM')} al ${format(seg.checkOut, 'dd/MM')}) - $${formatNumber(segDaily)}/día\n`;
       });
     }
     message += `- Check-in: ${format(data.checkIn, 'dd/MM/yyyy')}\n`;
@@ -1109,7 +1125,7 @@ function ReservationRequestModal({
     message += `- Noches: ${nights}\n`;
     message += `- Personas: ${people}\n`;
     message += `- Cochera: ${garage ? 'Sí' : 'No'}\n`;
-    message += `- Precio Total: $${totalPrice.toLocaleString('de-DE')}\n`;
+    message += `- Precio Total: $${formatNumber(totalPrice)}\n`;
 
     if (config?.whatsappReservationFooter?.trim()) {
       message += `\n${config.whatsappReservationFooter.trim()}\n`;
@@ -1283,14 +1299,14 @@ function ReservationRequestModal({
                         <span className="font-semibold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors block text-sm">{data.dept!.name}</span>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="text-xs font-semibold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/15 px-2 py-0.5 rounded-md">
-                            ${dailyPrice.toLocaleString()} / día
+                            ${formatNumber(dailyPrice)} / día
                           </span>
                           <span className="text-[11px] text-slate-500 dark:text-slate-400">({people} {people === 1 ? 'persona' : 'personas'})</span>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-slate-900 dark:text-white text-base font-bold block">${stayPrice.toLocaleString()}</span>
+                      <span className="text-slate-900 dark:text-white text-base font-bold block">${formatNumber(stayPrice)}</span>
                       <span className="text-[11px] text-slate-400 dark:text-slate-500">total {nights} {nights === 1 ? 'noche' : 'noches'}</span>
                     </div>
                   </div>
@@ -1313,11 +1329,11 @@ function ReservationRequestModal({
                           {parsedImages[0] && <img src={parsedImages[0]} alt={seg.deptName} className="w-10 h-10 rounded-lg object-cover" />}
                           <div>
                             <span className="font-medium text-slate-800 dark:text-white block text-sm group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">{seg.deptName}</span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">${segDailyPrice.toLocaleString()}/día • {seg.nights} noche(s)</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">${formatNumber(segDailyPrice)}/día • {seg.nights} noche(s)</span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-slate-900 dark:text-white text-sm font-bold block">${segPrice.toLocaleString()}</span>
+                          <span className="text-slate-900 dark:text-white text-sm font-bold block">${formatNumber(segPrice)}</span>
                           <span className="text-xs text-slate-400 dark:text-slate-500">{seg.nights} noche(s)</span>
                         </div>
                       </div>
@@ -1369,12 +1385,12 @@ function ReservationRequestModal({
                 <span className="text-slate-900 dark:text-white font-bold block text-sm">Precio Total</span>
                 {data.type === 'direct' && (
                   <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5 font-medium">
-                    ${(getPriceForPeople(data.dept!, people)).toLocaleString()}/día × {nights} {nights === 1 ? 'noche' : 'noches'}
+                    ${formatNumber(getPriceForPeople(data.dept!, people))}/día × {nights} {nights === 1 ? 'noche' : 'noches'}
                   </span>
                 )}
               </div>
               <div className="text-right">
-                <span className="text-2xl font-bold text-sky-600 dark:text-sky-400">${totalPrice.toLocaleString()}</span>
+                <span className="text-2xl font-bold text-sky-600 dark:text-sky-400">${formatNumber(totalPrice)}</span>
               </div>
             </div>
           </div>

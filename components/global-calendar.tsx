@@ -21,6 +21,7 @@ import {
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, ShieldAlert, Home, Car, Expand, Shrink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatNumber } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -513,7 +514,7 @@ export function GlobalCalendar({ departments, reservations }: GlobalCalendarProp
                                     <span>{displayAmountLabel}</span>
                                     <span className="font-bold text-emerald-400">
                                       {res.currency === 'USD' ? 'USD ' : '$'}
-                                      {displayAmount?.toLocaleString()}
+                                      {formatNumber(displayAmount || 0)}
                                     </span>
                                   </div>
                                 </div>

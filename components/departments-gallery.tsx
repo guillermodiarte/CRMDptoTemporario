@@ -10,6 +10,7 @@ import { SharedDepartment } from "./shared-ui";
 import { PublicFooter } from "./public-footer";
 import { SiteConfig, SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
 import { DepartmentLocationMap } from "@/components/department-location-map";
+import { formatNumber } from "@/lib/utils";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
   addMonths, isBefore, startOfDay, isWithinInterval, isSameDay
@@ -344,13 +345,13 @@ function DeptSection({ dept, index, onLightbox, onAvailability }: {
                 {Object.entries(prices).sort(([a], [b]) => Number(a) - Number(b)).map(([ppl, price]) => (
                   <div key={ppl} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
                     <span className="text-slate-500 dark:text-slate-400 text-sm">{Number(ppl) === 1 ? "1 persona" : `${ppl} personas`}</span>
-                    <span className={`font-bold text-base sm:text-lg ${accent.text}`}>${Number(price).toLocaleString()}</span>
+                    <span className={`font-bold text-base sm:text-lg ${accent.text}`}>${formatNumber(price)}</span>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="flex items-baseline gap-1 py-1">
-                <span className={`text-2xl sm:text-3xl font-black ${accent.text}`}>${dept.basePrice.toLocaleString()}</span>
+                <span className={`text-2xl sm:text-3xl font-black ${accent.text}`}>${formatNumber(dept.basePrice)}</span>
                 <span className="text-slate-400 text-sm">/ noche</span>
               </div>
             )}

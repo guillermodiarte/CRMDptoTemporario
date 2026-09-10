@@ -6,14 +6,24 @@ import { getSiteConfig } from "@/lib/site-config-loader";
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
-  const title = `Contacto | ${config.siteName}`;
-  const description = `Ponete en contacto con ${config.siteName}. Estamos en ${config.city}, ${config.country}. Respondemos por WhatsApp, email y teléfono.`;
+  const title = `Contacto y Reservas | Alojamientos en Formosa | ${config.siteName}`;
+  const description = `Consultá disponibilidad y reservá tu departamento amoblado en Formosa Capital. Atención directa por WhatsApp, teléfono y email sin intermediarios.`;
   return {
     title,
     description,
+    keywords: [
+      "contacto alojamientos formosa",
+      "reservas departamentos formosa",
+      "alquiler temporario formosa contacto",
+      "hospedaje en formosa telefono",
+    ],
     openGraph: {
       title,
       description,
+      url: `${config.siteUrl || "https://alojamientosdiarte.com"}/contacto`,
+    },
+    alternates: {
+      canonical: `${config.siteUrl || "https://alojamientosdiarte.com"}/contacto`,
     },
   };
 }

@@ -8,7 +8,8 @@ export default async function DepartmentsPage() {
   const session = await auth();
   const userRole = (session?.user as any)?.role;
   const sessionId = session?.user?.sessionId;
-  const isSuperAdmin = session?.user?.email === "guillermo.diarte@gmail.com";
+  const userEmail = session?.user?.email?.toLowerCase().trim();
+  const isSuperAdmin = userEmail === "guillermo.diarte@gmail.com" || (session?.user as any)?.isSuperAdmin === true;
 
   const departments = await prisma.department.findMany({
     where: {
@@ -25,29 +26,57 @@ export default async function DepartmentsPage() {
   const totalSuppliesCost = 0; // Calcular si es necesario
 
   let otherSessionsDepts: { sessionName: string; departments: any[] }[] = [];
+  let allPublicDepartments: any[] = [];
 
-  if (isSuperAdmin && sessionId) {
-    const allOtherSessions = await prisma.session.findMany({
+  if (isSuperAdmin) {
+    allPublicDepartments = await prisma.department.findMany({
       where: {
-        id: { not: sessionId },
-        isActive: true
+        type: 'APARTMENT',
+        isActive: true,
+        showOnPublic: true,
+        isArchived: false,
+        OR: [
+          { sessionId: null },
+          { session: { isActive: true } }
+        ]
       },
+      orderBy: [
+        { order: "asc" },
+        { createdAt: "desc" }
+      ],
       include: {
-        departments: {
-          where: { type: 'APARTMENT' },
-          orderBy: [
-            { order: "asc" },
-            { createdAt: "desc" }
-          ]
+        session: {
+          select: {
+            id: true,
+            name: true
+          }
         }
       }
     });
-    otherSessionsDepts = allOtherSessions
-      .filter(s => s.departments.length > 0)
-      .map(s => ({
-        sessionName: s.name,
-        departments: s.departments
-      }));
+
+    if (sessionId) {
+      const allOtherSessions = await prisma.session.findMany({
+        where: {
+          id: { not: sessionId },
+          isActive: true
+        },
+        include: {
+          departments: {
+            where: { type: 'APARTMENT' },
+            orderBy: [
+              { order: "asc" },
+              { createdAt: "desc" }
+            ]
+          }
+        }
+      });
+      otherSessionsDepts = allOtherSessions
+        .filter(s => s.departments.length > 0)
+        .map(s => ({
+          sessionName: s.name,
+          departments: s.departments
+        }));
+    }
   }
 
   return (
@@ -59,6 +88,8 @@ export default async function DepartmentsPage() {
         defaultType="APARTMENT"
         title="Departamentos"
         otherSessionsDepts={otherSessionsDepts}
+        isSuperAdmin={isSuperAdmin}
+        allPublicDepartments={allPublicDepartments}
       />
     </div>
   );

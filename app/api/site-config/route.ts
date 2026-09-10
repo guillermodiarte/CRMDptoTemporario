@@ -70,6 +70,8 @@ export async function PUT(req: Request) {
       facebookUrl: "site_facebook_url",
       ogImageUrl: "site_og_image_url",
       seoDescription: "site_seo_description",
+      seoKeywords: "site_seo_keywords",
+      googleVerification: "site_google_verification",
       footerCopyright: "site_footer_copyright",
       footerCredit: "site_footer_credit",
       smtpHost: "smtp_host",

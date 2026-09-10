@@ -65,7 +65,7 @@ interface ReservationsClientProps {
 import { MonthSelector } from "./month-selector";
 import { ReservationsActions } from "./reservations-actions";
 import { BlacklistForm } from "./blacklist-form";
-import { normalizePhone } from "@/lib/phone-utils";
+import { normalizePhone, phoneMatchesQuery } from "@/lib/phone-utils";
 import { formatCurrency } from "@/lib/utils";
 
 
@@ -264,8 +264,9 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   const sortedData = [...data]
     .sort((a, b) => new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime())
     .filter(res =>
-      (res.guestName?.toLowerCase() || "").includes(search.toLowerCase()) ||
-      (res.guestPhone || "").includes(search)
+          (res.guestName?.toLowerCase() || "").includes(search.toLowerCase()) ||
+      phoneMatchesQuery(res.guestPhone, search) ||
+      (res.guestPhone || "").toLowerCase().includes(search.toLowerCase())
     );
 
   // Logic: Find first reservation starting TODAY or LATER.
@@ -476,8 +477,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 const isParkingUnit = (res.department as any).type === 'PARKING';
                 const isCancelled = (res.paymentStatus as any) === 'CANCELLED';
 
-                const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
-                const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
+                const isBlacklisted = !!res.guestPhone && blacklistedPhones.some(bp => normalizePhone(bp) === normalizePhone(res.guestPhone));
 
                 let rowClass = "border-b border-slate-100 dark:border-slate-700/60 transition-colors ";
                 if (isNoShow) {
@@ -621,7 +621,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           <span className="text-xs text-muted-foreground">≈ {formatCurrency(Math.round((res.groupTotalAmount ?? res.totalAmount) * dollarRate))}</span>
                         )}
                         {(isNoShow || (res.paymentStatus as any) === 'CANCELLED') && (
-                          <span className="text-xs text-orange-600 font-semibold">Seña: {formatCurrency(res.depositAmount || 0)}</span>
+                          <span className="text-xs text-orange-600 dark:text-orange-400 font-semibold">Seña: {formatCurrency(res.depositAmount || 0)}</span>
                         )}
                       </div>
                     </TableCell>
@@ -777,8 +777,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             const isNext = nextReservationDate && format(new Date(res.checkIn), "yyyy-MM-dd") === nextReservationDate;
             const isNoShow = (res.status as any) === 'NO_SHOW';
             const isParkingUnit = (res.department as any).type === 'PARKING';
-            const normalizedGuestPhone = res.guestPhone ? normalizePhone(res.guestPhone) : '';
-            const isBlacklisted = blacklistedPhones.includes(normalizedGuestPhone);
+            const isBlacklisted = !!res.guestPhone && blacklistedPhones.some(bp => normalizePhone(bp) === normalizePhone(res.guestPhone));
             const debt = res.totalAmount - (res.depositAmount || 0);
             const groupDebt = (res.groupTotalAmount ?? res.totalAmount) - (res.groupDepositAmount ?? res.depositAmount ?? 0);
             const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
@@ -903,7 +902,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           Total: {res.currency === 'USD' ? `US$ ${res.groupTotalAmount ?? res.totalAmount}` : formatCurrency(res.groupTotalAmount ?? res.totalAmount)}
                         </div>
                         {((res.paymentStatus as any) === 'CANCELLED' || isNoShow) && (
-                          <div className="text-orange-600 font-bold text-sm">
+                          <div className="text-orange-600 dark:text-orange-400 font-bold text-sm">
                             Seña: {res.currency === 'USD' ? `US$ ${res.depositAmount}` : formatCurrency(res.depositAmount)}
                           </div>
                         )}

@@ -46,7 +46,9 @@ export async function POST(req: NextRequest) {
           guestNationality: guestNationality || null,
           guestPhone,
           guestPeopleCount: people,
-          bedsRequired: people,
+          bedsRequired: (body.bedsRequired !== undefined && Number(body.bedsRequired) >= 0)
+            ? Number(body.bedsRequired)
+            : (people <= 2 ? 1 : Math.max(1, people - 1)),
           checkIn: new Date(`${inDateStr}T12:00:00.000Z`),
           checkOut: new Date(`${outDateStr}T12:00:00.000Z`),
           totalAmount: seg.totalAmount,

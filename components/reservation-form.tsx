@@ -29,11 +29,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Department, Reservation } from "@prisma/client";
 import { format, addDays } from "date-fns";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Moon } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
 
 // Removed Alert import
 
@@ -214,6 +215,16 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     }
   }, [selectedDepartmentId, departments, initialData, form]);
 
+  // Auto-fill Beds Required based on Guest Count for new reservations
+  const guestCount = form.watch("guestPeopleCount");
+  useEffect(() => {
+    if (!initialData && unitType !== "PARKING") {
+      const p = Number(guestCount) || 1;
+      const defaultBeds = p <= 2 ? 1 : Math.max(1, p - 1);
+      form.setValue("bedsRequired", defaultBeds);
+    }
+  }, [guestCount, initialData, unitType, form]);
+
   // Airbnb Logic
   const source = form.watch("source");
   useEffect(() => {
@@ -247,6 +258,22 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const checkInDate = form.watch("checkIn");
   const checkOutDate = form.watch("checkOut");
   const guestPeopleCount = form.watch("guestPeopleCount");
+
+  const calculatedNights = useMemo(() => {
+    if (!checkInDate || !checkOutDate) return 0;
+    try {
+      const [y1, m1, d1] = checkInDate.split("-").map(Number);
+      const [y2, m2, d2] = checkOutDate.split("-").map(Number);
+      if (!y1 || !y2) return 0;
+      const start = new Date(y1, m1 - 1, d1);
+      const end = new Date(y2, m2 - 1, d2);
+      const diffTime = end.getTime() - start.getTime();
+      if (diffTime <= 0) return 0;
+      return Math.round(diffTime / (1000 * 60 * 60 * 24));
+    } catch {
+      return 0;
+    }
+  }, [checkInDate, checkOutDate]);
 
   const recalculateAutoTotal = () => {
     setIsTotalManuallyModified(false);
@@ -459,28 +486,33 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
 
 
-        <FormField
-          control={form.control}
-          name="departmentId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Departamento</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione depto" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {filteredDepartments.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="departmentId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Departamento</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Seleccione depto" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {filteredDepartments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+
+
 
 
 
@@ -492,7 +524,16 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
               <FormItem>
                 <FormLabel>Ingreso</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input
+                    type="date"
+                    {...field}
+                    className="cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                    onClick={(e) => {
+                      try {
+                        e.currentTarget.showPicker?.();
+                      } catch {}
+                    }}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -503,9 +544,26 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
             name="checkOut"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Egreso</FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormLabel>Egreso</FormLabel>
+                  {calculatedNights > 0 && (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80">
+                      <Moon className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
+                      {calculatedNights} {calculatedNights === 1 ? "noche" : "noches"}
+                    </span>
+                  )}
+                </div>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input
+                    type="date"
+                    {...field}
+                    className="cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                    onClick={(e) => {
+                      try {
+                        e.currentTarget.showPicker?.();
+                      } catch {}
+                    }}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -637,13 +695,19 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
         {/* Partial Payment or Cancelled Logic */}
         {
           (form.watch("paymentStatus") === "PARTIAL" || form.watch("paymentStatus") === "CANCELLED") && (
-            <div className={`p-4 border rounded-md space-y-4 ${form.watch("paymentStatus") === "CANCELLED" ? "bg-red-50 border-red-100" : "bg-muted/50"}`}>
+            <div className={`p-4 border rounded-xl space-y-4 transition-colors ${
+              form.watch("paymentStatus") === "CANCELLED"
+                ? "bg-red-50/90 border-red-200 text-red-950 dark:bg-red-950/40 dark:border-red-900/60 dark:text-red-100"
+                : "bg-muted/50 border-border text-foreground"
+            }`}>
               <FormField
                 control={form.control}
                 name="depositAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{form.watch("paymentStatus") === "CANCELLED" ? "Ganancia Seña (Retenido)" : "Monto Abonado (Seña)"}</FormLabel>
+                    <FormLabel className={form.watch("paymentStatus") === "CANCELLED" ? "text-red-900 dark:text-red-200 font-semibold" : "font-semibold"}>
+                      {form.watch("paymentStatus") === "CANCELLED" ? "Ganancia Seña (Retenido)" : "Monto Abonado (Seña)"}
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -652,20 +716,26 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                         onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
                         {...field}
                         value={field.value ?? ""}
+                        className={form.watch("paymentStatus") === "CANCELLED"
+                          ? "bg-white dark:bg-slate-900/90 border-red-200 dark:border-red-900/70 text-slate-900 dark:text-white font-medium focus-visible:ring-red-500"
+                          : "bg-background"
+                        }
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <div className="flex justify-between items-center text-sm font-medium">
+              <div className={`flex justify-between items-center text-sm font-medium ${
+                form.watch("paymentStatus") === "CANCELLED" ? "text-red-900 dark:text-red-200" : "text-muted-foreground"
+              }`}>
                 <span>Monto Total:</span>
-                <span>${form.watch("totalAmount")}</span>
+                <span className="font-semibold text-slate-900 dark:text-white">${formatNumber(form.watch("totalAmount"))}</span>
               </div>
               {form.watch("paymentStatus") !== "CANCELLED" && (
-                <div className="flex justify-between items-center text-sm font-medium text-red-600">
+                <div className="flex justify-between items-center text-sm font-medium text-red-600 dark:text-red-400">
                   <span>Restante a Pagar:</span>
-                  <span>${(form.watch("totalAmount") || 0) - (form.watch("depositAmount") || 0)}</span>
+                  <span className="font-semibold">${formatNumber((form.watch("totalAmount") || 0) - (form.watch("depositAmount") || 0))}</span>
                 </div>
               )}
             </div>

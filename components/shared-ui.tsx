@@ -6,6 +6,7 @@ import Link from "next/link";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { DepartmentLocationMap } from "@/components/department-location-map";
+import { formatCurrency } from "@/lib/utils";
 
 export type SharedDepartment = {
   id: string;
@@ -251,13 +252,13 @@ export function DepartmentModal({ dept, parsedImages, onClose }: { dept: SharedD
                       Object.entries(pricesObj).sort(([a],[b]) => Number(a) - Number(b)).map(([people, price]) => (
                         <div key={people} className="flex items-center justify-between py-3 border-b border-slate-200/60 dark:border-slate-700 last:border-0 last:pb-0">
                            <span className="text-slate-600 dark:text-slate-400 font-medium">Para {people} {Number(people) === 1 ? 'persona' : 'personas'}</span>
-                           <span className="font-bold text-slate-900 dark:text-white">${price}</span>
+                           <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(Number(price))}</span>
                         </div>
                       ))
                     ) : (
                       <div className="flex items-center justify-between py-2">
                         <span className="text-slate-600 dark:text-slate-400 font-medium">Precio Base</span>
-                        <span className="font-bold text-slate-900 dark:text-white">${dept.basePrice}</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(dept.basePrice)}</span>
                       </div>
                     )}
                   </div>

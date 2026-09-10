@@ -1896,11 +1896,43 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                     />
                     <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                       <span>Acompaña el título debajo de la foto al compartir por WhatsApp y en Google.</span>
-                      <span className={`font-mono ${(siteConfig.seoDescription || "").length > 160 ? "text-amber-500 font-semibold" : "text-slate-400"
-                        }`}>
+                      <span className={`font-mono ${(siteConfig.seoDescription || "").length > 160 ? "text-amber-500 font-semibold" : "text-slate-400"}`}>
                         {(siteConfig.seoDescription || "").length} / 160 sugeridos
                       </span>
                     </div>
+                  </div>
+
+                  {/* Palabras Clave SEO (Google Keywords) */}
+                  <div className="space-y-1.5">
+                    <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider">
+                      Palabras Clave SEO (separadas por coma)
+                    </Label>
+                    <textarea
+                      rows={2}
+                      value={siteConfig.seoKeywords || ""}
+                      onChange={e => setSiteConfig(prev => ({ ...prev, seoKeywords: e.target.value }))}
+                      placeholder="alojamientos en formosa, departamentos en formosa, alquileres temporarios formosa, bañado las estrellas, tour a paraguay"
+                      className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-slate-400"
+                    />
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Términos de búsqueda con los que querés que encuentren tu página en Google.
+                    </p>
+                  </div>
+
+                  {/* Google Search Console Verification */}
+                  <div className="space-y-1.5">
+                    <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider">
+                      Código de Verificación de Google Search Console
+                    </Label>
+                    <Input
+                      value={siteConfig.googleVerification || ""}
+                      onChange={e => setSiteConfig(prev => ({ ...prev, googleVerification: e.target.value }))}
+                      placeholder="Ej: dG9rZW5fZGVfcHJ1ZWJhX2dvb2dsZQ..."
+                      className="p-3 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Ingresá el valor del token <code className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">content="..."</code> de la etiqueta HTML provista por Google Search Console.
+                    </p>
                   </div>
                 </div>
 

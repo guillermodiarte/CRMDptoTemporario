@@ -5,6 +5,7 @@ import { es } from 'date-fns/locale';
 import { CheckCircle2, XCircle, User, Phone, Calendar, Users, IdCard, Globe, Car, Building2, Clock, AlertTriangle, ClipboardCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AirbnbBookingReminderModal, ReminderItem } from '@/components/airbnb-booking-reminder-modal';
+import { formatNumber } from '@/lib/utils';
 
 type Reservation = {
   id: string;
@@ -406,7 +407,7 @@ export function ApprovalsClient({
                             {format(new Date(res.checkIn), "d MMM", { locale: es })} → {format(new Date(res.checkOut), "d MMM yyyy", { locale: es })}
                           </div>
                         </div>
-                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200 flex-shrink-0">${res.totalAmount.toLocaleString()}</span>
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200 flex-shrink-0">${formatNumber(res.totalAmount)}</span>
                       </div>
                     );
                   })}
@@ -415,7 +416,7 @@ export function ApprovalsClient({
                   <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
                     <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">Total (toda la estadía)</span>
                     <span className="text-lg font-bold text-sky-600 dark:text-sky-400">
-                      ${group.reservations.reduce((acc, r) => acc + r.totalAmount, 0).toLocaleString()}
+                      ${formatNumber(group.reservations.reduce((acc, r) => acc + r.totalAmount, 0))}
                     </span>
                   </div>
                 </div>

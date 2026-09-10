@@ -67,3 +67,8 @@ public/uploads/*
 !public/uploads/avatars/
 !public/uploads/slides/
 !public/uploads/departamentos/
+!public/uploads/icons/
+!public/uploads/banado_la_estrella.*
+!public/uploads/costanera_vuelta_fermoza.*
+!public/uploads/tour_paraguay_alberdi.*
+

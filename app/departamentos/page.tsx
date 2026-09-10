@@ -8,14 +8,25 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata() {
   const config = await getSiteConfig();
-  const title = `Departamentos | ${config.siteName}`;
-  const description = `Conocé todos los departamentos disponibles en ${config.siteName}. Fotos, comodidades, capacidad y precios.`;
+  const title = `Departamentos Amoblados en Formosa | Alquileres Temporarios Di'Arte`;
+  const description = `Alquiler de departamentos amoblados y temporarios en Formosa Capital. Unidades totalmente equipadas con cocina, aire acondicionado, WiFi y ropa blanca para turistas, profesionales y familias.`;
   return {
     title,
     description,
+    keywords: [
+      "departamentos amoblados formosa",
+      "alquileres temporarios formosa",
+      "departamentos en formosa",
+      "alojamientos temporarios formosa",
+      "alquiler por dia formosa",
+    ],
     openGraph: {
       title,
       description,
+      url: `${config.siteUrl || "https://alojamientosdiarte.com"}/departamentos`,
+    },
+    alternates: {
+      canonical: `${config.siteUrl || "https://alojamientosdiarte.com"}/departamentos`,
     },
   };
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, Home, Phone, Compass, Menu, X } from "lucide-react";
+import { Building2, Home, Phone, Compass, Menu, X, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SITE_CONFIG_DEFAULTS } from "@/lib/site.config";
 import { ThemeToggle } from "./theme-toggle";
@@ -35,6 +35,7 @@ export function PublicNavbar({
   const navLinks = [
     { href: "/", label: "Inicio", icon: <Home className="w-4 h-4" /> },
     { href: "/departamentos", label: "Departamentos", icon: <Building2 className="w-4 h-4" /> },
+    { href: "/informacion", label: "Información", icon: <Info className="w-4 h-4" /> },
     ...(guiaEnabled !== "false" ? [{ href: "/guia", label: "Guía & Turismo", icon: <Compass className="w-4 h-4" /> }] : []),
     { href: "/contacto", label: "Contacto", icon: <Phone className="w-4 h-4" /> },
   ];

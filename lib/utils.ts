@@ -5,13 +5,32 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const formatCurrency = (amount: number, currency: string = 'ARS', decimals: number = 2) => {
+export const formatNumber = (amount: number | string, minDecimals: number = 0, maxDecimals: number = 2): string => {
+  const num = Number(amount) || 0;
+  const hasDecimals = num % 1 !== 0;
   return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(amount);
+    minimumFractionDigits: hasDecimals ? (minDecimals || 2) : minDecimals,
+    maximumFractionDigits: hasDecimals ? maxDecimals : minDecimals,
+  }).format(num);
+};
+
+export const formatPrice = (amount: number | string, prefix: string = "$"): string => {
+  return `${prefix}${formatNumber(amount)}`;
+};
+
+export const formatCurrency = (amount: number, currency: string = 'ARS', decimals?: number) => {
+  const num = Number(amount) || 0;
+  const formatted = decimals !== undefined
+    ? new Intl.NumberFormat('es-AR', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      }).format(num)
+    : formatNumber(num);
+
+  if (currency === 'USD') {
+    return `US$ ${formatted}`;
+  }
+  return `$ ${formatted}`;
 };
 
 export const formatAxisNumber = (value: number) => {

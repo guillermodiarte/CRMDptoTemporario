@@ -44,6 +44,7 @@ export function PublicFooter({ config = SITE_CONFIG_DEFAULTS }: PublicFooterProp
               {[
                 { href: "/", label: "Inicio" },
                 { href: "/departamentos", label: "Departamentos" },
+                { href: "/informacion", label: "Información" },
                 ...(config.guiaEnabled !== "false" ? [{ href: "/guia", label: "Guía & Turismo" }] : []),
                 { href: "/contacto", label: "Contacto" },
               ].map(link => (
