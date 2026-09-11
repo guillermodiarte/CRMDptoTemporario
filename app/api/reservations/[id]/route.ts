@@ -59,6 +59,18 @@ export async function PATCH(
 
       const groupId = currentRes.groupId;
 
+      let effectiveGroupPaymentStatus = body.paymentStatus || firstPart.paymentStatus;
+      let effectiveGroupStatus = body.status;
+      if (effectiveGroupPaymentStatus === 'CANCELLED') {
+        effectiveGroupStatus = 'CANCELLED';
+      } else if (['PAID', 'PARTIAL', 'UNPAID'].includes(effectiveGroupPaymentStatus)) {
+        if (!effectiveGroupStatus || effectiveGroupStatus === 'CANCELLED' || firstPart.status === 'CANCELLED') {
+          effectiveGroupStatus = 'CONFIRMED';
+        }
+      } else if (!effectiveGroupStatus) {
+        effectiveGroupStatus = firstPart.status;
+      }
+
       await prisma.$transaction(async (tx) => {
         await tx.reservation.deleteMany({ where: { groupId } });
         await Promise.all(splits.map(split => tx.reservation.create({
@@ -76,17 +88,18 @@ export async function PATCH(
             cleaningFee: split.cleaningFee,
             amenitiesFee: split.amenitiesFee,
             currency: body.currency || firstPart.currency,
-            paymentStatus: body.paymentStatus || firstPart.paymentStatus,
+            paymentStatus: effectiveGroupPaymentStatus,
             source: body.source || firstPart.source,
             notes: body.notes || firstPart.notes,
             hasParking: body.hasParking !== undefined ? !!body.hasParking : firstPart.hasParking,
-            status: (body.status || firstPart.status) as any,
+            status: effectiveGroupStatus as any,
             groupId: groupId,
             sessionId: currentRes.sessionId
           }
         })));
       });
 
+      revalidatePath("/dashboard");
       revalidatePath("/dashboard/reservations");
       revalidatePath("/dashboard/calendar");
       revalidatePath("/dashboard/finance");
@@ -104,13 +117,15 @@ export async function PATCH(
             where: { id: sib.id },
             data: {
               paymentStatus: 'PAID',
-              depositAmount: sib.totalAmount // Clear debt for each part
+              depositAmount: sib.totalAmount, // Clear debt for each part
+              status: sib.status === 'CANCELLED' ? 'CONFIRMED' : sib.status
             }
           }))
         );
 
         const updated = await prisma.reservation.findUnique({ where: { id } });
 
+        revalidatePath("/dashboard");
         revalidatePath("/dashboard/reservations");
         revalidatePath("/dashboard/calendar");
         revalidatePath("/dashboard/finance");
@@ -177,6 +192,19 @@ export async function PATCH(
         }
       }
 
+      let effectivePaymentStatus = paymentStatus !== undefined ? paymentStatus : currentRes.paymentStatus;
+      let effectiveStatus = status;
+
+      if (effectivePaymentStatus === 'CANCELLED') {
+        effectiveStatus = 'CANCELLED';
+      } else if (['PAID', 'PARTIAL', 'UNPAID'].includes(effectivePaymentStatus)) {
+        if (!effectiveStatus || effectiveStatus === 'CANCELLED' || currentRes.status === 'CANCELLED') {
+          effectiveStatus = 'CONFIRMED';
+        }
+      } else if (!effectiveStatus) {
+        effectiveStatus = currentRes.status;
+      }
+
       const reservation = await prisma.reservation.update({
         where: { id },
         data: {
@@ -194,16 +222,17 @@ export async function PATCH(
           cleaningFee: cleaningFee !== undefined ? Number(cleaningFee) : undefined,
           amenitiesFee: amenitiesFee !== undefined ? Number(amenitiesFee) : undefined,
           currency,
-          paymentStatus,
+          paymentStatus: effectivePaymentStatus,
           source,
           notes,
           hasParking,
-          status: status as any,
+          status: effectiveStatus as any,
           exchangeRate: exchangeRate !== undefined ? parseFloat(exchangeRate) : undefined,
           groupId: groupId !== undefined ? groupId : undefined
         },
       });
 
+      revalidatePath("/dashboard");
       revalidatePath("/dashboard/reservations");
       revalidatePath("/dashboard/calendar");
       revalidatePath("/dashboard/finance");
@@ -231,6 +260,7 @@ export async function DELETE(
       where: { id }
     });
 
+    revalidatePath("/dashboard");
     revalidatePath("/dashboard/reservations");
     revalidatePath("/dashboard/calendar");
     revalidatePath("/dashboard/finance");

@@ -781,19 +781,19 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             const debt = res.totalAmount - (res.depositAmount || 0);
             const groupDebt = (res.groupTotalAmount ?? res.totalAmount) - (res.groupDepositAmount ?? res.depositAmount ?? 0);
             const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
-            const isCancelled = (res.paymentStatus as any) === 'CANCELLED';
+            const isCancelled = (res.paymentStatus as any) === 'CANCELLED' || (res.status as any) === 'CANCELLED';
 
-            let cardClass = "text-sm border border-slate-200 dark:border-slate-700 ";
+            let cardClass = "text-sm border border-slate-200 dark:border-slate-700 relative overflow-hidden ";
             if (isNoShow) {
               cardClass += "bg-orange-50/70 dark:bg-orange-900/30 opacity-90";
             } else if (isBlacklisted) {
               cardClass += "bg-red-50/80 dark:bg-red-900/40 border-l-4 border-red-500";
+            } else if (isCancelled) {
+              cardClass += "bg-red-50/40 dark:bg-rose-950/20 border-red-200 dark:border-red-900/50 opacity-85";
             } else if (isPaid) {
               cardClass += "bg-green-50/70 dark:bg-emerald-900/30";
             } else if (isPartial) {
               cardClass += "bg-blue-50/70 dark:bg-blue-900/30";
-            } else if ((res.paymentStatus as any) === 'CANCELLED') {
-              cardClass += "bg-red-50/50 dark:bg-rose-900/20";
             } else {
               cardClass += "bg-yellow-50/70 dark:bg-amber-900/30";
             }
@@ -804,6 +804,36 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
             return (
               <Card key={res.id} id={`res-mobile-${res.id}`} className={cardClass}>
+                {isCancelled && (
+                  <svg
+                    className="absolute inset-0 w-full h-full pointer-events-none z-10"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 100 100"
+                  >
+                    <line
+                      x1="0"
+                      y1="0"
+                      x2="100"
+                      y2="100"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      vectorEffect="non-scaling-stroke"
+                      strokeLinecap="round"
+                      className="text-red-500/45 dark:text-red-500/55"
+                    />
+                    <line
+                      x1="100"
+                      y1="0"
+                      x2="0"
+                      y2="100"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      vectorEffect="non-scaling-stroke"
+                      strokeLinecap="round"
+                      className="text-red-500/45 dark:text-red-500/55"
+                    />
+                  </svg>
+                )}
                 <CardContent className="p-4 space-y-3">
                   {/* Header: Name, Dept, Status (Wrapped) */}
                   <div className="flex flex-col gap-2">

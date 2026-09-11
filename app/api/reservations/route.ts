@@ -146,6 +146,7 @@ export async function POST(req: Request) {
       return createdReservations;
     });
 
+    revalidatePath("/dashboard");
     revalidatePath("/dashboard/reservations");
     revalidatePath("/dashboard/calendar");
     revalidatePath("/dashboard/finance");

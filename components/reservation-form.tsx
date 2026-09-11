@@ -54,6 +54,7 @@ const formSchema = z.object({
   amenitiesFee: z.coerce.number().default(0),
   currency: z.enum(["ARS", "USD"]).default("ARS"),
   paymentStatus: z.enum(["PAID", "PARTIAL", "UNPAID", "CANCELLED"]).default("UNPAID"),
+  status: z.string().optional(),
   source: z.enum(["AIRBNB", "BOOKING", "DIRECT"]).default("DIRECT"),
   hasParking: z.boolean().default(false),
   notes: z.string().optional(),
@@ -399,10 +400,20 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       const url = initialData ? `/api/reservations/${initialData.id}` : "/api/reservations";
       const method = initialData ? "PATCH" : "POST";
 
+      let resolvedStatus = initialData?.status;
+      if (values.paymentStatus === "CANCELLED") {
+        resolvedStatus = "CANCELLED";
+      } else if (values.paymentStatus !== "CANCELLED") {
+        if (!resolvedStatus || resolvedStatus === "CANCELLED") {
+          resolvedStatus = "CONFIRMED";
+        }
+      }
+
       const res = await fetch(url, {
         method: method,
         body: JSON.stringify({
           ...values,
+          status: resolvedStatus,
           guestPeopleCount: unitType === 'PARKING' ? 0 : values.guestPeopleCount,
           bedsRequired: unitType === 'PARKING' ? 0 : values.bedsRequired,
           amenitiesFee: unitType === 'PARKING' ? 0 : amenitiesCost,

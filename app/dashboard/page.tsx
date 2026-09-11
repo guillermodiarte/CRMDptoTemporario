@@ -26,6 +26,22 @@ export default async function DashboardPage() {
   const userRole = session?.user?.role; // 'ADMIN' | 'VISUALIZER'
   const isAdmin = userRole === 'ADMIN';
 
+  // Auto-heal: Ensure any reservation where paymentStatus is active but status was left as CANCELLED is synced to CONFIRMED
+  try {
+    await prisma.reservation.updateMany({
+      where: {
+        status: "CANCELLED",
+        paymentStatus: { in: ["PAID", "PARTIAL", "UNPAID"] },
+        sessionId: sessionId || undefined
+      },
+      data: {
+        status: "CONFIRMED"
+      }
+    });
+  } catch (e) {
+    console.error("Auto-heal reservations error:", e);
+  }
+
   // Shared date boundaries
   const startOfToday = new Date(today);
   startOfToday.setHours(0, 0, 0, 0);
@@ -37,6 +53,7 @@ export default async function DashboardPage() {
     where: {
       checkIn: { gte: today },
       status: { notIn: ["CANCELLED", "PENDING_APPROVAL"] },
+      paymentStatus: { not: "CANCELLED" },
       sessionId: sessionId
     },
     orderBy: { checkIn: "asc" },
@@ -49,6 +66,7 @@ export default async function DashboardPage() {
       checkIn: { lte: today },
       checkOut: { gte: today },
       status: { notIn: ["CANCELLED", "PENDING_APPROVAL"] },
+      paymentStatus: { not: "CANCELLED" },
       sessionId: sessionId
     },
     select: {
@@ -72,7 +90,7 @@ export default async function DashboardPage() {
   // 3. Pending Payments
   const pendingPayments = await prisma.reservation.count({
     where: {
-      paymentStatus: { not: "PAID" },
+      paymentStatus: { notIn: ["PAID", "CANCELLED"] },
       status: { notIn: ["CANCELLED", "NO_SHOW", "PENDING_APPROVAL"] },
       checkOut: { gte: startOfToday },
       sessionId: sessionId
@@ -84,6 +102,7 @@ export default async function DashboardPage() {
     where: {
       checkIn: { gte: startOfToday },
       status: { notIn: ["CANCELLED", "PENDING_APPROVAL"] },
+      paymentStatus: { not: "CANCELLED" },
       sessionId: sessionId
     }
   });
@@ -93,6 +112,7 @@ export default async function DashboardPage() {
     where: {
       checkOut: { gte: startOfToday, lte: endOfToday },
       status: { notIn: ["CANCELLED", "PENDING_APPROVAL", "NO_SHOW"] },
+      paymentStatus: { not: "CANCELLED" },
       sessionId: sessionId
     },
     select: {
@@ -110,6 +130,7 @@ export default async function DashboardPage() {
     where: {
       checkIn: { gte: startOfToday, lte: endOfToday },
       status: { notIn: ["CANCELLED", "PENDING_APPROVAL", "NO_SHOW"] },
+      paymentStatus: { not: "CANCELLED" },
       sessionId: sessionId
     },
     select: {
