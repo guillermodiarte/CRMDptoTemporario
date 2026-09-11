@@ -284,7 +284,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
     const checkInDate = new Date(r.checkIn);
     const checkInStr = format(checkInDate, "yyyy-MM-dd");
     // Exclude cancelled payments from highlighting
-    const isCancelled = (r.paymentStatus as any) === 'CANCELLED';
+    const isCancelled = (r.paymentStatus as any) === 'CANCELLED' || (r.status as any) === 'CANCELLED';
     return checkInStr >= todayStr && !isCancelled;
   });
 
@@ -774,7 +774,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             const isPaid = res.paymentStatus === 'PAID';
             const isPartial = res.paymentStatus === 'PARTIAL';
             // Highlight ALL reservations that match the target date
-            const isNext = nextReservationDate && format(new Date(res.checkIn), "yyyy-MM-dd") === nextReservationDate;
+            const isNext = nextReservationDate && format(new Date(res.checkIn), "yyyy-MM-dd") === nextReservationDate && (res.paymentStatus as any) !== 'CANCELLED';
             const isNoShow = (res.status as any) === 'NO_SHOW';
             const isParkingUnit = (res.department as any).type === 'PARKING';
             const isBlacklisted = !!res.guestPhone && blacklistedPhones.some(bp => normalizePhone(bp) === normalizePhone(res.guestPhone));
@@ -798,7 +798,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
               cardClass += "bg-yellow-50/70 dark:bg-amber-900/30";
             }
 
-            if (isNext) cardClass += " ring-2 ring-blue-500";
+            if (isNext && !isCancelled) cardClass += " ring-2 ring-blue-500";
             if (searchParams.get("edit") === res.id) cardClass += " ring-2 ring-emerald-500/80";
             if (searchParams.get("highlight") === res.id) cardClass += " ring-2 ring-blue-500/80";
 

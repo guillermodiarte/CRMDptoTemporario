@@ -164,6 +164,7 @@ export function PublicLandingClient({
   const searchBarRef = useRef<HTMLDivElement>(null);
   const peopleSelectRef = useRef<HTMLSelectElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToResults = useRef(false);
 
   const isDatesSet = !!(checkInDate && checkOutDate);
   const isMissingPeople = isDatesSet && peopleCount === '';
@@ -697,6 +698,7 @@ export function PublicLandingClient({
                   selected={checkInDate}
                   onSelect={setCheckInDate}
                   disabled={(date) => isBefore(date, today)}
+                  locale={es}
                   initialFocus
                 />
               </PopoverContent>
@@ -719,6 +721,7 @@ export function PublicLandingClient({
                   selected={checkOutDate}
                   onSelect={setCheckOutDate}
                   disabled={(date) => isBefore(date, checkInDate || today)}
+                  locale={es}
                   initialFocus
                 />
               </PopoverContent>
