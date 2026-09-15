@@ -483,7 +483,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                 if (isNoShow) {
                   rowClass += "bg-orange-50/70 dark:bg-orange-900/30 hover:bg-orange-100/80 dark:hover:bg-orange-800/40 text-muted-foreground";
                 } else if (isBlacklisted) {
-                  rowClass += "bg-red-50/80 dark:bg-red-900/40 hover:bg-red-100/90 dark:hover:bg-red-800/50 border-l-4 border-red-500 text-slate-900 dark:text-slate-100";
+                  rowClass += "bg-red-50/80 dark:bg-red-900/40 hover:bg-red-100/90 dark:hover:bg-red-800/50 text-slate-900 dark:text-slate-100";
                 } else if (isPaid) {
                   rowClass += "bg-green-50/70 dark:bg-emerald-900/30 hover:bg-green-100/80 dark:hover:bg-emerald-800/40 text-slate-900 dark:text-slate-100";
                 } else if (isPartial) {
@@ -787,7 +787,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             if (isNoShow) {
               cardClass += "bg-orange-50/70 dark:bg-orange-900/30 opacity-90";
             } else if (isBlacklisted) {
-              cardClass += "bg-red-50/80 dark:bg-red-900/40 border-l-4 border-red-500";
+              cardClass += "bg-red-50/80 dark:bg-red-900/40";
             } else if (isCancelled) {
               cardClass += "bg-red-50/40 dark:bg-rose-950/20 border-red-200 dark:border-red-900/50 opacity-85";
             } else if (isPaid) {
