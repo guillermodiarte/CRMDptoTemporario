@@ -28,6 +28,50 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
   }
 ];
 
+export interface QuickReply {
+  id: string;
+  title: string;
+  content: string;
+  category?: string; // "Booking" | "Directo" | "Airbnb" | "Otro"
+  description?: string;
+}
+
+export const DEFAULT_QUICK_REPLIES: QuickReply[] = [
+  {
+    id: "booking",
+    title: "Respuesta Booking",
+    category: "Booking",
+    description: "Bienvenida y coordinación de check-in para huéspedes de Booking",
+    content: "¡Hola! Gracias por reservar con nosotros a través de Booking.com. Te damos una cálida bienvenida a Alojamientos Di'Arte. Para coordinar los detalles de tu llegada y brindarte las instrucciones de acceso, ¿a qué hora estimás tu check-in? Quedamos a tu completa disposición ante cualquier consulta."
+  },
+  {
+    id: "direct",
+    title: "Respuesta Directos",
+    category: "Directo",
+    description: "Instrucciones de confirmación y anticipo de seña para reservas directas",
+    content: "¡Hola! Gracias por comunicarte con Alojamientos Di'Arte. Te confirmamos la disponibilidad para las fechas solicitadas. Para confirmar y asegurar el bloqueo de las fechas en el calendario, solicitamos el anticipo de la seña. Por favor avísanos si deseas proceder y te enviamos los datos bancarios. ¡Muchas gracias!"
+  },
+  {
+    id: "airbnb",
+    title: "Calificar Huésped Airbnb",
+    category: "Airbnb",
+    description: "Modelo de calificación 5 estrellas para huéspedes de Airbnb al realizar check-out",
+    content: "¡Excelente huésped! Muy cuidadoso, limpio y sumamente respetuoso de las normas de la casa. Mantuvo una comunicación fluida y cordial en todo momento. ¡100% recomendado para cualquier anfitrión de la comunidad!"
+  }
+];
+
+export interface QuickRepliesSettings {
+  enabledUsers: string[]; // Lista de emails de usuarios con el widget habilitado
+  userReplies: Record<string, QuickReply[]>; // Respuestas personalizadas por email de usuario
+}
+
+export const DEFAULT_QUICK_REPLIES_SETTINGS: QuickRepliesSettings = {
+  enabledUsers: ["guillermo.diarte@gmail.com"],
+  userReplies: {
+    "guillermo.diarte@gmail.com": DEFAULT_QUICK_REPLIES,
+  },
+};
+
 export const SITE_CONFIG_DEFAULTS = {
   // Identidad & Marca
   siteName: "Alojamientos Di'Arte",
@@ -99,6 +143,9 @@ export const SITE_CONFIG_DEFAULTS = {
 
   // Páginas públicas
   guiaEnabled: "true", // "true" | "false"
+
+  // Respuestas Rápidas (Portapapeles)
+  quickReplies: JSON.stringify(DEFAULT_QUICK_REPLIES_SETTINGS),
 };
 
 export type SiteConfig = typeof SITE_CONFIG_DEFAULTS;

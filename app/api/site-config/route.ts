@@ -80,6 +80,7 @@ export async function PUT(req: Request) {
       smtpPassword: "smtp_password",
       smtpFromName: "smtp_from_name",
       guiaEnabled: "site_guia_enabled",
+      quickReplies: "site_quick_replies",
     };
 
     // Reliable upsert loop for global settings (sessionId: null)

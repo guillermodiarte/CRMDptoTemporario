@@ -44,6 +44,9 @@ import {
   Smartphone,
   Info,
   HelpCircle,
+  ClipboardCopy,
+  Check,
+  Users,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -67,16 +70,35 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
-import { SiteConfig, SITE_CONFIG_DEFAULTS, HeroSlide, DEFAULT_HERO_SLIDES } from "@/lib/site.config";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import {
+  SiteConfig,
+  SITE_CONFIG_DEFAULTS,
+  HeroSlide,
+  DEFAULT_HERO_SLIDES,
+  QuickReply,
+  DEFAULT_QUICK_REPLIES,
+  QuickRepliesSettings,
+  DEFAULT_QUICK_REPLIES_SETTINGS,
+} from "@/lib/site.config";
 import { MediaPickerModal } from "./media-picker-modal";
+
+export interface SettingsFormUser {
+  id: string;
+  email: string;
+  name: string | null;
+  isSuperAdmin?: boolean;
+}
 
 interface SettingsFormProps {
   activeParkingCount?: number;
+  users?: SettingsFormUser[];
 }
 
-type TabType = "general" | "insumos" | "identidad" | "slides" | "whatsapp" | "contacto" | "smtp";
+type TabType = "general" | "insumos" | "identidad" | "slides" | "whatsapp" | "contacto" | "smtp" | "respuestas";
 
-export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
+export function SettingsForm({ activeParkingCount = 0, users = [] }: SettingsFormProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,6 +109,21 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
 
   // Active Tab State
   const [activeTab, setActiveTab] = useState<TabType>("general");
+  const [copiedReplyId, setCopiedReplyId] = useState<string | null>(null);
+
+  // Leer parámetro ?tab= de la URL (ej. ?tab=respuestas)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (
+        tabParam &&
+        ["general", "insumos", "identidad", "slides", "whatsapp", "contacto", "smtp", "respuestas"].includes(tabParam)
+      ) {
+        setActiveTab(tabParam as TabType);
+      }
+    }
+  }, []);
 
   // Media Picker State
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -281,6 +318,130 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
     list[index] = list[targetIndex];
     list[targetIndex] = temp;
     updateHeroSlides(list);
+  };
+
+  // ─── Quick Replies Settings (Per-User & Permissions) ───────────────
+  const quickRepliesSettings: QuickRepliesSettings = (() => {
+    try {
+      if (siteConfig.quickReplies) {
+        const parsed = typeof siteConfig.quickReplies === "string" ? JSON.parse(siteConfig.quickReplies) : siteConfig.quickReplies;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          return {
+            enabledUsers: Array.isArray(parsed.enabledUsers) ? parsed.enabledUsers : ["guillermo.diarte@gmail.com"],
+            userReplies: typeof parsed.userReplies === "object" && parsed.userReplies ? parsed.userReplies : { "guillermo.diarte@gmail.com": DEFAULT_QUICK_REPLIES },
+          };
+        } else if (Array.isArray(parsed) && parsed.length > 0) {
+          return {
+            enabledUsers: ["guillermo.diarte@gmail.com"],
+            userReplies: { "guillermo.diarte@gmail.com": parsed },
+          };
+        }
+      }
+    } catch (e) { }
+    return DEFAULT_QUICK_REPLIES_SETTINGS;
+  })();
+
+  const [selectedUserEmail, setSelectedUserEmail] = useState<string>("guillermo.diarte@gmail.com");
+
+  const updateQuickRepliesSettings = (newSettings: QuickRepliesSettings) => {
+    setSiteConfig(prev => ({
+      ...prev,
+      quickReplies: JSON.stringify(newSettings),
+    }));
+  };
+
+  const isSelectedUserEnabled = quickRepliesSettings.enabledUsers.some(
+    e => e.toLowerCase() === selectedUserEmail.toLowerCase()
+  );
+
+  const toggleSelectedUserEnabled = (enabled: boolean) => {
+    const currentList = quickRepliesSettings.enabledUsers.map(e => e.toLowerCase());
+    const targetEmail = selectedUserEmail.toLowerCase();
+    const set = new Set(currentList);
+    if (enabled) {
+      set.add(targetEmail);
+    } else {
+      set.delete(targetEmail);
+    }
+    updateQuickRepliesSettings({
+      ...quickRepliesSettings,
+      enabledUsers: Array.from(set),
+    });
+  };
+
+  const currentUserReplies: QuickReply[] =
+    quickRepliesSettings.userReplies[selectedUserEmail] ||
+    quickRepliesSettings.userReplies[selectedUserEmail.toLowerCase()] ||
+    DEFAULT_QUICK_REPLIES;
+
+  const updateCurrentUserReplies = (replies: QuickReply[]) => {
+    updateQuickRepliesSettings({
+      ...quickRepliesSettings,
+      userReplies: {
+        ...quickRepliesSettings.userReplies,
+        [selectedUserEmail]: replies,
+      },
+    });
+  };
+
+  const handleAddQuickReply = () => {
+    const newReply: QuickReply = {
+      id: `reply-${Date.now()}`,
+      title: "Nueva Respuesta",
+      category: "General",
+      description: "Descripción o canal",
+      content: "Escribí aquí el texto que se copiará al portapapeles...",
+    };
+    updateCurrentUserReplies([...currentUserReplies, newReply]);
+  };
+
+  const handleUpdateQuickReply = (id: string, updates: Partial<QuickReply>) => {
+    const updated = currentUserReplies.map(r => r.id === id ? { ...r, ...updates } : r);
+    updateCurrentUserReplies(updated);
+  };
+
+  const handleDeleteQuickReply = (id: string) => {
+    const updated = currentUserReplies.filter(r => r.id !== id);
+    updateCurrentUserReplies(updated);
+  };
+
+  const handleMoveQuickReply = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= currentUserReplies.length) return;
+    const list = [...currentUserReplies];
+    const temp = list[index];
+    list[index] = list[targetIndex];
+    list[targetIndex] = temp;
+    updateCurrentUserReplies(list);
+  };
+
+  const handleResetQuickReplies = () => {
+    updateCurrentUserReplies(DEFAULT_QUICK_REPLIES);
+    toast.success("Se restauraron las plantillas por defecto para este usuario");
+  };
+
+  const handleTestCopyReply = async (reply: QuickReply) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(reply.content);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = reply.content;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        textArea.remove();
+      }
+      setCopiedReplyId(reply.id);
+      toast.success(`Copiado: "${reply.title}"`);
+      setTimeout(() => setCopiedReplyId(null), 2000);
+    } catch (e) {
+      toast.error("Error al copiar al portapapeles");
+    }
   };
 
   // --- Media Picker Callback -----------------------------------------------
@@ -656,6 +817,16 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                 }`}
             >
               <Mail className="w-4 h-4 text-violet-500" /> Correo SMTP
+            </button>
+
+            <button
+              onClick={() => setActiveTab("respuestas")}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${activeTab === "respuestas"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+            >
+              <ClipboardCopy className="w-4 h-4 text-emerald-500" /> Respuestas Rápidas ({quickRepliesSettings.enabledUsers.length} activo{quickRepliesSettings.enabledUsers.length === 1 ? "" : "s"})
             </button>
           </>
         )}
@@ -2524,6 +2695,278 @@ export function SettingsForm({ activeParkingCount = 0 }: SettingsFormProps) {
                 <Button onClick={handleSaveSiteConfig} disabled={savingSiteConfig} className="bg-sky-600 hover:bg-sky-500 text-white font-bold cursor-pointer">
                   {savingSiteConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                   Guardar Configuración SMTP
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ── TAB 8: RESPUESTAS RÁPIDAS (PORTAPAPELES DASHBOARD) ── */}
+      {isSuperAdmin && activeTab === "respuestas" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <ClipboardCopy className="w-5 h-5 text-emerald-500" /> Respuestas Rápidas (Portapapeles del Dashboard)
+                </CardTitle>
+                <CardDescription className="text-slate-500 dark:text-slate-400">
+                  Controla qué usuarios tienen acceso al widget de respuestas rápidas y personaliza las respuestas de cada uno de ellos.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetQuickReplies}
+                  className="text-xs font-semibold cursor-pointer border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  title="Restaurar las 3 plantillas por defecto para el usuario seleccionado"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
+                  Restaurar por Defecto
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleAddQuickReply}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Nueva Respuesta
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              {/* Selector de Usuario y Toggle de Activación */}
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1.5 flex-1 max-w-md">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-sky-500" />
+                      Usuario a configurar:
+                    </Label>
+                    <select
+                      value={selectedUserEmail}
+                      onChange={(e) => setSelectedUserEmail(e.target.value)}
+                      className="w-full text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-sky-500 focus:outline-none cursor-pointer"
+                    >
+                      <option value="guillermo.diarte@gmail.com">
+                        Guillermo Diarte (guillermo.diarte@gmail.com) {quickRepliesSettings.enabledUsers.some(u => u.toLowerCase() === "guillermo.diarte@gmail.com") ? "— 🟢 Habilitado" : "— ⚪ Deshabilitado"}
+                      </option>
+                      {users
+                        .filter(u => u.email.toLowerCase() !== "guillermo.diarte@gmail.com")
+                        .map((u) => {
+                          const isEnabled = quickRepliesSettings.enabledUsers.some(
+                            e => e.toLowerCase() === u.email.toLowerCase()
+                          );
+                          return (
+                            <option key={u.id} value={u.email}>
+                              {u.name || u.email} ({u.email}) {isEnabled ? "— 🟢 Habilitado" : "— ⚪ Deshabilitado"}
+                            </option>
+                          );
+                        })}
+                    </select>
+                  </div>
+
+                  {/* Switch para activar/desactivar este usuario */}
+                  <div className="flex items-center justify-between sm:justify-start gap-4 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0 shadow-2xs">
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        {isSelectedUserEnabled ? (
+                          <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" />
+                        ) : (
+                          <span className="flex h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+                        )}
+                        Widget en Dashboard
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {isSelectedUserEnabled ? "Habilitado para este usuario" : "Deshabilitado para este usuario"}
+                      </div>
+                    </div>
+
+                    <Switch
+                      checked={isSelectedUserEnabled}
+                      onCheckedChange={toggleSelectedUserEnabled}
+                    />
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-200/80 dark:border-slate-700/60 pt-2.5 flex items-center justify-between">
+                  <span>
+                    Editando respuestas de: <strong className="text-slate-700 dark:text-slate-300">{selectedUserEmail}</strong>
+                  </span>
+                  <span className="text-muted-foreground font-semibold">
+                    {currentUserReplies.length} {currentUserReplies.length === 1 ? "respuesta" : "respuestas"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Listado de Respuestas Rápidas del Usuario Seleccionado */}
+              <div className="space-y-4">
+                {currentUserReplies.length === 0 ? (
+                  <div className="text-center py-8 border border-dashed rounded-xl text-slate-500 dark:text-slate-400 text-xs">
+                    Este usuario no tiene respuestas rápidas configuradas. Presiona "Nueva Respuesta" o "Restaurar por Defecto".
+                  </div>
+                ) : (
+                  currentUserReplies.map((reply, index) => {
+                    const isCopied = copiedReplyId === reply.id;
+                    return (
+                      <div
+                        key={reply.id}
+                        className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-4 hover:border-slate-300 dark:hover:border-slate-700 transition-all"
+                      >
+                        {/* Top Bar: Reorder + Title + Delete */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200">
+                              {index + 1}
+                            </span>
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                              {reply.title || "Sin título"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              disabled={index === 0}
+                              onClick={() => handleMoveQuickReply(index, "up")}
+                              className="h-7 w-7 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                              title="Mover arriba"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              disabled={index === currentUserReplies.length - 1}
+                              onClick={() => handleMoveQuickReply(index, "down")}
+                              className="h-7 w-7 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                              title="Mover abajo"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteQuickReply(reply.id)}
+                              className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
+                              title="Eliminar respuesta"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                              Título del Botón *
+                            </Label>
+                            <Input
+                              value={reply.title}
+                              onChange={(e) => handleUpdateQuickReply(reply.id, { title: e.target.value })}
+                              placeholder="Ej: Respuesta Booking"
+                              className="mt-1.5 text-xs bg-white dark:bg-slate-900"
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                              Canal / Categoría
+                            </Label>
+                            <Input
+                              value={reply.category || ""}
+                              onChange={(e) => handleUpdateQuickReply(reply.id, { category: e.target.value })}
+                              placeholder="Ej: Booking, Directo, Airbnb, General"
+                              className="mt-1.5 text-xs bg-white dark:bg-slate-900"
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                              Descripción Breve (Opcional)
+                            </Label>
+                            <Input
+                              value={reply.description || ""}
+                              onChange={(e) => handleUpdateQuickReply(reply.id, { description: e.target.value })}
+                              placeholder="Ej: Mensaje bienvenida y check-in"
+                              className="mt-1.5 text-xs bg-white dark:bg-slate-900"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Message Textarea */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                              Texto de la Respuesta (Se copiará al portapapeles) *
+                            </Label>
+                            <span className="text-[11px] text-slate-400">
+                              {reply.content?.length || 0} caracteres
+                            </span>
+                          </div>
+                          <Textarea
+                            value={reply.content}
+                            onChange={(e) => handleUpdateQuickReply(reply.id, { content: e.target.value })}
+                            rows={4}
+                            placeholder="Escribe el texto exacto que se copiará al presionar el botón..."
+                            className="text-xs bg-white dark:bg-slate-900 resize-y"
+                          />
+                        </div>
+
+                        {/* Bottom test copy button */}
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-[11px] text-slate-500 italic">
+                            Tip: Puedes probar cómo funciona presionando "Probar Copiar".
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleTestCopyReply(reply)}
+                            className={`h-7 px-2.5 text-xs font-semibold cursor-pointer ${
+                              isCopied
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
+                                : ""
+                            }`}
+                          >
+                            {isCopied ? (
+                              <>
+                                <Check className="w-3 h-3 mr-1 text-emerald-600" />
+                                ¡Copiado!
+                              </>
+                            ) : (
+                              <>
+                                <ClipboardCopy className="w-3 h-3 mr-1 text-slate-500" />
+                                Probar Copiar
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
+                <Button
+                  onClick={handleSaveSiteConfig}
+                  disabled={savingSiteConfig}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer"
+                >
+                  {savingSiteConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Guardar Respuestas Rápidas
                 </Button>
               </div>
             </CardContent>

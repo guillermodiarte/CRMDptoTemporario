@@ -11,6 +11,9 @@ import { getWeatherData } from "@/lib/weather";
 import { DollarWidget } from "@/components/dollar-widget";
 import { WeatherWidget } from "@/components/weather-widget";
 import { NotesWidget } from "@/components/notes-widget";
+import { QuickRepliesWidget } from "@/components/quick-replies-widget";
+import { getSiteConfig } from "@/lib/site-config-loader";
+import { QuickReply, DEFAULT_QUICK_REPLIES } from "@/lib/site.config";
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +28,47 @@ export default async function DashboardPage() {
   const sessionId = session?.user?.sessionId;
   const userRole = session?.user?.role; // 'ADMIN' | 'VISUALIZER'
   const isAdmin = userRole === 'ADMIN';
+
+  const userEmail = session?.user?.email?.toLowerCase().trim();
+
+  let hasQuickRepliesEnabled = false;
+  let quickReplies: QuickReply[] = DEFAULT_QUICK_REPLIES;
+
+  try {
+    const siteConfig = await getSiteConfig();
+    if (siteConfig.quickReplies) {
+      const parsed = typeof siteConfig.quickReplies === "string" ? JSON.parse(siteConfig.quickReplies) : siteConfig.quickReplies;
+
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const enabledUsers: string[] = Array.isArray(parsed.enabledUsers)
+          ? parsed.enabledUsers.map((e: string) => e.toLowerCase().trim())
+          : ["guillermo.diarte@gmail.com"];
+
+        if (userEmail && enabledUsers.includes(userEmail)) {
+          hasQuickRepliesEnabled = true;
+          const userSpecificReplies = parsed.userReplies?.[userEmail] || parsed.userReplies?.[session?.user?.email || ""];
+          if (Array.isArray(userSpecificReplies) && userSpecificReplies.length > 0) {
+            quickReplies = userSpecificReplies;
+          } else {
+            quickReplies = DEFAULT_QUICK_REPLIES;
+          }
+        }
+      } else if (Array.isArray(parsed) && parsed.length > 0) {
+        if (userEmail === "guillermo.diarte@gmail.com") {
+          hasQuickRepliesEnabled = true;
+          quickReplies = parsed;
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error cargando quickReplies para dashboard:", e);
+  }
+
+  // Fallback por defecto para Guillermo si aún no se guardó configuración
+  if (!hasQuickRepliesEnabled && userEmail === "guillermo.diarte@gmail.com") {
+    hasQuickRepliesEnabled = true;
+    quickReplies = DEFAULT_QUICK_REPLIES;
+  }
 
   // Auto-heal: Ensure any reservation where paymentStatus is active but status was left as CANCELLED is synced to CONFIRMED
   try {
@@ -324,6 +368,9 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Portapapeles de Respuestas Rápidas (Directamente debajo de Llegadas de Hoy) */}
+        {hasQuickRepliesEnabled && <QuickRepliesWidget replies={quickReplies} />}
+
         {/* Ingresos Totales (Mes) | Ocupación Actual */}
         <div className="grid grid-cols-2 gap-4">
           <Card>
@@ -610,6 +657,13 @@ export default async function DashboardPage() {
           {/* DÓLAR */}
           <DollarWidget data={dollarData} />
         </div>
+
+        {/* PORTAPAPELES DE RESPUESTAS RÁPIDAS */}
+        {hasQuickRepliesEnabled && (
+          <div className="col-span-2 lg:col-span-4">
+            <QuickRepliesWidget replies={quickReplies} />
+          </div>
+        )}
 
         {/* NOTAS RÁPIDAS — fila completa */}
         <div className="col-span-2 lg:col-span-4">

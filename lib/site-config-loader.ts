@@ -49,6 +49,7 @@ const SITE_CONFIG_KEYS = [
   "smtp_password",
   "smtp_from_name",
   "site_guia_enabled",
+  "site_quick_replies",
 ] as const;
 
 export async function getSiteConfig(): Promise<SiteConfig> {
@@ -110,6 +111,7 @@ export async function getSiteConfig(): Promise<SiteConfig> {
       smtpPassword: map.get("smtp_password") ?? SITE_CONFIG_DEFAULTS.smtpPassword,
       smtpFromName: map.get("smtp_from_name") ?? SITE_CONFIG_DEFAULTS.smtpFromName,
       guiaEnabled: map.get("site_guia_enabled") ?? SITE_CONFIG_DEFAULTS.guiaEnabled,
+      quickReplies: map.get("site_quick_replies") ?? SITE_CONFIG_DEFAULTS.quickReplies,
     };
   } catch (error) {
     console.error("Error loading site config, falling back to defaults:", error);

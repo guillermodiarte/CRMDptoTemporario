@@ -38,5 +38,11 @@ export default async function SettingsPage() {
     where: { type: "PARKING", isActive: true, sessionId }
   });
 
-  return <SettingsForm activeParkingCount={activeParkingCount} />;
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    select: { id: true, email: true, name: true, isSuperAdmin: true },
+    orderBy: { email: "asc" }
+  });
+
+  return <SettingsForm activeParkingCount={activeParkingCount} users={users} />;
 }
