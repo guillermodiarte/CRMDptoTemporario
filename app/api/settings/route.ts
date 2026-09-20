@@ -93,3 +93,38 @@ export async function PUT(req: Request) {
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
+
+export async function PATCH(req: Request) {
+  const session = await auth();
+  if (!session) return new NextResponse("Unauthorized", { status: 401 });
+
+  const role = (session.user as any)?.role;
+  const isSuperAdmin = (session.user as any)?.isSuperAdmin;
+  if (role !== "ADMIN" && !isSuperAdmin) {
+    return new NextResponse("Forbidden", { status: 403 });
+  }
+
+  const sessionId = await requireSessionId();
+
+  try {
+    const { key, value } = await req.json();
+    if (!key) {
+      return new NextResponse("Missing key", { status: 400 });
+    }
+
+    await prisma.systemSettings.upsert({
+      where: { sessionId_key: { sessionId, key } },
+      update: { value: String(value), updatedBy: session.user?.email || "unknown" },
+      create: { key, value: String(value), updatedBy: session.user?.email || "unknown", sessionId },
+    });
+
+    revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard/balance");
+    revalidatePath("/dashboard/balance/config");
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error updating setting:", error);
+    return new NextResponse("Internal Error", { status: 500 });
+  }
+}

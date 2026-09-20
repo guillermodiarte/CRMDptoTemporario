@@ -117,8 +117,12 @@ export async function PATCH(
             where: { id: sib.id },
             data: {
               paymentStatus: 'PAID',
-              depositAmount: sib.totalAmount, // Clear debt for each part
-              status: sib.status === 'CANCELLED' ? 'CONFIRMED' : sib.status
+              status: sib.status === 'CANCELLED' ? 'CONFIRMED' : sib.status,
+              // Payment tracking fields — only set on the reservation being updated
+              ...(sib.id === id ? {
+                paymentMethod: body.paymentMethod || null,
+                paymentReceiverId: body.paymentReceiverId || null,
+              } : {})
             }
           }))
         );
@@ -129,6 +133,7 @@ export async function PATCH(
         revalidatePath("/dashboard/reservations");
         revalidatePath("/dashboard/calendar");
         revalidatePath("/dashboard/finance");
+        revalidatePath("/dashboard/balance");
 
         return NextResponse.json(updated);
       }
@@ -149,6 +154,10 @@ export async function PATCH(
         amenitiesFee,
         currency,
         paymentStatus,
+        paymentMethod,
+        paymentReceiverId,
+        depositMethod,
+        depositReceiverId,
         source,
         hasParking,
         notes,
@@ -223,6 +232,10 @@ export async function PATCH(
           amenitiesFee: amenitiesFee !== undefined ? Number(amenitiesFee) : undefined,
           currency,
           paymentStatus: effectivePaymentStatus,
+          paymentMethod: paymentMethod !== undefined ? paymentMethod : undefined,
+          paymentReceiverId: paymentReceiverId !== undefined ? paymentReceiverId : undefined,
+          depositMethod: depositMethod !== undefined ? depositMethod : undefined,
+          depositReceiverId: depositReceiverId !== undefined ? depositReceiverId : undefined,
           source,
           notes,
           hasParking,
@@ -236,6 +249,7 @@ export async function PATCH(
       revalidatePath("/dashboard/reservations");
       revalidatePath("/dashboard/calendar");
       revalidatePath("/dashboard/finance");
+      revalidatePath("/dashboard/balance");
 
       return NextResponse.json(reservation);
     }

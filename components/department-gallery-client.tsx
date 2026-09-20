@@ -52,6 +52,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import JSZip from "jszip";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
 interface DeptSummary {
@@ -408,9 +409,11 @@ export function DepartmentGalleryClient({
   const [newFolderName, setNewFolderName] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
 
-  // Uploading / Exporting State
+  // Uploading / Exporting / Importing State
   const [uploading, setUploading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [importingZip, setImportingZip] = useState(false);
+  const zipInputRef = useRef<HTMLInputElement>(null);
 
   // Lightbox
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -432,7 +435,9 @@ export function DepartmentGalleryClient({
       const res = await fetch("/api/media/folders");
       if (res.ok) {
         const data = await res.json();
-        setWebFolders(data.folders || []);
+        const folders = data.folders || [];
+        setWebFolders(folders);
+        setSelectedExportCategories(["departamentos", ...folders.map((f: any) => f.id)]);
       }
     } catch {}
   }, [isSuperAdmin]);
@@ -552,6 +557,59 @@ export function DepartmentGalleryClient({
     } finally {
       setUploading(false);
       e.target.value = "";
+    }
+  };
+
+  // ─── Import ZIP Handler (Dedicated server-side extraction & DB sync) ──
+  const handleImportZip = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setImportingZip(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("section", activeSection);
+      if (activeSection === "dept") {
+        formData.append("departmentId", selectedDeptId);
+      } else {
+        formData.append("folder", selectedFolderId);
+      }
+
+      const res = await fetch("/api/media/import-zip", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Error al importar archivo ZIP");
+      }
+
+      const data = await res.json();
+      const { totalFiles = 0, updatedDepartments = 0 } = data;
+
+      if (totalFiles > 0) {
+        if (updatedDepartments > 1) {
+          toast.success(`¡Éxito! Se importaron ${totalFiles} fotos en ${updatedDepartments} departamentos y carpetas.`);
+        } else {
+          toast.success(`¡Éxito! Se importaron ${totalFiles} imágenes correctamente.`);
+        }
+
+        // Trigger page refresh to sync state and reload files
+        router.refresh();
+        if (activeSection === "web") {
+          await loadWebImages(selectedFolderId);
+        }
+      } else {
+        toast.error("No se encontraron imágenes válidas en el archivo ZIP");
+      }
+    } catch (err: any) {
+      console.error("Error importing ZIP:", err);
+      toast.error("Error al importar ZIP: " + (err?.message || ""));
+    } finally {
+      setImportingZip(false);
     }
   };
 
@@ -1137,10 +1195,39 @@ export function DepartmentGalleryClient({
                     multiple
                     accept="image/png,image/jpeg,image/webp,image/svg+xml"
                     onChange={handleUploadFiles}
-                    disabled={uploading}
+                    disabled={uploading || importingZip}
                     className="hidden"
                   />
                 </label>
+              )}
+
+              {/* Import ZIP Button */}
+              {!isReadOnly && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => zipInputRef.current?.click()}
+                    disabled={uploading || importingZip}
+                    className="text-xs cursor-pointer font-semibold border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300 bg-sky-50/70 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/60"
+                    title="Importar imágenes desde un archivo ZIP (individual o de todos los departamentos)"
+                  >
+                    {importingZip ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5 mr-1.5 text-sky-600 dark:text-sky-400" />
+                    )}
+                    {importingZip ? "Importando..." : "Importar ZIP"}
+                  </Button>
+                  <input
+                    ref={zipInputRef}
+                    type="file"
+                    accept=".zip"
+                    onChange={handleImportZip}
+                    disabled={uploading || importingZip}
+                    className="hidden"
+                  />
+                </>
               )}
 
               {/* Export Contextual or Selected ZIP */}

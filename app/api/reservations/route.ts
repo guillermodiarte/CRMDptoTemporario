@@ -13,6 +13,11 @@ export async function GET(req: Request) {
     const session = await auth();
     const sessionId = await requireSessionId();
 
+    const { searchParams } = new URL(req.url);
+    const departmentId = searchParams.get("departmentId");
+    const fromStr = searchParams.get("from");
+    const toStr = searchParams.get("to");
+
     const whereClause: any = {
       status: { not: "CANCELLED" },
       sessionId
@@ -62,7 +67,8 @@ export async function POST(req: Request) {
     const {
       departmentId, guestName, guestPhone, guestDni, guestNationality, guestPeopleCount, bedsRequired,
       checkIn, checkOut, totalAmount, depositAmount, cleaningFee, amenitiesFee,
-      currency, paymentStatus, source, notes, force, hasParking, groupId, exchangeRate
+      currency, paymentStatus, source, notes, force, hasParking, groupId, exchangeRate,
+      depositMethod, depositReceiverId, paymentMethod, paymentReceiverId
     } = body;
 
     if (!departmentId || !guestName || !checkIn || !checkOut || totalAmount === undefined) {
@@ -131,6 +137,10 @@ export async function POST(req: Request) {
             amenitiesFee: split.amenitiesFee,
             currency: currency || "ARS",
             paymentStatus: paymentStatus || "UNPAID",
+            paymentMethod: paymentMethod || null,
+            paymentReceiverId: paymentReceiverId || null,
+            depositMethod: depositMethod || null,
+            depositReceiverId: depositReceiverId || null,
             source: source || "DIRECT",
             notes,
             hasParking: !!hasParking,
@@ -150,6 +160,7 @@ export async function POST(req: Request) {
     revalidatePath("/dashboard/reservations");
     revalidatePath("/dashboard/calendar");
     revalidatePath("/dashboard/finance");
+    revalidatePath("/dashboard/balance");
 
     return NextResponse.json(reservations[0]);
 

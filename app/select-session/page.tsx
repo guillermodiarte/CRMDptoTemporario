@@ -16,7 +16,22 @@ export default async function SelectSessionPage() {
     redirect("/admin");
   }
 
-  const isSuperAdmin = (session.user as any).isSuperAdmin === true;
+  // Validate that user actually exists in the current database (handles restored/swapped dev.db)
+  const dbUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { id: session.user.id },
+        ...(session.user.email ? [{ email: session.user.email }] : [])
+      ]
+    }
+  });
+
+  if (!dbUser) {
+    redirect("/admin");
+  }
+
+  const userId = dbUser.id;
+  const isSuperAdmin = (session.user as any).isSuperAdmin === true || dbUser.isSuperAdmin;
 
   if (isSuperAdmin) {
     const allActiveSessions = await prisma.session.findMany({
@@ -26,9 +41,9 @@ export default async function SelectSessionPage() {
 
     for (const s of allActiveSessions) {
       await prisma.userSession.upsert({
-        where: { userId_sessionId: { userId: session.user.id, sessionId: s.id } },
+        where: { userId_sessionId: { userId, sessionId: s.id } },
         update: { role: 'ADMIN' },
-        create: { userId: session.user.id, sessionId: s.id, role: 'ADMIN' }
+        create: { userId, sessionId: s.id, role: 'ADMIN' }
       });
     }
   }
@@ -36,7 +51,7 @@ export default async function SelectSessionPage() {
   // Fetch available sessions for the user
   const memberships = await prisma.userSession.findMany({
     where: {
-      userId: session.user.id,
+      userId,
       session: { isActive: true } // Only active sessions
     },
     include: {

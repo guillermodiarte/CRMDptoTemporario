@@ -9,6 +9,7 @@ import {
   Car,
   Images,
   ClipboardCheck,
+  BarChart3,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -101,18 +102,30 @@ export default async function DashboardLayout({
 
   // Fetch System Settings for Menu Visibility
   let showParking = true; // Default
+  let showBalance = false; // Default: only visible when enabled
 
   if (sessionId) {
-    const showParkingSetting = await prisma.systemSettings.findUnique({
-      where: {
-        sessionId_key: {
-          sessionId,
-          key: "SHOW_PARKING_MENU"
-        }
-      }
-    });
+    const [showParkingSetting, showBalanceSetting] = await Promise.all([
+      prisma.systemSettings.findUnique({
+        where: { sessionId_key: { sessionId, key: "SHOW_PARKING_MENU" } }
+      }),
+      prisma.systemSettings.findUnique({
+        where: { sessionId_key: { sessionId, key: "SHOW_BALANCE_MENU" } }
+      }),
+    ]);
+
     if (showParkingSetting) {
       showParking = showParkingSetting.value !== "false";
+    }
+
+    // Balance is visible to superadmin always, or to enabled users per SHOW_BALANCE_MENU
+    if (user?.isSuperAdmin) {
+      showBalance = true;
+    } else if (showBalanceSetting?.value) {
+      try {
+        const enabledUsers: string[] = JSON.parse(showBalanceSetting.value);
+        showBalance = user?.email ? enabledUsers.includes(user.email.toLowerCase()) : false;
+      } catch { showBalance = false; }
     }
   }
 
@@ -234,6 +247,15 @@ export default async function DashboardLayout({
                     Gestión de Sesiones
                   </Link>
                 )}
+                {role === "ADMIN" && showBalance && (
+                  <Link
+                    href="/dashboard/balance"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                  >
+                    <BarChart3 className="h-5 w-5 text-violet-500" />
+                    Balance
+                  </Link>
+                )}
                 <Link
                   href="/dashboard/departments/gallery"
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
@@ -266,6 +288,7 @@ export default async function DashboardLayout({
               user={userForMenu}
               showParking={showParking}
               isSuperAdmin={user?.isSuperAdmin}
+              showBalance={showBalance}
               adminLogo={adminLogo}
               adminLogoDark={adminLogoDark}
               adminLogoSize={adminLogoSize}

@@ -13,6 +13,8 @@ export default async function ReservationsPage({
   const session = await auth();
   const userRole = (session?.user as any)?.role;
   const sessionId = session?.user?.sessionId;
+  const userEmail = session?.user?.email?.toLowerCase().trim();
+  const isSuperAdmin = !!(session?.user as any)?.isSuperAdmin;
 
   const params = await searchParams;
   // Adjust for Argentina Time (UTC-3) to prevent "next day" issues at night
@@ -27,6 +29,29 @@ export default async function ReservationsPage({
 
   const startDate = new Date(selectedYear, selectedMonth, 1);
   const endDate = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+
+  // Determine if this user has payment tracking enabled
+  let showPaymentTracking = isSuperAdmin;
+  if (!showPaymentTracking) {
+    const balanceSetting = await prisma.systemSettings.findUnique({
+      where: { sessionId_key: { sessionId: sessionId || '', key: "BALANCE_ENABLED_USERS" } }
+    });
+    if (balanceSetting?.value) {
+      try {
+        const enabledUsers: string[] = JSON.parse(balanceSetting.value);
+        showPaymentTracking = userEmail ? enabledUsers.includes(userEmail) : false;
+      } catch { showPaymentTracking = false; }
+    }
+  }
+
+  // Fetch payment receivers if tracking enabled
+  const paymentReceivers = showPaymentTracking && sessionId
+    ? await prisma.paymentReceiver.findMany({
+        where: { sessionId, isActive: true },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+        select: { id: true, name: true, accountInfo: true, isDefault: true }
+      })
+    : [];
 
   const reservations = await prisma.reservation.findMany({
     where: {
@@ -43,7 +68,7 @@ export default async function ReservationsPage({
 
   const groupIds = Array.from(new Set(reservations.filter(r => r.groupId).map(r => r.groupId as string)));
   
-  let groupTotals: Record<string, { totalAmount: number, depositAmount: number, isMultiDept: boolean }> = {};
+  let groupTotals: Record<string, { totalAmount: number, depositAmount: number, isMultiDept: boolean, count: number }> = {};
   if (groupIds.length > 0) {
     const groupParts = await prisma.reservation.findMany({
       where: { groupId: { in: groupIds }, status: { not: 'PENDING_APPROVAL' } },
@@ -72,8 +97,6 @@ export default async function ReservationsPage({
   const enhancedReservations = reservations.map(r => {
     if (r.groupId && groupTotals[r.groupId]) {
       const group = groupTotals[r.groupId];
-      // Only show group total for same-dept splits (month splits), not multi-dept combinations,
-      // and only if the reservation actually has multiple parts (spans multiple months)
       if (!group.isMultiDept && group.count > 1) {
         return {
           ...r,
@@ -124,6 +147,8 @@ export default async function ReservationsPage({
         blacklistEntries={blacklistEntries}
         startYear={configStartYear}
         endYear={configEndYear}
+        showPaymentTracking={showPaymentTracking}
+        paymentReceivers={paymentReceivers}
       />
     </div>
   );

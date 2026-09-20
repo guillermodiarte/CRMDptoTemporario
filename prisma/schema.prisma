@@ -45,6 +45,11 @@ enum NoteType {
   PERSONAL
 }
 
+enum PaymentMethod {
+  CASH
+  TRANSFER
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -77,6 +82,7 @@ model Session {
   blacklist     BlacklistEntry[]
   settings      SystemSettings[]
   notes         Note[]
+  paymentReceivers PaymentReceiver[]
 }
 
 model UserSession {
@@ -178,6 +184,15 @@ model Reservation {
 
   paymentStatus PaymentStatus @default(UNPAID)
 
+  // Payment tracking (balance system)
+  paymentMethod     PaymentMethod? // How the final payment was received
+  paymentReceiverId String?        // Who received the final payment
+  paymentReceiver   PaymentReceiver? @relation("FinalPayment", fields: [paymentReceiverId], references: [id], onDelete: SetNull)
+
+  depositMethod     PaymentMethod? // How the deposit/seña was received
+  depositReceiverId String?        // Who received the deposit/seña
+  depositReceiver   PaymentReceiver? @relation("DepositPayment", fields: [depositReceiverId], references: [id], onDelete: SetNull)
+
   hasParking Boolean @default(false)
 
   notes String?
@@ -271,3 +286,19 @@ model SystemSettings {
 }
 
 
+model PaymentReceiver {
+  id          String   @id @default(cuid())
+  name        String
+  accountInfo String?  // Optional: bank account, CBU, alias, etc.
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  isDefault   Boolean  @default(false) // Default receiver for deposits
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id])
+
+  finalPayments   Reservation[] @relation("FinalPayment")
+  depositPayments Reservation[] @relation("DepositPayment")
+}

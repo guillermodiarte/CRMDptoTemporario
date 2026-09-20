@@ -29,6 +29,7 @@ interface MobileNavProps {
   user: any;
   showParking: boolean;
   isSuperAdmin?: boolean;
+  showBalance?: boolean;
   adminLogo?: string;
   adminLogoDark?: string;
   adminLogoSize?: number | string;
@@ -39,6 +40,7 @@ export function MobileNav({
   user,
   showParking,
   isSuperAdmin,
+  showBalance = false,
   adminLogo = "/images/logo-diarte-horizontal.png",
   adminLogoDark,
   adminLogoSize = 46,
@@ -196,6 +198,16 @@ export function MobileNav({
             >
               <ShieldAlert className="h-5 w-5 text-indigo-500" />
               Gestión de Sesiones
+            </Link>
+          )}
+          {role === 'ADMIN' && showBalance && (
+            <Link
+              href="/dashboard/balance"
+              className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+              onClick={() => setOpen(false)}
+            >
+              <LineChart className="h-5 w-5 text-violet-500" />
+              Balance
             </Link>
           )}
           <Link

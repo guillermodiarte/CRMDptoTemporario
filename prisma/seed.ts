@@ -12,6 +12,7 @@ async function main() {
   await prisma.blacklistEntry.deleteMany()
   await prisma.expense.deleteMany()
   await prisma.reservation.deleteMany()
+  await prisma.paymentReceiver.deleteMany()
   await prisma.department.deleteMany()
   await prisma.supply.deleteMany()
   await prisma.systemSettings.deleteMany()
@@ -53,6 +54,17 @@ async function main() {
     }
   })
 
+  // 4. Create default payment receiver (Guillermo Diarte)
+  await prisma.paymentReceiver.create({
+    data: {
+      name: 'Guillermo Diarte',
+      accountInfo: null,
+      isDefault: true,
+      order: 0,
+      sessionId: session.id,
+    }
+  })
+
   console.log('Default user created:')
   console.log({
     name: admin.name,
@@ -60,6 +72,7 @@ async function main() {
     isSuperAdmin: admin.isSuperAdmin,
     session: session.name
   })
+  console.log('Default payment receiver created: Guillermo Diarte')
 }
 
 main()

@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { isSuperAdminCredentials, isSuperAdminEmail, ensureSuperAdminInDb } from "@/lib/superadmin";
 
 const LoginSchema = z.object({
   email: z.string().email(),
@@ -21,6 +22,33 @@ export async function getUserSessions(formData: FormData) {
   const { email, password } = parsed.data;
 
   try {
+    // 1. Check if login matches Super Admin from .env (auto-bootstrap)
+    if (isSuperAdminCredentials(email, password)) {
+      const { user } = await ensureSuperAdminInDb();
+      const allActive = await prisma.session.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true, isActive: true }
+      });
+
+      // Ensure superadmin has userSession for each active session
+      for (const s of allActive) {
+        await prisma.userSession.upsert({
+          where: { userId_sessionId: { userId: user.id, sessionId: s.id } },
+          update: { role: 'ADMIN' },
+          create: { userId: user.id, sessionId: s.id, role: 'ADMIN' }
+        });
+      }
+
+      const sessions = allActive.map(s => ({
+        sessionId: s.id,
+        role: 'ADMIN',
+        name: s.name
+      }));
+
+      return { success: true, sessions };
+    }
+
+    // 2. Standard DB user authentication
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
@@ -44,7 +72,7 @@ export async function getUserSessions(formData: FormData) {
       return { success: false, error: "Credenciales inválidas" };
     }
 
-    const isSuperAdmin = email.toLowerCase().trim() === 'guillermo.diarte@gmail.com' || user.isSuperAdmin;
+    const isSuperAdmin = isSuperAdminEmail(email) || user.isSuperAdmin;
 
     if (isSuperAdmin) {
       const allActive = await prisma.session.findMany({

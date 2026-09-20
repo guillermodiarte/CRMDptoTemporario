@@ -1,6 +1,7 @@
 import type { NextAuthConfig } from 'next-auth';
 
 export const authConfig = {
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'crm-super-secret-key-diarte-2026',
   trustHost: true,
   pages: {
     signIn: '/admin',

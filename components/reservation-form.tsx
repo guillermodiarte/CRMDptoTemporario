@@ -33,7 +33,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Department, Reservation } from "@prisma/client";
 import { format, addDays } from "date-fns";
-import { RotateCcw, Moon } from "lucide-react";
+import { RotateCcw, Moon, Banknote, CreditCard, Check } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 
 // Removed Alert import
@@ -84,9 +84,11 @@ interface ReservationFormProps {
     checkIn: string | Date;
     checkOut: string | Date;
   }) => void;
+  showPaymentTracking?: boolean;
+  paymentReceivers?: { id: string; name: string; accountInfo?: string | null; isDefault: boolean }[];
 }
 
-export function ReservationForm({ departments, setOpen, defaultDepartmentId, defaultDate, initialData, onDirectCreated, onReservationCreated }: ReservationFormProps) {
+export function ReservationForm({ departments, setOpen, defaultDepartmentId, defaultDate, initialData, onDirectCreated, onReservationCreated, showPaymentTracking = false, paymentReceivers = [] }: ReservationFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [overlapWarning, setOverlapWarning] = useState(false);
@@ -96,8 +98,23 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
   const [amenitiesCost, setAmenitiesCost] = useState(initialData?.amenitiesFee || 0);
   const [globalCleaningFee, setGlobalCleaningFee] = useState<number | null>(null);
-  // Initialize as modified if we are editing an existing reservation with a price (to prevent auto-recalc on date/dept change)
   const [isTotalManuallyModified, setIsTotalManuallyModified] = useState(!!(initialData?.totalAmount && initialData.totalAmount > 0));
+  // Deposit & Payment tracking (payment balance system)
+  const [depositMethod, setDepositMethod] = useState<'CASH' | 'TRANSFER' | null>(
+    initialData?.depositMethod || null
+  );
+  const [depositReceiverId, setDepositReceiverId] = useState<string | null>(() => {
+    if (!showPaymentTracking) return null;
+    return initialData?.depositReceiverId || paymentReceivers.find(r => r.isDefault)?.id || null;
+  });
+
+  const [finalPaymentMethod, setFinalPaymentMethod] = useState<'CASH' | 'TRANSFER' | null>(
+    initialData?.paymentMethod || null
+  );
+  const [finalPaymentReceiverId, setFinalPaymentReceiverId] = useState<string | null>(() => {
+    if (!showPaymentTracking) return null;
+    return initialData?.paymentReceiverId || paymentReceivers.find(r => r.isDefault)?.id || null;
+  });
 
   // Initialize Type
   const initialType = (initialData?.department as any)?.type ||
@@ -411,13 +428,24 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
       const res = await fetch(url, {
         method: method,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...values,
           status: resolvedStatus,
           guestPeopleCount: unitType === 'PARKING' ? 0 : values.guestPeopleCount,
           bedsRequired: unitType === 'PARKING' ? 0 : values.bedsRequired,
           amenitiesFee: unitType === 'PARKING' ? 0 : amenitiesCost,
-          force: forceOverlap
+          force: forceOverlap,
+          // Deposit tracking fields (only when feature is enabled)
+          ...(showPaymentTracking && values.paymentStatus === 'PARTIAL' && depositMethod ? {
+            depositMethod,
+            depositReceiverId: depositMethod === 'TRANSFER' ? depositReceiverId : null,
+          } : {}),
+          // Final payment tracking fields (only when feature is enabled)
+          ...(showPaymentTracking && values.paymentStatus === 'PAID' && finalPaymentMethod ? {
+            paymentMethod: finalPaymentMethod,
+            paymentReceiverId: finalPaymentMethod === 'TRANSFER' ? finalPaymentReceiverId : null,
+          } : {})
         }),
       });
 
@@ -737,6 +765,127 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                   </FormItem>
                 )}
               />
+
+              {/* Deposit tracking: method + receiver (only for PARTIAL + tracking enabled) */}
+              {showPaymentTracking && form.watch("paymentStatus") === "PARTIAL" && (
+                <div className="space-y-3 pt-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">¿Cómo se recibió la seña?</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDepositMethod('CASH')}
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                        depositMethod === 'CASH'
+                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300'
+                      }`}
+                    >
+                      <Banknote className="h-4 w-4" />
+                      Efectivo
+                      {depositMethod === 'CASH' && <Check className="h-3 w-3 ml-auto text-emerald-500" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDepositMethod('TRANSFER')}
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                        depositMethod === 'TRANSFER'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                      }`}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      Transferencia
+                      {depositMethod === 'TRANSFER' && <Check className="h-3 w-3 ml-auto text-blue-500" />}
+                    </button>
+                  </div>
+
+                  {/* Receiver selector */}
+                  {depositMethod === 'TRANSFER' && paymentReceivers.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-semibold text-muted-foreground">¿Quién recibió la seña?</p>
+                      {paymentReceivers.map(receiver => (
+                        <button
+                          key={receiver.id}
+                          type="button"
+                          onClick={() => setDepositReceiverId(receiver.id)}
+                          className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-left text-sm transition-all cursor-pointer ${
+                            depositReceiverId === receiver.id
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                              : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                          }`}
+                        >
+                          <div>
+                            <span className="font-medium">{receiver.name}</span>
+                            {receiver.accountInfo && <span className="ml-2 text-xs text-muted-foreground">{receiver.accountInfo}</span>}
+                          </div>
+                          {depositReceiverId === receiver.id && <Check className="h-4 w-4 text-blue-500 shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Payment tracking: method + receiver (only for PAID + tracking enabled) */}
+              {showPaymentTracking && form.watch("paymentStatus") === "PAID" && (
+                <div className="space-y-3 pt-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">¿Cómo se recibió el pago?</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFinalPaymentMethod('CASH')}
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                        finalPaymentMethod === 'CASH'
+                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300'
+                      }`}
+                    >
+                      <Banknote className="h-4 w-4" />
+                      Efectivo
+                      {finalPaymentMethod === 'CASH' && <Check className="h-3 w-3 ml-auto text-emerald-500" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFinalPaymentMethod('TRANSFER')}
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                        finalPaymentMethod === 'TRANSFER'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                      }`}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      Transferencia
+                      {finalPaymentMethod === 'TRANSFER' && <Check className="h-3 w-3 ml-auto text-blue-500" />}
+                    </button>
+                  </div>
+
+                  {/* Receiver selector */}
+                  {finalPaymentMethod === 'TRANSFER' && paymentReceivers.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-semibold text-muted-foreground">¿Quién recibió el pago?</p>
+                      {paymentReceivers.map(receiver => (
+                        <button
+                          key={receiver.id}
+                          type="button"
+                          onClick={() => setFinalPaymentReceiverId(receiver.id)}
+                          className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-left text-sm transition-all cursor-pointer ${
+                            finalPaymentReceiverId === receiver.id
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                              : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                          }`}
+                        >
+                          <div>
+                            <span className="font-medium">{receiver.name}</span>
+                            {receiver.accountInfo && <span className="ml-2 text-xs text-muted-foreground">{receiver.accountInfo}</span>}
+                          </div>
+                          {finalPaymentReceiverId === receiver.id && <Check className="h-4 w-4 text-blue-500 shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className={`flex justify-between items-center text-sm font-medium ${
                 form.watch("paymentStatus") === "CANCELLED" ? "text-red-900 dark:text-red-200" : "text-muted-foreground"
               }`}>

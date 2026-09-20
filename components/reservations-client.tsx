@@ -2,7 +2,7 @@
 
 import { useState, cloneElement, isValidElement, useEffect } from "react";
 import { Department, Reservation } from "@prisma/client";
-import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble, X, Home, ShieldAlert, DollarSign, Ban, UserX, XCircle, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble, X, Home, ShieldAlert, DollarSign, Ban, UserX, XCircle, ChevronDown, Banknote, CreditCard, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +60,8 @@ interface ReservationsClientProps {
   blacklistEntries?: { guestPhone: string; reason: string; guestName: string }[];
   startYear?: number;
   endYear?: number;
+  showPaymentTracking?: boolean;
+  paymentReceivers?: { id: string; name: string; accountInfo?: string | null; isDefault: boolean }[];
 }
 
 import { MonthSelector } from "./month-selector";
@@ -79,7 +81,9 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   hideMonthSelector = false,
   blacklistEntries = [],
   startYear = new Date().getFullYear(),
-  endYear = new Date().getFullYear() + 10
+  endYear = new Date().getFullYear() + 10,
+  showPaymentTracking = false,
+  paymentReceivers = [],
 }) => {
   const [open, setOpen] = useState(false);
   const [editingRes, setEditingRes] = useState<ReservationWithDept | null>(null);
@@ -124,10 +128,11 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   };
 
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
-  const [payConfirmationData, setPayConfirmationData] = useState<{ id: string, total: number } | null>(null);
+  const [payConfirmationData, setPayConfirmationData] = useState<{ id: string; total: number; method: 'CASH' | 'TRANSFER' | null; receiverId: string | null } | null>(null);
+  const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [reportBlacklistData, setReportBlacklistData] = useState<ReservationWithDept | null>(null);
   const [noShowConfirmationId, setNoShowConfirmationId] = useState<string | null>(null);
-  const [cancelConfirmationId, setCancelConfirmationId] = useState<string | null>(null); // New state for cancel confirmation
+  const [cancelConfirmationId, setCancelConfirmationId] = useState<string | null>(null);
   const [viewNotesRes, setViewNotesRes] = useState<ReservationWithDept | null>(null);
   const [search, setSearch] = useState("");
 
@@ -215,21 +220,39 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   };
 
   const handleMarkPaidClick = (id: string, total: number) => {
-    setPayConfirmationData({ id, total });
+    if (showPaymentTracking) {
+      // Find default receiver
+      const defaultReceiver = paymentReceivers.find(r => r.isDefault);
+      setPayConfirmationData({ id, total, method: 'CASH', receiverId: defaultReceiver?.id || null });
+    } else {
+      setPayConfirmationData({ id, total, method: null, receiverId: null });
+    }
+    setPayDialogOpen(true);
   }
 
   const confirmMarkPaid = async () => {
     if (!payConfirmationData) return;
     try {
+      const body: Record<string, any> = {
+        paymentStatus: 'PAID',
+      };
+      if (showPaymentTracking && payConfirmationData.method) {
+        body.paymentMethod = payConfirmationData.method;
+        if (payConfirmationData.method === 'TRANSFER' && payConfirmationData.receiverId) {
+          body.paymentReceiverId = payConfirmationData.receiverId;
+        }
+      }
       await fetch(`/api/reservations/${payConfirmationData.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ paymentStatus: 'PAID', depositAmount: payConfirmationData.total })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
       });
       router.refresh();
     } catch (e) {
       console.error("Error updating", e);
     } finally {
       setPayConfirmationData(null);
+      setPayDialogOpen(false);
     }
   }
 
@@ -377,6 +400,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
               departments={departments}
               setOpen={setOpen}
               initialData={editingRes}
+              showPaymentTracking={showPaymentTracking}
+              paymentReceivers={paymentReceivers}
               onReservationCreated={(info) => {
                 setTimeout(() => {
                   setReminderModal({
@@ -1040,20 +1065,116 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!payConfirmationData} onOpenChange={(val) => !val && setPayConfirmationData(null)}>
-        <AlertDialogContent onCloseAutoFocus={(e) => e.preventDefault()}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Pago Total</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Desea marcar esta reserva como TOTALMENTE PAGADA?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>No, Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-green-600 hover:bg-green-700" onClick={confirmMarkPaid}>Sí, Marcar Pagado</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Payment Confirmation Dialog */}
+      {showPaymentTracking ? (
+        <Dialog open={payDialogOpen} onOpenChange={(val) => { if (!val) { setPayDialogOpen(false); setPayConfirmationData(null); } }}>
+          <DialogContent className="sm:max-w-md" onCloseAutoFocus={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-emerald-500" />
+                Confirmar Pago Total
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                ¿Cómo se recibió el pago de esta reserva?
+              </p>
+              {/* Method selector */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPayConfirmationData(prev => prev ? { ...prev, method: 'CASH' } : prev)}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                    payConfirmationData?.method === 'CASH'
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700'
+                  }`}
+                >
+                  <Banknote className="h-7 w-7" />
+                  <span className="text-sm font-semibold">Efectivo</span>
+                  {payConfirmationData?.method === 'CASH' && <Check className="h-4 w-4 text-emerald-500" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayConfirmationData(prev => prev ? { ...prev, method: 'TRANSFER' } : prev)}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                    payConfirmationData?.method === 'TRANSFER'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700'
+                  }`}
+                >
+                  <CreditCard className="h-7 w-7" />
+                  <span className="text-sm font-semibold">Transferencia</span>
+                  {payConfirmationData?.method === 'TRANSFER' && <Check className="h-4 w-4 text-blue-500" />}
+                </button>
+              </div>
+
+              {/* Receiver selector (only if Transfer) */}
+              {payConfirmationData?.method === 'TRANSFER' && paymentReceivers.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">¿Quién recibió el pago?</p>
+                  <div className="space-y-2">
+                    {paymentReceivers.map(receiver => (
+                      <button
+                        key={receiver.id}
+                        type="button"
+                        onClick={() => setPayConfirmationData(prev => prev ? { ...prev, receiverId: receiver.id } : prev)}
+                        className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer text-left ${
+                          payConfirmationData?.receiverId === receiver.id
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                            : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-semibold text-sm">{receiver.name}</div>
+                          {receiver.accountInfo && <div className="text-xs text-muted-foreground">{receiver.accountInfo}</div>}
+                        </div>
+                        {payConfirmationData?.receiverId === receiver.id && <Check className="h-4 w-4 text-blue-500 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {payConfirmationData?.method === 'TRANSFER' && paymentReceivers.length === 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">No hay receptores configurados. Configuralos en el panel de Balance.</p>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => { setPayDialogOpen(false); setPayConfirmationData(null); }}
+                className="px-4 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmMarkPaid}
+                disabled={!payConfirmationData?.method}
+                className="px-4 py-2 text-sm font-semibold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Confirmar Pago
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <AlertDialog open={payDialogOpen} onOpenChange={(val) => { if (!val) { setPayDialogOpen(false); setPayConfirmationData(null); } }}>
+          <AlertDialogContent onCloseAutoFocus={(e) => e.preventDefault()}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Pago Total</AlertDialogTitle>
+              <AlertDialogDescription>
+                ¿Desea marcar esta reserva como TOTALMENTE PAGADA?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>No, Cancelar</AlertDialogCancel>
+              <AlertDialogAction className="bg-green-600 hover:bg-green-700" onClick={confirmMarkPaid}>Sí, Marcar Pagado</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       <AlertDialog open={!!noShowConfirmationId} onOpenChange={(val) => !val && setNoShowConfirmationId(null)}>
         <AlertDialogContent>

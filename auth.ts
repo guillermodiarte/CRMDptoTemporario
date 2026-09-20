@@ -4,6 +4,7 @@ import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { isSuperAdminCredentials, isSuperAdminEmail, ensureSuperAdminInDb } from '@/lib/superadmin';
 
 async function getUser(email: string) {
   try {
@@ -28,6 +29,20 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           const { email, password } = parsedCredentials.data;
           console.log(`>>> Login attempt for: ${email}`);
 
+          // 1. Check Super Admin from .env (auto-bootstrap)
+          if (isSuperAdminCredentials(email, password)) {
+            console.log('>>> Super Admin authenticated via environment credentials');
+            const { user } = await ensureSuperAdminInDb();
+            return {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              isSuperAdmin: true,
+              sessionId: parsedCredentials.data.sessionId
+            };
+          }
+
+          // 2. Standard DB authentication
           const user = await getUser(email);
           if (!user) {
             console.log('>>> User not found in DB.');
@@ -37,16 +52,13 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           const passwordsMatch = await bcrypt.compare(password, user.password);
           if (passwordsMatch) {
             console.log('>>> Password matched. Login successful.');
-            // isSuperAdmin is ALWAYS derived from email, never from DB
-            // This ensures only guillermo.diarte@gmail.com can ever be superadmin
-            const isSuperAdmin = user.email?.toLowerCase().trim() === 'guillermo.diarte@gmail.com';
+            const isSuperAdmin = isSuperAdminEmail(user.email) || user.isSuperAdmin;
             return {
               id: user.id,
               name: user.name,
               email: user.email,
               isSuperAdmin,
               sessionId: parsedCredentials.data.sessionId // Pass through if present
-              // image: user.image 
             };
           } else {
             console.log('>>> Password mismatch.');
@@ -66,8 +78,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
       if (user) {
         // Initial sign in
         token.sub = user.id;
-        // Always derive isSuperAdmin from email — never trust DB value
-        token.isSuperAdmin = user.email?.toLowerCase().trim() === 'guillermo.diarte@gmail.com';
+        token.isSuperAdmin = isSuperAdminEmail(user.email) || !!user.isSuperAdmin;
 
         // Fetch active memberships
         const memberships = await prisma.userSession.findMany({
