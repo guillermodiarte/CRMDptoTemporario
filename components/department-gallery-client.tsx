@@ -45,6 +45,7 @@ import {
   Layers,
   Download,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -409,10 +410,11 @@ export function DepartmentGalleryClient({
   const [newFolderName, setNewFolderName] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
 
-  // Uploading / Exporting / Importing State
+  // Uploading / Exporting / Importing / Syncing State
   const [uploading, setUploading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importingZip, setImportingZip] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const zipInputRef = useRef<HTMLInputElement>(null);
 
   // Lightbox
@@ -466,6 +468,26 @@ export function DepartmentGalleryClient({
       setLoadingWebImages(false);
     }
   }, []);
+
+  const handleSyncImages = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/departments/sync-images", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.departments) {
+          setDepartments(data.departments);
+          toast.success("Imágenes sincronizadas con las carpetas de uploads");
+        }
+      } else {
+        toast.error("Error al sincronizar imágenes");
+      }
+    } catch {
+      toast.error("Error al sincronizar imágenes");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     if (activeSection === "web" && isSuperAdmin) {
@@ -619,6 +641,13 @@ export function DepartmentGalleryClient({
     if (activeSection === "dept" && selectedDept) {
       const updated = deptImages.filter(img => img.url !== url);
       await saveDeptImages(selectedDept.id, updated);
+      try {
+        await fetch("/api/media/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+      } catch {}
       toast.success("Foto eliminada");
     } else if (activeSection === "web") {
       try {
@@ -644,6 +673,13 @@ export function DepartmentGalleryClient({
     if (activeSection === "dept" && selectedDept) {
       const updated = deptImages.filter(img => !selectedUrls.includes(img.url));
       await saveDeptImages(selectedDept.id, updated);
+      try {
+        await fetch("/api/media/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ urls: selectedUrls }),
+        });
+      } catch {}
       setSelectedUrls([]);
       setIsSelectMode(false);
       toast.success(`${selectedUrls.length} fotos eliminadas`);
@@ -1228,6 +1264,21 @@ export function DepartmentGalleryClient({
                     className="hidden"
                   />
                 </>
+              )}
+
+              {/* Sync Disk Button */}
+              {!isReadOnly && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSyncImages}
+                  disabled={syncing || uploading || importingZip}
+                  className="text-xs cursor-pointer font-semibold border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  title="Sincronizar imágenes existentes en las carpetas de uploads con la galería"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "Sincronizando..." : "Sincronizar Disco"}
+                </Button>
               )}
 
               {/* Export Contextual or Selected ZIP */}

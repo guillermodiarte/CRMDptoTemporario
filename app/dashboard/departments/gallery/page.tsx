@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { DepartmentGalleryClient } from "@/components/department-gallery-client";
 import { redirect } from "next/navigation";
+import { syncDepartmentImages } from "@/lib/department-media";
 
 export const metadata = {
   title: "Galería de Imágenes | Departamentos",
@@ -41,9 +42,20 @@ export default async function DepartmentGalleryPage() {
     },
   });
 
+  // Automatically sync filesystem images for each department
+  const syncedDepartments = await Promise.all(
+    departments.map(async (dept) => {
+      const syncedUrls = await syncDepartmentImages(dept);
+      return {
+        ...dept,
+        images: JSON.stringify(syncedUrls),
+      };
+    })
+  );
+
   return (
     <DepartmentGalleryClient
-      initialDepartments={departments}
+      initialDepartments={syncedDepartments}
       isSuperAdmin={isSuperAdmin}
       role={role}
     />

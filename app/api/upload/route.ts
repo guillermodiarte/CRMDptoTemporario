@@ -65,7 +65,8 @@ export async function POST(req: NextRequest) {
 
     let targetFolder = folderParam || "general";
     if (deptParam) {
-      targetFolder = `departamentos/${deptParam}`;
+      const safeName = deptParam.trim().replace(/[/\\?%*:|"<>]/g, "_").replace(/\s+/g, "_");
+      targetFolder = `departamentos/${safeName}`;
     }
 
     if (!files || files.length === 0) {
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
       const rawBuffer = Buffer.from(bytes);
       const isSvg = file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg");
 
-      let bufferToWrite = rawBuffer;
+      let bufferToWrite: Buffer | any = rawBuffer;
       let extension = isSvg ? "svg" : "webp";
 
       if (!isSvg) {
