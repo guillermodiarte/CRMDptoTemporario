@@ -154,7 +154,7 @@ export function BalanceClient({ reservations, receivers, isSuperAdmin }: Balance
   const [filterReceiver, setFilterReceiver] = useState<string>("all");
   const [filterMethod, setFilterMethod] = useState<string>("all");
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
-  const [filterMonth, setFilterMonth] = useState<string>("all");
+  const [filterMonth, setFilterMonth] = useState<string>(() => String(new Date().getMonth()));
 
   const years = useMemo(() => {
     const ys = new Set<number>();
