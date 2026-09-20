@@ -16,10 +16,12 @@ export default async function BalanceConfigPage() {
     redirect("/dashboard/balance");
   }
 
-  const receivers = await prisma.paymentReceiver.findMany({
-    where: { sessionId, isActive: true },
-    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-  });
+  const receivers = prisma.paymentReceiver
+    ? await prisma.paymentReceiver.findMany({
+        where: { sessionId, isActive: true },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      })
+    : [];
 
   const balanceSetting = await prisma.systemSettings.findUnique({
     where: { sessionId_key: { sessionId, key: "BALANCE_ENABLED_USERS" } }

@@ -8,7 +8,10 @@ declare global {
   var prismaGlobal: undefined | ReturnType<typeof prismaClientSingleton>;
 }
 
-const prisma = globalThis.prismaGlobal ?? prismaClientSingleton();
+const prisma =
+  globalThis.prismaGlobal && (globalThis.prismaGlobal as any).paymentReceiver
+    ? globalThis.prismaGlobal
+    : prismaClientSingleton();
 
 export default prisma;
 

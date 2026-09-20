@@ -35,10 +35,12 @@ export default async function BalancePage() {
   }
 
   // Fetch payment receivers
-  const receivers = await prisma.paymentReceiver.findMany({
-    where: { sessionId, isActive: true },
-    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-  });
+  const receivers = prisma.paymentReceiver
+    ? await prisma.paymentReceiver.findMany({
+        where: { sessionId, isActive: true },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      })
+    : [];
 
   // Fetch all paid/partial reservations (not cancelled) to calculate balance
   const reservations = await prisma.reservation.findMany({

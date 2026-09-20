@@ -45,7 +45,7 @@ export default async function ReservationsPage({
   }
 
   // Fetch payment receivers if tracking enabled
-  const paymentReceivers = showPaymentTracking && sessionId
+  const paymentReceivers = showPaymentTracking && sessionId && prisma.paymentReceiver
     ? await prisma.paymentReceiver.findMany({
         where: { sessionId, isActive: true },
         orderBy: [{ order: "asc" }, { createdAt: "asc" }],

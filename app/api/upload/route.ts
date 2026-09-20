@@ -1,8 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, readdir } from "fs/promises";
 import path from "path";
 import { auth } from "@/auth";
 import { optimizeImageBuffer } from "@/lib/image-optimizer";
+
+/**
+ * Returns a short prefix for filenames based on the target folder.
+ * Examples: "logos" → "logo", "slides" → "slide", "departamentos/X" → "foto", etc.
+ */
+function getFolderPrefix(subDir: string): string {
+  const base = subDir.includes("/") ? subDir.split("/").pop() || subDir : subDir;
+  const map: Record<string, string> = {
+    logos: "logo",
+    slides: "slide",
+    general: "imagen",
+    icons: "icon",
+    avatars: "avatar",
+    guia: "guia",
+  };
+  return map[base.toLowerCase()] || "foto";
+}
+
+/**
+ * Returns the next available sequential number for a given prefix+extension in a folder.
+ * E.g. if "slide-1.webp" and "slide-2.webp" exist, returns 3.
+ */
+async function getNextSequentialNumber(dir: string, prefix: string, extension: string): Promise<number> {
+  try {
+    const entries = await readdir(dir);
+    const regex = new RegExp(`^${prefix}-(\\d+)\\.${extension}$`, "i");
+    let max = 0;
+    for (const name of entries) {
+      const m = name.match(regex);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > max) max = n;
+      }
+    }
+    return max + 1;
+  } catch {
+    return 1;
+  }
+}
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -48,6 +87,10 @@ export async function POST(req: NextRequest) {
     // Create directory recursively if it doesn't exist
     await mkdir(uploadsDir, { recursive: true });
 
+    const prefix = getFolderPrefix(subDir);
+    // Track sequential counter across multiple files uploaded at once
+    let nextNum = await getNextSequentialNumber(uploadsDir, prefix, "webp");
+
     for (const file of files) {
       const bytes = await file.arrayBuffer();
       const rawBuffer = Buffer.from(bytes);
@@ -73,18 +116,16 @@ export async function POST(req: NextRequest) {
         extension = optExt;
       }
 
-      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-      const baseNameWithoutExt = file.name
-        .replace(/\.[^/.]+$/, "")
-        .replace(/[^a-zA-Z0-9À-ÿ_-]/g, "_")
-        .slice(0, 40);
-
-      const filename = `${uniqueSuffix}-${baseNameWithoutExt}.${extension}`;
+      // Use sequential naming: prefix-N.ext (e.g. slide-1.webp, logo-3.webp)
+      const currentNum = await getNextSequentialNumber(uploadsDir, prefix, extension);
+      const seqNum = Math.max(nextNum, currentNum);
+      const filename = `${prefix}-${seqNum}.${extension}`;
       const filepath = path.join(uploadsDir, filename);
 
       await writeFile(filepath, bufferToWrite);
 
       uploadedUrls.push(`/uploads/${subDir}/${filename}`);
+      nextNum = seqNum + 1;
     }
 
     return NextResponse.json({ urls: uploadedUrls });
