@@ -149,6 +149,8 @@ export async function POST(req: Request) {
         });
       }
 
+      const validReceiverIds = new Set((data.paymentReceivers || []).map((r: any) => r.id));
+
       if (data.reservations?.length) {
         await tx.reservation.createMany({
           data: data.reservations.map((item: any) => ({
@@ -173,9 +175,9 @@ export async function POST(req: Request) {
             exchangeRate: item.exchangeRate,
             paymentStatus: item.paymentStatus,
             paymentMethod: item.paymentMethod ?? null,
-            paymentReceiverId: item.paymentReceiverId ?? null,
+            paymentReceiverId: (item.paymentReceiverId && validReceiverIds.has(item.paymentReceiverId)) ? item.paymentReceiverId : null,
             depositMethod: item.depositMethod ?? null,
-            depositReceiverId: item.depositReceiverId ?? null,
+            depositReceiverId: (item.depositReceiverId && validReceiverIds.has(item.depositReceiverId)) ? item.depositReceiverId : null,
             hasParking: item.hasParking,
             notes: item.notes,
             createdAt: parseDate(item.createdAt),
@@ -196,7 +198,7 @@ export async function POST(req: Request) {
             unitPrice: item.unitPrice,
             date: parseDate(item.date)!,
             departmentId: item.departmentId,
-            paymentReceiverId: item.paymentReceiverId ?? null,
+            paymentReceiverId: (item.paymentReceiverId && validReceiverIds.has(item.paymentReceiverId)) ? item.paymentReceiverId : null,
             isDeleted: item.isDeleted,
             createdAt: parseDate(item.createdAt),
             updatedAt: parseDate(item.updatedAt),

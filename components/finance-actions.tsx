@@ -9,7 +9,8 @@ import { Department, Expense, ExpenseType } from "@prisma/client";
 import {
   Download,
   Upload,
-  FileSpreadsheet
+  FileSpreadsheet,
+  FileJson
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -105,6 +106,28 @@ export function FinanceActions({ expenses, departments, receivers = [], date = n
     link.click();
   };
 
+  const exportToJSON = () => {
+    const exportData = expenses.map(exp => ({
+      date: format(new Date(exp.date), "yyyy-MM-dd"),
+      type: exp.type,
+      description: exp.description,
+      amount: exp.amount,
+      departmentName: exp.department?.name || "Global",
+      quantity: exp.quantity || 1,
+      unitPrice: exp.unitPrice || 0,
+      paymentReceiverName: exp.paymentReceiver?.name || "",
+      isDeleted: exp.isDeleted || false,
+    }));
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = getExportFileName("json");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
 
 
   // --- Import Logic ---
@@ -146,6 +169,40 @@ export function FinanceActions({ expenses, departments, receivers = [], date = n
       error: (err) => alert("Error leyendo CSV: " + err.message)
     });
     e.target.value = "";
+  };
+
+  const handleImportJSON = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    setPreviewRows([]);
+    setStats({ total: 0, new: 0, updated: 0, same: 0, errors: 0 });
+
+    try {
+      const text = await file.text();
+      const rawData = JSON.parse(text);
+      if (!Array.isArray(rawData)) {
+        throw new Error("El archivo JSON debe ser una lista de gastos (array)");
+      }
+
+      const normalizedData = rawData.map((item: any) => ({
+        Fecha: item.date ?? item.Fecha,
+        Tipo: item.type ?? item.Tipo,
+        Descripción: item.description ?? item.Descripción ?? item.Descripcion,
+        Total: item.amount ?? item.Total ?? item.Monto,
+        Departamento: item.departmentName ?? item.department?.name ?? item.Departamento ?? item.Depto,
+        Cantidad: item.quantity ?? item.Cantidad ?? 1,
+        "Precio Unitario": item.unitPrice ?? item["Precio Unitario"] ?? item.precioUnitario ?? 0,
+        "Pagado por": item.paymentReceiverName ?? item["Pagado por"] ?? item.paymentReceiver?.name ?? "",
+        Eliminado: item.isDeleted ?? item.Eliminado ?? false
+      }));
+
+      validateAndSetPreview(normalizedData);
+      setImportOpen(true);
+    } catch (err: any) {
+      alert("Error al importar JSON de finanzas: " + err.message);
+    }
   };
 
   const validateAndSetPreview = (rows: any[]) => {
@@ -356,11 +413,16 @@ export function FinanceActions({ expenses, departments, receivers = [], date = n
           <DropdownMenuItem onClick={exportToCSV}>
             <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar CSV
           </DropdownMenuItem>
-
+          <DropdownMenuItem onClick={exportToJSON}>
+            <FileJson className="mr-2 h-4 w-4" /> Exportar JSON
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => document.getElementById("finance-file-upload")?.click()}>
             <Upload className="mr-2 h-4 w-4" /> Importar CSV
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => document.getElementById("finance-file-upload-json")?.click()}>
+            <FileJson className="mr-2 h-4 w-4 text-blue-600" /> Importar JSON
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -371,6 +433,13 @@ export function FinanceActions({ expenses, departments, receivers = [], date = n
         accept=".csv"
         className="hidden"
         onChange={handleFileUpload}
+      />
+      <input
+        id="finance-file-upload-json"
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleImportJSON}
       />
 
       <ImportPreviewModal

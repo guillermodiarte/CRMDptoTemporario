@@ -224,6 +224,8 @@ export async function POST(req: Request) {
           });
         }
 
+        const validReceiverIds = new Set((data.paymentReceivers || []).map((r: any) => r.id));
+
         if (data.reservations?.length) {
           await tx.reservation.createMany({
             data: data.reservations.map((item: any) => ({
@@ -248,9 +250,9 @@ export async function POST(req: Request) {
               exchangeRate: item.exchangeRate,
               paymentStatus: item.paymentStatus,
               paymentMethod: item.paymentMethod ?? null,
-              paymentReceiverId: item.paymentReceiverId ?? null,
+              paymentReceiverId: (item.paymentReceiverId && validReceiverIds.has(item.paymentReceiverId)) ? item.paymentReceiverId : null,
               depositMethod: item.depositMethod ?? null,
-              depositReceiverId: item.depositReceiverId ?? null,
+              depositReceiverId: (item.depositReceiverId && validReceiverIds.has(item.depositReceiverId)) ? item.depositReceiverId : null,
               hasParking: item.hasParking,
               notes: item.notes,
               createdAt: parseDate(item.createdAt),
@@ -271,7 +273,7 @@ export async function POST(req: Request) {
               unitPrice: item.unitPrice,
               date: parseDate(item.date)!,
               departmentId: item.departmentId,
-              paymentReceiverId: item.paymentReceiverId ?? null,
+              paymentReceiverId: (item.paymentReceiverId && validReceiverIds.has(item.paymentReceiverId)) ? item.paymentReceiverId : null,
               isDeleted: item.isDeleted,
               createdAt: parseDate(item.createdAt),
               updatedAt: parseDate(item.updatedAt),
@@ -346,18 +348,6 @@ export async function POST(req: Request) {
         const userIdMap = new Map<string, string>(); // Old User ID -> New/Existing User ID
         const deptIdMap = new Map<string, string>(); // Old Dept ID -> New Dept ID
         const receiverIdMap = new Map<string, string>(); // Old Receiver ID -> New Receiver ID
-
-        if (data.systemSettings?.length) {
-          await tx.systemSettings.createMany({
-            data: data.systemSettings.map((item: any) => ({
-              key: item.key,
-              value: item.value,
-              updatedBy: item.updatedBy,
-              updatedAt: parseDate(item.updatedAt),
-              sessionId
-            }))
-          });
-        }
 
         if (data.users?.length) {
           for (const userItem of data.users) {
@@ -577,6 +567,36 @@ export async function POST(req: Request) {
               });
             }
           }
+        }
+
+        if (data.systemSettings?.length) {
+          const settingsToCreate = data.systemSettings.map((item: any) => {
+            let val = item.value;
+            if (item.key?.startsWith("BALANCE_MANUAL_TRANSFERS_") && receiverIdMap.size > 0) {
+              try {
+                const parsed = JSON.parse(val);
+                if (parsed.receivers && typeof parsed.receivers === "object") {
+                  const remappedReceivers: Record<string, number> = {};
+                  for (const [oldId, amt] of Object.entries(parsed.receivers)) {
+                    const newId = receiverIdMap.get(oldId) || oldId;
+                    remappedReceivers[newId] = amt as number;
+                  }
+                  parsed.receivers = remappedReceivers;
+                  val = JSON.stringify(parsed);
+                }
+              } catch (e) {
+                // Keep original value if parse fails
+              }
+            }
+            return {
+              key: item.key,
+              value: val,
+              updatedBy: item.updatedBy,
+              updatedAt: parseDate(item.updatedAt),
+              sessionId
+            };
+          });
+          await tx.systemSettings.createMany({ data: settingsToCreate });
         }
       }
     });
