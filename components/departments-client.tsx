@@ -724,7 +724,9 @@ export const DepartmentsClient: React.FC<DepartmentsClientProps> = ({
                 <span className="sm:hidden">Orden Web</span>
               </Button>
             )}
-            <DepartmentsActions data={visibleData} role={role} defaultType={defaultType} />
+            {!isVisualizer && (
+              <DepartmentsActions data={visibleData} role={role} defaultType={defaultType} />
+            )}
             {!isVisualizer && (
               <Button onClick={() => { setEditingDepartment(null); setIsModalOpen(true); }} size="sm">
                 <Plus className="mr-2 h-4 w-4" /> Nuevo

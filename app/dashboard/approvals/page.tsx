@@ -13,6 +13,8 @@ export default async function ApprovalsPage() {
   const sessionId = session.user?.sessionId;
   if (!sessionId) redirect('/select-session');
 
+  const userRole = session.user?.role ?? 'VISUALIZER';
+
   // Find all PENDING_APPROVAL groupIds in this session
   const pendingInSession = await prisma.reservation.findMany({
     where: { status: 'PENDING_APPROVAL', sessionId },
@@ -133,7 +135,7 @@ export default async function ApprovalsPage() {
         <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Aprobaciones Pendientes</h1>
       </div>
 
-      <ApprovalsClient initialApprovals={approvals} currentSessionId={sessionId} />
+      <ApprovalsClient initialApprovals={approvals} currentSessionId={sessionId} userRole={userRole} />
     </div>
   );
 }

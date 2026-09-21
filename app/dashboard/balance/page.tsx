@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { BalanceClient } from "@/components/balance-client";
+import { getDollarRate } from "@/lib/dollar";
 
 export const dynamic = 'force-dynamic';
 
@@ -10,29 +11,48 @@ export default async function BalancePage() {
   const session = await auth();
   const sessionId = session?.user?.sessionId;
   const userRole = session?.user?.role;
-  const userEmail = session?.user?.email?.toLowerCase().trim();
+  let userEmail = session?.user?.email?.toLowerCase().trim();
 
-  if (!sessionId || userRole !== 'ADMIN') {
+  if (!sessionId) {
     redirect("/dashboard");
+  }
+
+  // Ensure userEmail is loaded even if session doesn't carry it directly
+  if (!userEmail && session?.user?.id) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { email: true },
+    });
+    userEmail = dbUser?.email?.toLowerCase().trim();
   }
 
   // Check if user has access to balance panel
   const isSuperAdmin = !!(session?.user as any)?.isSuperAdmin;
-  const balanceSetting = await prisma.systemSettings.findUnique({
-    where: { sessionId_key: { sessionId, key: "BALANCE_ENABLED_USERS" } }
+  const balanceSetting = await prisma.systemSettings.findFirst({
+    where: {
+      sessionId,
+      key: { in: ["BALANCE_ENABLED_USERS", "SHOW_BALANCE_MENU"] },
+    },
+    orderBy: { updatedAt: "desc" },
   });
 
   let hasBalanceAccess = isSuperAdmin;
   if (!hasBalanceAccess && balanceSetting?.value) {
     try {
       const enabledUsers: string[] = JSON.parse(balanceSetting.value);
-      hasBalanceAccess = userEmail ? enabledUsers.includes(userEmail) : false;
-    } catch { hasBalanceAccess = false; }
+      hasBalanceAccess = userEmail
+        ? enabledUsers.map((e) => e.toLowerCase().trim()).includes(userEmail)
+        : false;
+    } catch {
+      hasBalanceAccess = false;
+    }
   }
 
   if (!hasBalanceAccess) {
     redirect("/dashboard");
   }
+
+  const dollarRate = await getDollarRate();
 
   // Fetch payment receivers
   const receivers = prisma.paymentReceiver
@@ -42,12 +62,63 @@ export default async function BalancePage() {
       })
     : [];
 
-  // Fetch all paid/partial reservations (not cancelled) to calculate balance
+  // Fetch cleaning expense setting for balance
+  const cleaningSetting = await prisma.systemSettings.findUnique({
+    where: { sessionId_key: { sessionId, key: "CLEANING_EXPENSE_IN_BALANCE" } },
+  });
+  const cleaningExpenseEnabled = cleaningSetting?.value === "true";
+
+  // Fetch manual transfers edit setting
+  const manualTransfersSetting = await prisma.systemSettings.findUnique({
+    where: { sessionId_key: { sessionId, key: "MANUAL_TRANSFERS_EDIT_ENABLED" } },
+  });
+  const manualTransfersEditEnabled = manualTransfersSetting?.value === "true";
+
+  // Fetch all manual transfers adjustments for this session
+  const manualTransfersRecords = await prisma.systemSettings.findMany({
+    where: {
+      sessionId,
+      key: { startsWith: "BALANCE_MANUAL_TRANSFERS_" },
+    },
+  });
+
+  const initialManualTransfers: Record<string, { year: number; month: number; editedAt: string; editedBy: string; receivers: Record<string, number> }> = {};
+  for (const rec of manualTransfersRecords) {
+    try {
+      const parsed = JSON.parse(rec.value);
+      const suffix = rec.key.replace("BALANCE_MANUAL_TRANSFERS_", "");
+      initialManualTransfers[suffix] = parsed;
+    } catch {}
+  }
+
+  // Fetch expenses for the session
+  const expenses = await prisma.expense.findMany({
+    where: { sessionId, isDeleted: false },
+    include: {
+      department: { select: { name: true } },
+      paymentReceiver: { select: { id: true, name: true } },
+    },
+    orderBy: { date: "desc" },
+  });
+
+  // Fetch all paid/partial reservations + cancelled with deposits to calculate balance
   const reservations = await prisma.reservation.findMany({
     where: {
       sessionId,
-      paymentStatus: { in: ["PAID", "PARTIAL"] },
-      status: { notIn: ["CANCELLED"] },
+      OR: [
+        {
+          paymentStatus: { in: ["PAID", "PARTIAL"] },
+          status: { notIn: ["CANCELLED"] },
+        },
+        {
+          status: "CANCELLED",
+          depositAmount: { gt: 0 },
+        },
+        {
+          paymentStatus: "CANCELLED",
+          depositAmount: { gt: 0 },
+        },
+      ],
     },
     include: {
       department: { select: { name: true } },
@@ -125,8 +196,14 @@ export default async function BalancePage() {
     <BalanceClient
       reservations={reservations as any}
       receivers={receivers}
+      expenses={expenses as any}
+      cleaningExpenseEnabled={cleaningExpenseEnabled}
       summaryStats={summaryStats}
+      dollarRate={dollarRate}
       isSuperAdmin={isSuperAdmin}
+      userRole={userRole ?? 'VISUALIZER'}
+      manualTransfersEditEnabled={manualTransfersEditEnabled}
+      initialManualTransfers={initialManualTransfers}
     />
   );
 }

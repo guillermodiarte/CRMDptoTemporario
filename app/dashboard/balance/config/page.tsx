@@ -39,12 +39,26 @@ export default async function BalanceConfigPage() {
   });
   const allUsers = userSessions.map(us => us.user);
 
+  // Fetch cleaning expense in balance setting
+  const cleaningSetting = await prisma.systemSettings.findUnique({
+    where: { sessionId_key: { sessionId, key: "CLEANING_EXPENSE_IN_BALANCE" } }
+  });
+  const initialCleaningExpenseEnabled = cleaningSetting?.value === "true";
+
+  // Fetch manual transfers edit enabled setting
+  const manualTransfersSetting = await prisma.systemSettings.findUnique({
+    where: { sessionId_key: { sessionId, key: "MANUAL_TRANSFERS_EDIT_ENABLED" } }
+  });
+  const initialManualTransfersEditEnabled = manualTransfersSetting?.value === "true";
+
   return (
     <BalanceConfigClient
       receivers={receivers}
       enabledUsers={enabledUsers}
       allUsers={allUsers}
       isSuperAdmin={isSuperAdmin}
+      initialCleaningExpenseEnabled={initialCleaningExpenseEnabled}
+      initialManualTransfersEditEnabled={initialManualTransfersEditEnabled}
     />
   );
 }

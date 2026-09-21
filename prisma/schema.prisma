@@ -227,6 +227,9 @@ model Expense {
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id])
 
+  paymentReceiverId String?          // Who paid this expense (deducted from their balance)
+  paymentReceiver   PaymentReceiver? @relation("ExpensePaidBy", fields: [paymentReceiverId], references: [id], onDelete: SetNull)
+
   isDeleted Boolean  @default(false) // Soft delete
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -293,6 +296,7 @@ model PaymentReceiver {
   isActive    Boolean  @default(true)
   order       Int      @default(0)
   isDefault   Boolean  @default(false) // Default receiver for deposits
+  profitSharePercent Float @default(0)  // % of net profit that belongs to this receiver
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -301,4 +305,5 @@ model PaymentReceiver {
 
   finalPayments   Reservation[] @relation("FinalPayment")
   depositPayments Reservation[] @relation("DepositPayment")
+  expenses        Expense[]     @relation("ExpensePaidBy")
 }

@@ -33,11 +33,15 @@ interface ExpenseFormProps {
   setOpen: (open: boolean) => void;
   initialData?: any;
   defaultDate?: Date;
+  receivers?: { id: string; name: string; accountInfo?: string | null }[];
 }
 
-export function ExpenseForm({ departments, setOpen, initialData, defaultDate }: ExpenseFormProps) {
+export function ExpenseForm({ departments, setOpen, initialData, defaultDate, receivers = [] }: ExpenseFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [selectedReceiverId, setSelectedReceiverId] = useState<string>(
+    initialData?.paymentReceiverId || initialData?.paymentReceiver?.id || ""
+  );
 
   const defaultDateStr = initialData?.date
     ? new Date(initialData.date).toISOString().split("T")[0]
@@ -78,12 +82,28 @@ export function ExpenseForm({ departments, setOpen, initialData, defaultDate }: 
     }
   }, [type, quantity, unitPrice, form]);
 
+  useEffect(() => {
+    setSelectedReceiverId(initialData?.paymentReceiverId || initialData?.paymentReceiver?.id || "");
+    if (initialData) {
+      form.reset({
+        type: initialData.type,
+        description: initialData.description,
+        amount: initialData.amount,
+        quantity: initialData.quantity || 1,
+        unitPrice: initialData.unitPrice || 0,
+        departmentId: initialData.departmentId || "global",
+        date: initialData.date ? new Date(initialData.date).toISOString().split("T")[0] : defaultDateStr,
+      });
+    }
+  }, [initialData]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
       const payload = {
         ...values,
         departmentId: values.departmentId === "global" ? null : values.departmentId,
+        paymentReceiverId: selectedReceiverId || null,
       };
 
       const url = initialData?.id ? `/api/expenses/${initialData.id}` : "/api/expenses";
@@ -249,6 +269,26 @@ export function ExpenseForm({ departments, setOpen, initialData, defaultDate }: 
             </FormItem>
           )}
         />
+
+        {/* Receptor (solo si hay receptores configurados) */}
+        {receivers.length > 0 && (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium leading-none">Pagado por (opcional)</label>
+            <select
+              value={selectedReceiverId}
+              onChange={(e) => setSelectedReceiverId(e.target.value)}
+              className="w-full text-sm px-3 py-2 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Sin asignar</option>
+              {receivers.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}{r.accountInfo ? ` (${r.accountInfo})` : ""}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">Quién pagó este gasto — se descontará de su balance.</p>
+          </div>
+        )}
 
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Guardando..." : (initialData?.id ? "Actualizar Gasto" : "Guardar Gasto")}

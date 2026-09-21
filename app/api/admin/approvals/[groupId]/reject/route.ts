@@ -8,6 +8,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
   try {
     const session = await auth();
     if (!session) return new NextResponse('Unauthorized', { status: 401 });
+    if (session.user?.role === 'VISUALIZER') return new NextResponse('Forbidden', { status: 403 });
     const sessionId = await requireSessionId();
     const { groupId } = await params;
 

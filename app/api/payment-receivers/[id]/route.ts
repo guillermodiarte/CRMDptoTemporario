@@ -24,7 +24,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { name, accountInfo, isDefault, order, isActive } = body;
+    const { name, accountInfo, isDefault, order, isActive, profitSharePercent } = body;
 
     // If setting as default, clear other defaults
     if (isDefault) {
@@ -42,6 +42,7 @@ export async function PATCH(
         ...(isDefault !== undefined && { isDefault: !!isDefault }),
         ...(order !== undefined && { order: Number(order) }),
         ...(isActive !== undefined && { isActive: !!isActive }),
+        ...(profitSharePercent !== undefined && { profitSharePercent: Math.min(100, Math.max(0, Number(profitSharePercent))) }),
       },
     });
 

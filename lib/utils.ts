@@ -20,17 +20,44 @@ export const formatPrice = (amount: number | string, prefix: string = "$"): stri
 
 export const formatCurrency = (amount: number, currency: string = 'ARS', decimals?: number) => {
   const num = Number(amount) || 0;
+  const isNegative = num < -0.00001;
+  const absNum = Math.abs(num);
   const formatted = decimals !== undefined
     ? new Intl.NumberFormat('es-AR', {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
-      }).format(num)
-    : formatNumber(num);
+      }).format(absNum)
+    : formatNumber(absNum);
 
-  if (currency === 'USD') {
-    return `US$ ${formatted}`;
+  const prefix = currency === 'USD' ? 'US$ ' : '$ ';
+  return isNegative ? `-${prefix}${formatted}` : `${prefix}${formatted}`;
+};
+
+export const formatSignedCurrency = (
+  amount: number,
+  forcePlus: boolean = false,
+  currency: string = 'ARS',
+  decimals?: number
+) => {
+  const num = Number(amount) || 0;
+  const isNegative = num < -0.00001;
+  const isPositive = num > 0.00001;
+  const absNum = Math.abs(num);
+  const formatted = decimals !== undefined
+    ? new Intl.NumberFormat('es-AR', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      }).format(absNum)
+    : formatNumber(absNum);
+
+  const prefix = currency === 'USD' ? 'US$ ' : '$ ';
+  if (isNegative) {
+    return `-${prefix}${formatted}`;
   }
-  return `$ ${formatted}`;
+  if (isPositive && forcePlus) {
+    return `+${prefix}${formatted}`;
+  }
+  return `${prefix}${formatted}`;
 };
 
 export const formatAxisNumber = (value: number) => {

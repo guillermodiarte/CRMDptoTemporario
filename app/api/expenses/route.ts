@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const sessionId = await requireSessionId();
-    const { type, description, amount, departmentId, date, quantity, unitPrice, isDeleted } = body;
+    const { type, description, amount, departmentId, date, quantity, unitPrice, isDeleted, paymentReceiverId } = body;
 
     let cleanIsDeleted = false;
     if (typeof isDeleted === "boolean") {
@@ -48,6 +48,7 @@ export async function POST(req: Request) {
         quantity: quantity ? Number(quantity) : 1,
         unitPrice: unitPrice ? Number(unitPrice) : null,
         departmentId: departmentId || null,
+        paymentReceiverId: paymentReceiverId || null,
         date: date ? new Date(`${date}T12:00:00`) : new Date(),
         isDeleted: cleanIsDeleted,
         sessionId

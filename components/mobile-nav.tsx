@@ -200,7 +200,7 @@ export function MobileNav({
               Gestión de Sesiones
             </Link>
           )}
-          {role === 'ADMIN' && showBalance && (
+          {showBalance && (
             <Link
               href="/dashboard/balance"
               className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"

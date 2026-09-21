@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface FinanceViewProps {
-  expenses: (Expense & { department: { name: string } | null })[];
+  expenses: (Expense & { department: { name: string } | null; paymentReceiver?: { id: string; name: string } | null })[];
   departments: Department[];
   monthlyStats: any[];
   distribution: any[];
@@ -43,9 +43,11 @@ interface FinanceViewProps {
   departmentStats?: any[];
   startYear?: number;
   endYear?: number;
+  receivers?: { id: string; name: string; accountInfo?: string | null }[];
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+
 const PLATFORM_COLORS: Record<string, string> = {
   'AIRBNB': '#FF5A5F', // Airbnb Red
   'BOOKING': '#003580', // Booking Blue
@@ -69,7 +71,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function FinanceView({ expenses, departments, monthlyStats, distribution, summary, role, date = new Date(), departmentStats = [], platformStats = [], startYear, endYear, reservations = [] }: FinanceViewProps) {
+export function FinanceView({ expenses, departments, monthlyStats, distribution, summary, role, date = new Date(), departmentStats = [], platformStats = [], startYear, endYear, reservations = [], receivers = [] }: FinanceViewProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
@@ -215,7 +217,14 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                   <TableCell className="text-xs">{format(new Date(exp.date), "dd/MM")}</TableCell>
                   <TableCell className="text-xs">
                     <div className="font-medium truncate max-w-[120px] lg:max-w-none">{exp.description}</div>
-                    <div className="text-muted-foreground text-[10px] truncate">{exp.department?.name || "Global"}</div>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                      <span className="text-muted-foreground text-[10px]">{exp.department?.name || "Global"}</span>
+                      {exp.paymentReceiver && (
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-medium">
+                          {exp.paymentReceiver.name}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   {showDetails && <TableCell className="text-right text-xs">{exp.quantity || 1}</TableCell>}
                   {showDetails && <TableCell className="text-right text-xs">{formatCurrency(exp.unitPrice || 0)}</TableCell>}
@@ -258,7 +267,14 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
             <div key={exp.id} className="p-3 border-b last:border-0 flex justify-between items-start gap-2">
               <div className="min-w-0 flex-1">
                 <div className="font-medium text-sm whitespace-normal break-words leading-tight">{exp.description}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{format(new Date(exp.date), "dd/MM")} • {exp.department?.name || "Global"}</div>
+                <div className="flex items-center gap-1.5 flex-wrap text-xs text-muted-foreground mt-0.5">
+                  <span>{format(new Date(exp.date), "dd/MM")} • {exp.department?.name || "Global"}</span>
+                  {exp.paymentReceiver && (
+                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-medium">
+                      {exp.paymentReceiver.name}
+                    </span>
+                  )}
+                </div>
                 {showDetails && ((exp.quantity || 0) > 1 || (exp.unitPrice || 0) > 0) && (
                   <div className="text-[10px] text-muted-foreground mt-1">
                     {exp.quantity || 1} x {formatCurrency(exp.unitPrice || 0)}
@@ -314,7 +330,9 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
           {!isPdfExporting && <h2 className="text-3xl font-bold tracking-tight">Finanzas</h2>}
           <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             {!isPdfExporting && <MonthSelector startYear={startYear} endYear={endYear} />}
-            {!isPdfExporting && <FinanceActions expenses={expenses} departments={departments} date={date} onExportPDF={handleExportPDF} />}
+            {!isPdfExporting && !isVisualizer && (
+              <FinanceActions expenses={expenses} departments={departments} date={date} onExportPDF={handleExportPDF} />
+            )}
           </div>
         </div>
 
@@ -338,6 +356,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                   setOpen={setOpen}
                   initialData={editingExpense}
                   defaultDate={formDefaultDate}
+                  receivers={receivers}
                 />
               </DialogContent>
             </Dialog>

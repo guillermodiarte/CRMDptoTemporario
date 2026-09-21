@@ -9,6 +9,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
   try {
     const session = await auth();
     if (!session) return new NextResponse('Unauthorized', { status: 401 });
+    if (session.user?.role === 'VISUALIZER') return new NextResponse('Forbidden', { status: 403 });
     const sessionId = await requireSessionId();
     const { groupId } = await params;
 
@@ -183,7 +184,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
               cleaningFee: splits[i].cleaningFee,
               amenitiesFee: splits[i].amenitiesFee,
               currency: res.currency,
-              paymentStatus: paymentStatus === 'PAID' ? 'PAID' : 'UNPAID',
+              paymentStatus: splits[i].depositAmount > 0 ? 'PARTIAL' : 'UNPAID',
               hasParking: res.hasParking,
               groupId: splitGroupId,
               notes: res.notes,

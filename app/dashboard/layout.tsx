@@ -105,12 +105,15 @@ export default async function DashboardLayout({
   let showBalance = false; // Default: only visible when enabled
 
   if (sessionId) {
-    const [showParkingSetting, showBalanceSetting] = await Promise.all([
+    const [showParkingSetting, showBalanceSetting, balanceEnabledUsersSetting] = await Promise.all([
       prisma.systemSettings.findUnique({
         where: { sessionId_key: { sessionId, key: "SHOW_PARKING_MENU" } }
       }),
       prisma.systemSettings.findUnique({
         where: { sessionId_key: { sessionId, key: "SHOW_BALANCE_MENU" } }
+      }),
+      prisma.systemSettings.findUnique({
+        where: { sessionId_key: { sessionId, key: "BALANCE_ENABLED_USERS" } }
       }),
     ]);
 
@@ -118,14 +121,21 @@ export default async function DashboardLayout({
       showParking = showParkingSetting.value !== "false";
     }
 
-    // Balance is visible to superadmin always, or to enabled users per SHOW_BALANCE_MENU
+    // Balance is visible to superadmin always, or to enabled users per BALANCE_ENABLED_USERS / SHOW_BALANCE_MENU
     if (user?.isSuperAdmin) {
       showBalance = true;
-    } else if (showBalanceSetting?.value) {
-      try {
-        const enabledUsers: string[] = JSON.parse(showBalanceSetting.value);
-        showBalance = user?.email ? enabledUsers.includes(user.email.toLowerCase()) : false;
-      } catch { showBalance = false; }
+    } else {
+      const balanceConfigValue = balanceEnabledUsersSetting?.value || showBalanceSetting?.value;
+      if (balanceConfigValue) {
+        try {
+          const enabledUsers: string[] = JSON.parse(balanceConfigValue);
+          showBalance = user?.email
+            ? enabledUsers.map((e) => e.toLowerCase().trim()).includes(user.email.toLowerCase().trim())
+            : false;
+        } catch {
+          showBalance = false;
+        }
+      }
     }
   }
 
@@ -202,15 +212,13 @@ export default async function DashboardLayout({
                     Cocheras
                   </Link>
                 )}
-                {role === "ADMIN" && (
-                  <Link
-                    href="/dashboard/finance"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                  >
-                    <LineChart className="h-5 w-5 text-green-500" />
-                    Finanzas
-                  </Link>
-                )}
+                <Link
+                  href="/dashboard/finance"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                >
+                  <LineChart className="h-5 w-5 text-green-500" />
+                  Finanzas
+                </Link>
                 {role === "ADMIN" && (
                   <Link
                     href="/dashboard/users"
@@ -247,7 +255,7 @@ export default async function DashboardLayout({
                     Gestión de Sesiones
                   </Link>
                 )}
-                {role === "ADMIN" && showBalance && (
+                {showBalance && (
                   <Link
                     href="/dashboard/balance"
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"

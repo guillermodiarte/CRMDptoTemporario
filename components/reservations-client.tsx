@@ -339,15 +339,17 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   {!hideMonthSelector && <MonthSelector startYear={startYear} endYear={endYear} />}
 
                   {/* Export/Import (Mobile Only) */}
-                  <div className="md:hidden">
-                    <ReservationsActions
-                      data={data}
-                      departments={departments}
-                      blacklistedPhones={blacklistedPhones}
-                      blacklistEntries={blacklistEntries}
-                      date={selectedDate}
-                    />
-                  </div>
+                  {!isVisualizer && (
+                    <div className="md:hidden">
+                      <ReservationsActions
+                        data={data}
+                        departments={departments}
+                        blacklistedPhones={blacklistedPhones}
+                        blacklistEntries={blacklistEntries}
+                        date={selectedDate}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -365,28 +367,32 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   </div>
 
                   {/* New Button (Mobile Only) */}
-                  <DialogTrigger asChild>
-                    <Button onClick={handleCreate} className="md:hidden whitespace-nowrap w-[140px] h-10 text-base">
-                      <Plus className="mr-2 h-5 w-5" /> Nueva
-                    </Button>
-                  </DialogTrigger>
-
-                  {/* Desktop Actions */}
-                  <div className="hidden md:flex gap-2 items-center">
-                    <ReservationsActions
-                      data={data}
-                      departments={departments}
-                      blacklistedPhones={blacklistedPhones}
-                      blacklistEntries={blacklistEntries}
-                      date={selectedDate}
-                    />
-
+                  {!isVisualizer && (
                     <DialogTrigger asChild>
-                      <Button onClick={handleCreate} className="whitespace-nowrap">
-                        <Plus className="mr-2 h-4 w-4" /> Nueva
+                      <Button onClick={handleCreate} className="md:hidden whitespace-nowrap w-[140px] h-10 text-base">
+                        <Plus className="mr-2 h-5 w-5" /> Nueva
                       </Button>
                     </DialogTrigger>
-                  </div>
+                  )}
+
+                  {/* Desktop Actions */}
+                  {!isVisualizer && (
+                    <div className="hidden md:flex gap-2 items-center">
+                      <ReservationsActions
+                        data={data}
+                        departments={departments}
+                        blacklistedPhones={blacklistedPhones}
+                        blacklistEntries={blacklistEntries}
+                        date={selectedDate}
+                      />
+
+                      <DialogTrigger asChild>
+                        <Button onClick={handleCreate} className="whitespace-nowrap">
+                          <Plus className="mr-2 h-4 w-4" /> Nueva
+                        </Button>
+                      </DialogTrigger>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -446,30 +452,30 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
           <p className="text-sm text-muted-foreground">Gestiona tus reservas y ocupación.</p>
         </div>
 
-        <div className="flex flex-wrap gap-4 mb-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-100 dark:bg-amber-400 border border-yellow-300 dark:border-amber-400 rounded"></div>
-            <span>Pendiente</span>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 text-xs font-medium select-none">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 shadow-2xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 shadow-xs"></span>
+            <span className="font-semibold">Pendiente (Sin Pago)</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-100 dark:bg-emerald-500 border border-green-300 dark:border-emerald-500 rounded"></div>
-            <span>Pagado</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 border border-blue-300 dark:border-blue-700 shadow-2xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0 shadow-xs"></span>
+            <span className="font-semibold">Parcial (Con Seña)</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-100 dark:bg-blue-500 border border-blue-300 dark:border-blue-500 rounded"></div>
-            <span>Parcial</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shrink-0 shadow-xs"></span>
+            <span className="font-semibold">Pagado (100%)</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-100 dark:bg-rose-500 border border-red-300 dark:border-rose-500 rounded"></div>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-900">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"></span>
             <span>Cancelado</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-orange-100 dark:bg-orange-500 border border-orange-300 dark:border-orange-500 rounded"></div>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/50 text-purple-900 dark:text-purple-300 border border-purple-300 dark:border-purple-900">
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-600 shrink-0"></span>
             <span>No Presentado</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-500 border border-red-500 rounded"></div>
-            <span>Lista Negra</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-900 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-700 shrink-0"></span>
+            <span className="font-semibold">Lista Negra</span>
           </div>
         </div>
         {/* Desktop Table */}
@@ -504,26 +510,22 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
                 const isBlacklisted = !!res.guestPhone && blacklistedPhones.some(bp => normalizePhone(bp) === normalizePhone(res.guestPhone));
 
-                let rowClass = "border-b border-slate-100 dark:border-slate-700/60 transition-colors ";
+                let rowClass = "border-b border-slate-200/90 dark:border-slate-800 transition-colors ";
                 if (isNoShow) {
-                  rowClass += "bg-orange-50/70 dark:bg-orange-900/30 hover:bg-orange-100/80 dark:hover:bg-orange-800/40 text-muted-foreground";
+                  rowClass += "bg-purple-100/80 dark:bg-purple-950/40 hover:bg-purple-200/80 dark:hover:bg-purple-900/60 text-muted-foreground";
                 } else if (isBlacklisted) {
-                  rowClass += "bg-red-50/80 dark:bg-red-900/40 hover:bg-red-100/90 dark:hover:bg-red-800/50 text-slate-900 dark:text-slate-100";
+                  rowClass += "bg-rose-100 dark:bg-rose-950/50 hover:bg-rose-200/90 dark:hover:bg-rose-900/70 text-slate-900 dark:text-slate-100";
+                } else if (isCancelled) {
+                  rowClass += "bg-red-100/70 dark:bg-rose-950/30 hover:bg-red-200/80 dark:hover:bg-rose-900/50 text-muted-foreground";
                 } else if (isPaid) {
-                  rowClass += "bg-green-50/70 dark:bg-emerald-900/30 hover:bg-green-100/80 dark:hover:bg-emerald-800/40 text-slate-900 dark:text-slate-100";
+                  rowClass += "bg-emerald-100/75 dark:bg-emerald-950/40 hover:bg-emerald-200/80 dark:hover:bg-emerald-900/60 text-slate-900 dark:text-slate-100";
                 } else if (isPartial) {
-                  rowClass += "bg-blue-50/70 dark:bg-blue-900/30 hover:bg-blue-100/80 dark:hover:bg-blue-800/40 text-slate-900 dark:text-slate-100";
-                } else if ((res.paymentStatus as any) === 'CANCELLED') {
-                  rowClass += "bg-red-50/60 dark:bg-rose-900/25 hover:bg-red-100/70 dark:hover:bg-rose-800/35 text-muted-foreground";
+                  rowClass += "bg-blue-100/85 dark:bg-blue-950/45 hover:bg-blue-200/85 dark:hover:bg-blue-900/65 text-slate-900 dark:text-slate-100";
                 } else {
-                  // Pending
-                  rowClass += "bg-yellow-50/70 dark:bg-amber-900/30 hover:bg-yellow-100/80 dark:hover:bg-amber-800/40 text-slate-900 dark:text-slate-100";
+                  // Pending (Unpaid) -> Amarillo fuerte y claro
+                  rowClass += "bg-amber-100/85 dark:bg-amber-950/45 hover:bg-amber-200/85 dark:hover:bg-amber-900/65 text-slate-900 dark:text-slate-100";
                 }
 
-                if (isNext) {
-                  // Use ring (shadow) instead of border to avoid table collapse issues
-                  rowClass += " ring-2 ring-inset ring-blue-500 z-10 relative shadow-md";
-                }
                 if (searchParams.get("edit") === res.id) {
                   rowClass += " ring-2 ring-emerald-500/80";
                 }
@@ -580,12 +582,21 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
                     </TableCell>
                     <TableCell className={`text-center ${isCancelled ? "line-through text-muted-foreground" : ""}`}>
-                      {format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}
-                      {res.groupId && res.groupTotalAmount != null && (
-                        <span title="Parte de una reserva dividida" className="ml-2 inline-block">
-                          <LinkIcon className="h-3 w-3 text-blue-500" />
-                        </span>
-                      )}
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <div>
+                          {format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}
+                          {res.groupId && res.groupTotalAmount != null && (
+                            <span title="Parte de una reserva dividida" className="ml-1.5 inline-block align-middle">
+                              <LinkIcon className="h-3 w-3 text-blue-500" />
+                            </span>
+                          )}
+                        </div>
+                        {isNext && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
+                            Próximo ingreso
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className={`flex items-center justify-center gap-1 ${isCancelled ? "line-through text-muted-foreground" : ""}`}>
@@ -614,18 +625,19 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     <TableCell className="text-center">
                       <div className="flex flex-col items-center gap-1">
                         <Badge
-                          variant={isPaid ? "default" : "secondary"}
+                          variant="default"
                           className={
-                            (res.paymentStatus as any) === 'CANCELLED' ? "bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-500" :
-                              isPaid ? "bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-slate-900 font-bold" :
-                                isPartial ? "bg-blue-500 hover:bg-blue-600 text-white dark:bg-blue-400 dark:hover:bg-blue-300 dark:text-slate-900 font-bold" :
-                                  "bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-400 dark:hover:bg-amber-300 dark:text-slate-900 font-bold"
+                            isNoShow ? "bg-purple-600 hover:bg-purple-700 text-white font-bold tracking-wide shadow-2xs" :
+                            (res.paymentStatus as any) === 'CANCELLED' || isCancelled ? "bg-red-500 hover:bg-red-600 text-white font-bold tracking-wide shadow-2xs" :
+                            isPaid ? "bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:text-white font-bold shadow-2xs tracking-wide" :
+                            isPartial ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white font-extrabold shadow-2xs tracking-wide" :
+                            "bg-amber-400 hover:bg-amber-500 text-amber-950 dark:bg-amber-400 dark:hover:bg-amber-300 dark:text-amber-950 font-extrabold shadow-2xs tracking-wide border border-amber-500/40"
                           }
                         >
-                          {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PENDIENTE'}
+                          {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' || isCancelled ? 'CANCELADO' : 'PENDIENTE'}
                         </Badge>
 
-                        {(isPaid || isPartial) && (
+                        {!isCancelled && (
                           <span className="text-[10px] uppercase font-bold text-muted-foreground">
                             {isNoShow ? "NO PRESENTADO" : (new Date(res.checkOut) < today ? "FINALIZADO" : "CONFIRMADO")}
                           </span>
@@ -651,20 +663,26 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
                     </TableCell>
 
-                    <TableCell className="text-right text-red-600 dark:text-red-400 font-medium">
+                    <TableCell className="text-right font-medium">
                       {(res.paymentStatus as any) === 'CANCELLED'
                         ? '-'
                         : (!isPaid && !isNoShow ? (
                             <div className="flex flex-col items-end">
                               {res.groupId && res.groupTotalAmount != null && groupDebt !== debt && (
-                                <div className="text-[10px] text-slate-500 font-medium mb-0.5 leading-none text-right" title="Deuda de este mes">
+                                <div className={`text-[10px] ${isPartial ? "text-blue-700/80 dark:text-blue-400/80" : "text-amber-700/80 dark:text-amber-400/80"} font-semibold mb-0.5 leading-none text-right`} title="Deuda de este mes">
                                   Mes: {res.currency === 'USD' ? `US$ ${debt}` : formatCurrency(debt)}
                                 </div>
                               )}
-                              <span>{res.currency === 'USD' ? `US$ ${groupDebt}` : formatCurrency(groupDebt)}</span>
+                              <span className={`font-extrabold ${isPartial ? "text-blue-700 dark:text-blue-400" : "text-amber-900 dark:text-amber-300"} text-sm`}>
+                                {res.currency === 'USD' ? `US$ ${groupDebt}` : formatCurrency(groupDebt)}
+                              </span>
+                              <span className={`text-[10px] uppercase font-bold ${isPartial ? "text-blue-600 dark:text-blue-400" : "text-amber-800 dark:text-amber-400"} tracking-wider`}>
+                                {isPartial ? "Resta cobrar" : "Sin abonar"}
+                              </span>
                             </div>
-                          ) : '-')
-                      }
+                          ) : (
+                            <span className="text-muted-foreground text-xs font-semibold">-</span>
+                          ))}
                     </TableCell>
                     <TableCell className="text-right w-[260px] min-w-[260px]">
                       <div className="flex items-center justify-end gap-1">
@@ -810,20 +828,21 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
             let cardClass = "text-sm border border-slate-200 dark:border-slate-700 relative overflow-hidden ";
             if (isNoShow) {
-              cardClass += "bg-orange-50/70 dark:bg-orange-900/30 opacity-90";
+              cardClass += "bg-purple-100/80 dark:bg-purple-950/40 opacity-90";
             } else if (isBlacklisted) {
-              cardClass += "bg-red-50/80 dark:bg-red-900/40";
+              cardClass += "bg-rose-100 dark:bg-rose-950/50";
             } else if (isCancelled) {
-              cardClass += "bg-red-50/40 dark:bg-rose-950/20 border-red-200 dark:border-red-900/50 opacity-85";
+              cardClass += "bg-red-100/70 dark:bg-rose-950/30 border-red-200 dark:border-red-900/50 opacity-85";
             } else if (isPaid) {
-              cardClass += "bg-green-50/70 dark:bg-emerald-900/30";
+              cardClass += "bg-emerald-100/75 dark:bg-emerald-950/40";
             } else if (isPartial) {
-              cardClass += "bg-blue-50/70 dark:bg-blue-900/30";
+              cardClass += "bg-blue-100/85 dark:bg-blue-950/45";
             } else {
-              cardClass += "bg-yellow-50/70 dark:bg-amber-900/30";
+              // Pending (Unpaid) -> Amarillo
+              cardClass += "bg-amber-100/85 dark:bg-amber-950/45";
             }
 
-            if (isNext && !isCancelled) cardClass += " ring-2 ring-blue-500";
+            if (isNext && !isCancelled) cardClass += " ring-1 ring-sky-400/60";
             if (searchParams.get("edit") === res.id) cardClass += " ring-2 ring-emerald-500/80";
             if (searchParams.get("highlight") === res.id) cardClass += " ring-2 ring-blue-500/80";
 
@@ -892,13 +911,14 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       </div>
 
                       <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span className={`text-xs font-bold px-2 py-1 rounded border whitespace-nowrap 
-                          ${(res.paymentStatus as any) === 'CANCELLED' ? "bg-red-100 text-red-700 border-red-200 dark:bg-red-600 dark:text-white dark:border-red-600" :
-                            isPaid ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500 dark:text-slate-900 dark:border-emerald-500 font-extrabold" :
-                              isPartial ? "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500 dark:text-white dark:border-blue-400 font-extrabold" :
-                                "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-400 dark:text-slate-900 dark:border-amber-400 font-extrabold"
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-md whitespace-nowrap 
+                          ${isNoShow ? "bg-purple-600 text-white" :
+                            (res.paymentStatus as any) === 'CANCELLED' ? "bg-red-500 text-white" :
+                            isPaid ? "bg-emerald-600 text-white font-bold" :
+                            isPartial ? "bg-blue-600 text-white font-extrabold" :
+                            "bg-amber-400 text-amber-950 font-extrabold border border-amber-500/40"
                           }`}>
-                          {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PEND.'}
+                          {isPaid ? 'PAGADO' : isPartial ? 'PARCIAL' : (res.paymentStatus as any) === 'CANCELLED' ? 'CANCELADO' : 'PENDIENTE'}
                         </span>
                         {/* Status Badge Update for Mobile - Hide if Cancelled */}
                         {(res.paymentStatus as any) !== 'CANCELLED' && (

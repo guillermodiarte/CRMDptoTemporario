@@ -36,18 +36,21 @@ type ApprovalGroup = {
 
 export function ApprovalsClient({ 
   initialApprovals, 
-  currentSessionId 
+  currentSessionId,
+  userRole = 'ADMIN'
 }: { 
   initialApprovals: ApprovalGroup[]; 
   currentSessionId: string;
+  userRole?: string | null;
 }) {
+  const isReadOnly = userRole === 'VISUALIZER';
   const [approvals, setApprovals] = useState<ApprovalGroup[]>(initialApprovals);
   const [loading, setLoading] = useState<string | null>(null);
   const [deposits, setDeposits] = useState<Record<string, number>>({});
   const [conflictWarning, setConflictWarning] = useState<{
     groupId: string;
-    confirmedConflicts: { deptName: string; checkIn: string; checkOut: string }[];
-    pendingConflicts: { deptName: string; checkIn: string; checkOut: string; conflictGroupId: string }[];
+    confirmedConflicts: { deptName: string; checkIn: string; checkOut: string; guestName?: string }[];
+    pendingConflicts: { deptName: string; checkIn: string; checkOut: string; conflictGroupId: string; guestName?: string }[];
   } | null>(null);
   const [highlightedGroupIds, setHighlightedGroupIds] = useState<string[]>([]);
   const [confirmDeny, setConfirmDeny] = useState<string | null>(null);
@@ -425,6 +428,16 @@ export function ApprovalsClient({
 
             {/* Actions */}
             {isPending && (
+              isReadOnly ? (
+                <div className="px-6 pb-6">
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 flex items-center gap-3">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <p className="text-sm text-amber-800 dark:text-amber-300">
+                      Tenés acceso de <strong>solo lectura</strong>. Solo los administradores pueden aprobar o denegar solicitudes.
+                    </p>
+                  </div>
+                </div>
+              ) : (
               <div className="px-6 pb-6 space-y-4">
                 <div className="bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
@@ -468,6 +481,7 @@ export function ApprovalsClient({
                   </div>
                 </div>
               </div>
+              )
             )}
           </div>
         );

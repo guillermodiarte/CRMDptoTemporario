@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     if (!sessionId) return new NextResponse("No session", { status: 400 });
 
     const body = await req.json();
-    const { name, accountInfo, isDefault, order } = body;
+    const { name, accountInfo, isDefault, order, profitSharePercent } = body;
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return new NextResponse("Name is required", { status: 400 });
@@ -57,6 +57,7 @@ export async function POST(req: Request) {
         accountInfo: accountInfo?.trim() || null,
         isDefault: !!isDefault,
         order: order !== undefined ? Number(order) : 0,
+        profitSharePercent: profitSharePercent !== undefined ? Math.min(100, Math.max(0, Number(profitSharePercent))) : 0,
         sessionId,
       },
     });

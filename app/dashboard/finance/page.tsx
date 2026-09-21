@@ -41,8 +41,14 @@ export default async function FinancePage({
       date: { gte: startDate, lte: endDate },
       sessionId
     },
-    include: { department: true },
+    include: { department: true, paymentReceiver: true },
     orderBy: { date: "desc" },
+  });
+
+  const paymentReceivers = await prisma.paymentReceiver.findMany({
+    where: { sessionId, isActive: true },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    select: { id: true, name: true, accountInfo: true },
   });
 
   const reservations = await prisma.reservation.findMany({
@@ -224,6 +230,7 @@ export default async function FinancePage({
       date={displayDate}
       startYear={configStartYear}
       endYear={configEndYear}
+      receivers={paymentReceivers}
     />
   );
 }
