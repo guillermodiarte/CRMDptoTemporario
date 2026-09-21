@@ -341,9 +341,10 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   {/* Export/Import (Mobile Only) */}
                   {!isVisualizer && (
                     <div className="md:hidden">
-                      <ReservationsActions
+                    <ReservationsActions
                         data={data}
                         departments={departments}
+                        receivers={paymentReceivers}
                         blacklistedPhones={blacklistedPhones}
                         blacklistEntries={blacklistEntries}
                         date={selectedDate}
@@ -381,6 +382,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       <ReservationsActions
                         data={data}
                         departments={departments}
+                        receivers={paymentReceivers}
                         blacklistedPhones={blacklistedPhones}
                         blacklistEntries={blacklistEntries}
                         date={selectedDate}

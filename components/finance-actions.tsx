@@ -25,8 +25,9 @@ import {
 import { ImportPreviewModal, ImportPreviewRow, ImportStats } from "./import-preview-modal";
 
 interface FinanceActionsProps {
-  expenses: (Expense & { department: { name: string } | null })[];
+  expenses: (Expense & { department: { name: string } | null; paymentReceiver?: { id: string; name: string } | null })[];
   departments: Department[];
+  receivers?: { id: string; name: string }[];
   date?: Date;
   onExportPDF?: () => void;
 }
@@ -61,10 +62,11 @@ const CSV_CONFIG = [
   { label: "Departamento", key: "departmentName", type: "string" },
   { label: "Cantidad", key: "quantity", type: "number" },
   { label: "Precio Unitario", key: "unitPrice", type: "number" },
+  { label: "Pagado por", key: "paymentReceiverName", type: "string" },
   { label: "Eliminado", key: "isDeleted", type: "boolean" }
 ];
 
-export function FinanceActions({ expenses, departments, date = new Date(), onExportPDF }: FinanceActionsProps) {
+export function FinanceActions({ expenses, departments, receivers = [], date = new Date(), onExportPDF }: FinanceActionsProps) {
   const router = useRouter();
 
   const [importOpen, setImportOpen] = useState(false);
@@ -90,6 +92,7 @@ export function FinanceActions({ expenses, departments, date = new Date(), onExp
         `"${(exp.department?.name || "Global").replace(/"/g, '""')}"`,
         exp.quantity || 1,
         exp.unitPrice || 0,
+        `"${(exp.paymentReceiver?.name || "").replace(/"/g, '""')}"`,
         exp.isDeleted ? "SI" : "NO"
       ].join(",");
     });
@@ -169,6 +172,7 @@ export function FinanceActions({ expenses, departments, date = new Date(), onExp
             if (config.key === "departmentName" && kLow === "depto") return true;
             if (config.key === "unitPrice" && kLow === "precio unitario") return true;
             if (config.key === "isDeleted" && (kLow === "eliminado" || kLow === "borrado")) return true;
+            if (config.key === "paymentReceiverName" && (kLow === "pagado por" || kLow === "socio" || kLow === "receptor" || kLow === "cobrador")) return true;
             return false;
           });
           if (foundKey) val = row[foundKey];
@@ -202,6 +206,13 @@ export function FinanceActions({ expenses, departments, date = new Date(), onExp
         const dept = departments.find(d => d.name.toLowerCase() === entry.departmentName.toLowerCase());
         if (!dept) rowErrors.push(`Depto no encontrado: ${entry.departmentName}`);
         else entry._departmentId = dept.id;
+      }
+
+      // Payment Receiver
+      if (entry.paymentReceiverName && entry.paymentReceiverName.trim() !== "") {
+        const recv = receivers.find(r => r.name.toLowerCase() === entry.paymentReceiverName.trim().toLowerCase());
+        if (recv) entry._paymentReceiverId = recv.id;
+        // If receiver name is provided but not found, skip silently (not a hard error)
       }
 
       // Type
@@ -284,6 +295,7 @@ export function FinanceActions({ expenses, departments, date = new Date(), onExp
           description: row.description,
           amount: row.amount,
           departmentId: row._departmentId,
+          paymentReceiverId: row._paymentReceiverId || undefined,
           date: row.date,
           quantity: row.quantity || 1,
           unitPrice: row.unitPrice || row.amount,
@@ -318,6 +330,7 @@ export function FinanceActions({ expenses, departments, date = new Date(), onExp
     { header: "Desc.", accessorKey: "description" },
     { header: "Total", accessorKey: "amount", cell: (val: any) => <span>${val}</span> },
     { header: "Depto", accessorKey: "departmentName", cell: (val: any) => <span className="truncate max-w-[100px] block" title={val}>{val || "Global"}</span> },
+    { header: "Pagado por", accessorKey: "paymentReceiverName", cell: (val: any) => <span className="text-xs">{val || "-"}</span> },
     { header: "Eliminado", accessorKey: "isDeleted", cell: (val: any) => Boolean(val) ? <span className="text-red-500 font-bold">SI</span> : "NO" },
     {
       header: "Error",

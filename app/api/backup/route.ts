@@ -26,7 +26,8 @@ export async function GET() {
       expenses,
       notes,
       blacklistEntries,
-      systemSettings
+      systemSettings,
+      paymentReceivers
     ] = await Promise.all([
       prisma.user.findMany(),
       prisma.session.findMany(),
@@ -38,6 +39,7 @@ export async function GET() {
       prisma.note.findMany(),
       prisma.blacklistEntry.findMany(),
       prisma.systemSettings.findMany(),
+      prisma.paymentReceiver.findMany(),
     ]);
 
     const backupData = {
@@ -49,6 +51,7 @@ export async function GET() {
         sessions,
         userSessions,
         departments: departments.map(d => ({ ...d, images: "[]" })),
+        paymentReceivers,
         reservations,
         supplies,
         expenses,
@@ -98,6 +101,7 @@ export async function POST(req: Request) {
         await tx.blacklistEntry.deleteMany();
         await tx.expense.deleteMany();
         await tx.reservation.deleteMany();
+        await tx.paymentReceiver.deleteMany();
         await tx.department.deleteMany();
         await tx.supply.deleteMany();
         await tx.systemSettings.deleteMany();
@@ -202,6 +206,24 @@ export async function POST(req: Request) {
           });
         }
 
+        // Restore paymentReceivers BEFORE reservations and expenses (foreign key deps)
+        if (data.paymentReceivers?.length) {
+          await tx.paymentReceiver.createMany({
+            data: data.paymentReceivers.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              accountInfo: item.accountInfo ?? null,
+              isActive: item.isActive,
+              order: item.order ?? 0,
+              isDefault: item.isDefault ?? false,
+              profitSharePercent: item.profitSharePercent ?? 0,
+              createdAt: parseDate(item.createdAt),
+              updatedAt: parseDate(item.updatedAt),
+              sessionId: item.sessionId
+            }))
+          });
+        }
+
         if (data.reservations?.length) {
           await tx.reservation.createMany({
             data: data.reservations.map((item: any) => ({
@@ -225,6 +247,10 @@ export async function POST(req: Request) {
               currency: item.currency,
               exchangeRate: item.exchangeRate,
               paymentStatus: item.paymentStatus,
+              paymentMethod: item.paymentMethod ?? null,
+              paymentReceiverId: item.paymentReceiverId ?? null,
+              depositMethod: item.depositMethod ?? null,
+              depositReceiverId: item.depositReceiverId ?? null,
               hasParking: item.hasParking,
               notes: item.notes,
               createdAt: parseDate(item.createdAt),
@@ -245,6 +271,7 @@ export async function POST(req: Request) {
               unitPrice: item.unitPrice,
               date: parseDate(item.date)!,
               departmentId: item.departmentId,
+              paymentReceiverId: item.paymentReceiverId ?? null,
               isDeleted: item.isDeleted,
               createdAt: parseDate(item.createdAt),
               updatedAt: parseDate(item.updatedAt),
@@ -309,6 +336,7 @@ export async function POST(req: Request) {
         await tx.blacklistEntry.deleteMany({ where: { sessionId } });
         await tx.expense.deleteMany({ where: { sessionId } });
         await tx.reservation.deleteMany({ where: { sessionId } });
+        await tx.paymentReceiver.deleteMany({ where: { sessionId } });
         await tx.department.deleteMany({ where: { sessionId } });
         await tx.supply.deleteMany({ where: { sessionId } });
         await tx.systemSettings.deleteMany({ where: { sessionId } });
@@ -317,6 +345,7 @@ export async function POST(req: Request) {
 
         const userIdMap = new Map<string, string>(); // Old User ID -> New/Existing User ID
         const deptIdMap = new Map<string, string>(); // Old Dept ID -> New Dept ID
+        const receiverIdMap = new Map<string, string>(); // Old Receiver ID -> New Receiver ID
 
         if (data.systemSettings?.length) {
           await tx.systemSettings.createMany({
@@ -378,6 +407,26 @@ export async function POST(req: Request) {
           });
         }
 
+        // Restore paymentReceivers with ID remapping (must come before reservations/expenses)
+        if (data.paymentReceivers?.length) {
+          for (const recv of data.paymentReceivers) {
+            const newRecv = await tx.paymentReceiver.create({
+              data: {
+                name: recv.name,
+                accountInfo: recv.accountInfo ?? null,
+                isActive: recv.isActive ?? true,
+                order: recv.order ?? 0,
+                isDefault: recv.isDefault ?? false,
+                profitSharePercent: recv.profitSharePercent ?? 0,
+                createdAt: parseDate(recv.createdAt),
+                updatedAt: parseDate(recv.updatedAt),
+                sessionId
+              }
+            });
+            if (recv.id) receiverIdMap.set(recv.id, newRecv.id);
+          }
+        }
+
         if (data.departments?.length) {
           for (const dept of data.departments) {
             const newDept = await tx.department.create({
@@ -428,6 +477,8 @@ export async function POST(req: Request) {
           for (const res of data.reservations) {
             const newDeptId = deptIdMap.get(res.departmentId);
             if (newDeptId) {
+              const newPaymentReceiverId = res.paymentReceiverId ? receiverIdMap.get(res.paymentReceiverId) : undefined;
+              const newDepositReceiverId = res.depositReceiverId ? receiverIdMap.get(res.depositReceiverId) : undefined;
               await tx.reservation.create({
                 data: {
                   departmentId: newDeptId,
@@ -448,6 +499,10 @@ export async function POST(req: Request) {
                   currency: res.currency,
                   exchangeRate: res.exchangeRate,
                   paymentStatus: res.paymentStatus,
+                  paymentMethod: res.paymentMethod ?? null,
+                  paymentReceiverId: newPaymentReceiverId ?? null,
+                  depositMethod: res.depositMethod ?? null,
+                  depositReceiverId: newDepositReceiverId ?? null,
                   hasParking: res.hasParking,
                   notes: res.notes,
                   createdAt: parseDate(res.createdAt),
@@ -462,6 +517,7 @@ export async function POST(req: Request) {
         if (data.expenses?.length) {
           for (const exp of data.expenses) {
             const newDeptId = exp.departmentId ? deptIdMap.get(exp.departmentId) : undefined;
+            const newPayReceiverId = exp.paymentReceiverId ? receiverIdMap.get(exp.paymentReceiverId) : undefined;
             if (!exp.departmentId || newDeptId) {
               await tx.expense.create({
                 data: {
@@ -472,6 +528,7 @@ export async function POST(req: Request) {
                   unitPrice: exp.unitPrice,
                   date: parseDate(exp.date)!,
                   departmentId: newDeptId,
+                  paymentReceiverId: newPayReceiverId ?? null,
                   isDeleted: exp.isDeleted,
                   createdAt: parseDate(exp.createdAt),
                   updatedAt: parseDate(exp.updatedAt),

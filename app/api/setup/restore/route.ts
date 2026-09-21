@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       await tx.blacklistEntry.deleteMany();
       await tx.expense.deleteMany();
       await tx.reservation.deleteMany();
+      await tx.paymentReceiver.deleteMany();
       await tx.department.deleteMany();
       await tx.supply.deleteMany();
       await tx.systemSettings.deleteMany();
@@ -130,6 +131,24 @@ export async function POST(req: Request) {
         });
       }
 
+      // Restore paymentReceivers BEFORE reservations and expenses (foreign key deps)
+      if (data.paymentReceivers?.length) {
+        await tx.paymentReceiver.createMany({
+          data: data.paymentReceivers.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            accountInfo: item.accountInfo ?? null,
+            isActive: item.isActive,
+            order: item.order ?? 0,
+            isDefault: item.isDefault ?? false,
+            profitSharePercent: item.profitSharePercent ?? 0,
+            createdAt: parseDate(item.createdAt),
+            updatedAt: parseDate(item.updatedAt),
+            sessionId: item.sessionId,
+          })),
+        });
+      }
+
       if (data.reservations?.length) {
         await tx.reservation.createMany({
           data: data.reservations.map((item: any) => ({
@@ -153,6 +172,10 @@ export async function POST(req: Request) {
             currency: item.currency,
             exchangeRate: item.exchangeRate,
             paymentStatus: item.paymentStatus,
+            paymentMethod: item.paymentMethod ?? null,
+            paymentReceiverId: item.paymentReceiverId ?? null,
+            depositMethod: item.depositMethod ?? null,
+            depositReceiverId: item.depositReceiverId ?? null,
             hasParking: item.hasParking,
             notes: item.notes,
             createdAt: parseDate(item.createdAt),
@@ -173,6 +196,7 @@ export async function POST(req: Request) {
             unitPrice: item.unitPrice,
             date: parseDate(item.date)!,
             departmentId: item.departmentId,
+            paymentReceiverId: item.paymentReceiverId ?? null,
             isDeleted: item.isDeleted,
             createdAt: parseDate(item.createdAt),
             updatedAt: parseDate(item.updatedAt),

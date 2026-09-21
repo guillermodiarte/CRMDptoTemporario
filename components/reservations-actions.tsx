@@ -19,17 +19,22 @@ import { useRouter } from "next/navigation";
 import { normalizePhone } from "@/lib/phone-utils";
 import { ImportPreviewModal, ImportPreviewRow, ImportStats } from "./import-preview-modal";
 
-type ReservationWithDept = Reservation & { department: Department };
+type ReservationWithDept = Reservation & {
+  department: Department;
+  paymentReceiver?: { id: string; name: string } | null;
+  depositReceiver?: { id: string; name: string } | null;
+};
 
 interface ReservationsActionsProps {
   data: ReservationWithDept[];
   departments: Department[];
+  receivers?: { id: string; name: string }[];
   blacklistedPhones?: string[];
   blacklistEntries?: { guestPhone: string; reason: string; guestName: string }[];
   date?: Date;
 }
 
-export function ReservationsActions({ data, departments, blacklistedPhones = [], blacklistEntries = [], date = new Date() }: ReservationsActionsProps) {
+export function ReservationsActions({ data, departments, receivers = [], blacklistedPhones = [], blacklistEntries = [], date = new Date() }: ReservationsActionsProps) {
   const router = useRouter();
   const [importOpen, setImportOpen] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -46,7 +51,8 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
     const csvRows = [];
     csvRows.push([
       "Huésped", "Teléfono", "DNI", "Nacionalidad", "Departamento", "Check-In", "Check-Out",
-      "Personas", "Camas", "Cochera", "Total", "Seña", "Limpieza", "Insumos", "Moneda", "Estado", "Pago", "No-Show", "Lista Negra", "Motivo Lista Negra", "Fuente", "Notas", "Tipo de Cambio", "ID Grupo"
+      "Personas", "Camas", "Cochera", "Total", "Seña", "Limpieza", "Insumos", "Moneda", "Estado", "Pago", "No-Show", "Lista Negra", "Motivo Lista Negra", "Fuente", "Notas", "Tipo de Cambio", "ID Grupo",
+      "Método Pago Final", "Receptor Pago Final", "Método Seña", "Receptor Seña"
     ].join(","));
 
     data.forEach(res => {
@@ -79,7 +85,11 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
         res.source,
         `"${(res.notes || "").replace(/"/g, '""')}"`,
         res.exchangeRate || 1,
-        `"${(res.groupId || "").replace(/"/g, '""')}"`
+        `"${(res.groupId || "").replace(/"/g, '""')}"`,
+        res.paymentMethod || "",
+        `"${((res as any).paymentReceiver?.name || "").replace(/"/g, '""')}"`,
+        res.depositMethod || "",
+        `"${((res as any).depositReceiver?.name || "").replace(/"/g, '""')}"`
       ];
       csvRows.push(row.join(","));
     });
@@ -116,7 +126,11 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
       source: res.source,
       notes: res.notes || "",
       exchangeRate: res.exchangeRate || 1,
-      groupId: res.groupId || ""
+      groupId: res.groupId || "",
+      paymentMethod: res.paymentMethod || "",
+      paymentReceiverName: (res as any).paymentReceiver?.name || "",
+      depositMethod: res.depositMethod || "",
+      depositReceiverName: (res as any).depositReceiver?.name || ""
     }));
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
@@ -170,6 +184,10 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
                 if (normalizedKey === "notas" || normalizedKey === "notes") return "Notes";
                 if (normalizedKey === "tipo de cambio" || normalizedKey === "exchangerate") return "ExchangeRate";
                 if (normalizedKey === "id grupo" || normalizedKey === "groupid") return "GroupId";
+                if (normalizedKey === "método pago final" || normalizedKey === "metodo pago final" || normalizedKey === "paymentmethod") return "PaymentMethod";
+                if (normalizedKey === "receptor pago final" || normalizedKey === "paymentreceivername") return "PaymentReceiverName";
+                if (normalizedKey === "método seña" || normalizedKey === "metodo seña" || normalizedKey === "depositmethod") return "DepositMethod";
+                if (normalizedKey === "receptor seña" || normalizedKey === "depositreceivername") return "DepositReceiverName";
                 return null;
               })();
               if (mapped) newRow[mapped] = row[key];
@@ -227,7 +245,11 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
         Source: item.source ?? item.Source ?? "DIRECT",
         Notes: item.notes ?? item.Notes ?? "",
         ExchangeRate: item.exchangeRate ?? item.ExchangeRate ?? "1",
-        GroupId: item.groupId ?? item.GroupId ?? ""
+        GroupId: item.groupId ?? item.GroupId ?? "",
+        PaymentMethod: item.paymentMethod ?? item.PaymentMethod ?? "",
+        PaymentReceiverName: item.paymentReceiverName ?? item.PaymentReceiverName ?? "",
+        DepositMethod: item.depositMethod ?? item.DepositMethod ?? "",
+        DepositReceiverName: item.depositReceiverName ?? item.DepositReceiverName ?? ""
       }));
 
       validateAndSetPreview(normalizedData);
@@ -350,12 +372,28 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           if (normalizePhone(row.GuestPhone || "") !== normalizePhone(existingRes.guestPhone || "")) {
             diffs["GuestPhone"] = { old: existingRes.guestPhone, new: row.GuestPhone };
           }
+          // Payment tracking diffs
+          const newPaymentMethod = (row.PaymentMethod || "").toUpperCase() || null;
+          if (newPaymentMethod && newPaymentMethod !== (existingRes.paymentMethod || "")) {
+            diffs["PaymentMethod"] = { old: existingRes.paymentMethod || "", new: newPaymentMethod };
+          }
+          const newDepositMethod = (row.DepositMethod || "").toUpperCase() || null;
+          if (newDepositMethod && newDepositMethod !== (existingRes.depositMethod || "")) {
+            diffs["DepositMethod"] = { old: existingRes.depositMethod || "", new: newDepositMethod };
+          }
 
           if (Object.keys(diffs).length > 0) {
+            // Resolve receiver IDs for update
+            const resolvedPayReceiverId = row.PaymentReceiverName
+              ? receivers.find(r => r.name.toLowerCase() === row.PaymentReceiverName.toLowerCase())?.id
+              : undefined;
+            const resolvedDepReceiverId = row.DepositReceiverName
+              ? receivers.find(r => r.name.toLowerCase() === row.DepositReceiverName.toLowerCase())?.id
+              : undefined;
             statsParams.updated++;
             preview.push({
               status: "UPDATE",
-              data: { ...row, _id: existingRes.id, _departmentId: dept?.id, _diff: diffs }
+              data: { ...row, _id: existingRes.id, _departmentId: dept?.id, _diff: diffs, _paymentReceiverId: resolvedPayReceiverId, _depositReceiverId: resolvedDepReceiverId }
             });
           } else {
             statsParams.same++;
@@ -365,10 +403,17 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
             });
           }
         } else {
+          // Resolve receiver IDs for new
+          const resolvedPayReceiverId = row.PaymentReceiverName
+            ? receivers.find(r => r.name.toLowerCase() === row.PaymentReceiverName.toLowerCase())?.id
+            : undefined;
+          const resolvedDepReceiverId = row.DepositReceiverName
+            ? receivers.find(r => r.name.toLowerCase() === row.DepositReceiverName.toLowerCase())?.id
+            : undefined;
           statsParams.new++;
           preview.push({
             status: "NEW",
-            data: { ...row, _departmentId: dept?.id }
+            data: { ...row, _departmentId: dept?.id, _paymentReceiverId: resolvedPayReceiverId, _depositReceiverId: resolvedDepReceiverId }
           });
         }
       }
@@ -438,6 +483,10 @@ export function ReservationsActions({ data, departments, blacklistedPhones = [],
           notes: row.Notes || row.Notas || "",
           exchangeRate: row.ExchangeRate ? parseFloat(row.ExchangeRate) : 1,
           groupId: row.GroupId || null,
+          paymentMethod: row.PaymentMethod ? String(row.PaymentMethod).toUpperCase() : undefined,
+          paymentReceiverId: row._paymentReceiverId || undefined,
+          depositMethod: row.DepositMethod ? String(row.DepositMethod).toUpperCase() : undefined,
+          depositReceiverId: row._depositReceiverId || undefined,
           force: true
         };
 

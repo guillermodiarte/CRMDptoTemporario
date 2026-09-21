@@ -331,7 +331,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
           <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             {!isPdfExporting && <MonthSelector startYear={startYear} endYear={endYear} />}
             {!isPdfExporting && !isVisualizer && (
-              <FinanceActions expenses={expenses} departments={departments} date={date} onExportPDF={handleExportPDF} />
+              <FinanceActions expenses={expenses} departments={departments} receivers={receivers} date={date} onExportPDF={handleExportPDF} />
             )}
           </div>
         </div>

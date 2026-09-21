@@ -62,7 +62,11 @@ export default async function ReservationsPage({
         lte: endDate,
       },
     },
-    include: { department: true },
+    include: {
+      department: true,
+      paymentReceiver: { select: { id: true, name: true } },
+      depositReceiver: { select: { id: true, name: true } }
+    },
     orderBy: { checkIn: "asc" },
   });
 
