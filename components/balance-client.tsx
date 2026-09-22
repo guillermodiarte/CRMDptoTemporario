@@ -1582,119 +1582,153 @@ export function BalanceClient({
             </DialogDescription>
           </DialogHeader>
 
-          {editingRes && (
-            <div className="space-y-4 py-2">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Monto Total de la Reserva:</span>
-                <span className="font-bold text-base">
-                  {formatCurrency(
-                    editingRes.currency === "USD"
-                      ? editingRes.totalAmount * (editingRes.exchangeRate && editingRes.exchangeRate > 1 ? editingRes.exchangeRate : dollarRate)
-                      : editingRes.totalAmount
-                  )}
-                  {editingRes.currency === "USD" && (
-                    <span className="text-xs text-muted-foreground font-normal ml-1">
-                      (USD {editingRes.totalAmount.toFixed(2)})
+          {editingRes && (() => {
+            const _isCancelled = editingRes.status === "CANCELLED" || editingRes.paymentStatus === "CANCELLED";
+            const _isPaid = editingRes.paymentStatus === "PAID";
+            const _isPartial = editingRes.paymentStatus === "PARTIAL";
+            const _hasDeposit = (editingRes.depositAmount || 0) > 0;
+
+            const _statusBadge = _isCancelled
+              ? { label: "Cancelado", cls: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-red-200 dark:border-red-800" }
+              : _isPaid
+                ? { label: "Pagado (Completo)", cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" }
+                : _isPartial
+                  ? { label: "Parcial (Con Seña)", cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800" }
+                  : { label: "Pendiente", cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800" };
+
+            return (
+              <div className="space-y-4 py-2">
+                {/* Total + status badge */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Monto Total de la Reserva:</span>
+                    <span className="font-bold text-base">
+                      {formatCurrency(
+                        editingRes.currency === "USD"
+                          ? editingRes.totalAmount * (editingRes.exchangeRate && editingRes.exchangeRate > 1 ? editingRes.exchangeRate : dollarRate)
+                          : editingRes.totalAmount
+                      )}
+                      {editingRes.currency === "USD" && (
+                        <span className="text-xs text-muted-foreground font-normal ml-1">
+                          (USD {editingRes.totalAmount.toFixed(2)})
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
-              </div>
-
-              {/* 1. SEÑA */}
-              <div className="space-y-2 border-t pt-3">
-                <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">1. Seña / Anticipo</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Monto Seña</label>
-                    <Input
-                      type="number"
-                      value={editForm.depositAmount}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, depositAmount: Number(e.target.value) }))}
-                      className="text-sm"
-                    />
                   </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Método de Seña</label>
-                    <select
-                      value={editForm.depositMethod}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, depositMethod: e.target.value }))}
-                      className="w-full text-sm px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none"
-                    >
-                      <option value="TRANSFER">Transferencia</option>
-                      <option value="CASH">Efectivo</option>
-                    </select>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs">Estado del pago:</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${_statusBadge.cls}`}>
+                      {_statusBadge.label}
+                    </span>
                   </div>
                 </div>
 
-                {editForm.depositMethod === "TRANSFER" && (
-                  <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Cuenta / Receptor de la Seña</label>
-                    <select
-                      value={editForm.depositReceiverId}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, depositReceiverId: e.target.value }))}
-                      className="w-full text-sm px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none font-medium"
-                    >
-                      <option value="">Seleccionar cuenta receptor...</option>
-                      {receivers.map((rec) => (
-                        <option key={rec.id} value={rec.id}>
-                          {rec.name} {rec.accountInfo ? `(${rec.accountInfo})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                {/* SEÑA: visible for CANCELLED, PARTIAL, or if there is a deposit amount */}
+                {(_isCancelled || _isPartial || _hasDeposit) && (
+                  <div className="space-y-3 border-t pt-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                      {_isCancelled ? "Seña Retenida (Cancelación)" : "Seña / Anticipo"}
+                    </h4>
+                    {/* Monto seña: read-only display */}
+                    <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-sm">
+                      <span className="text-muted-foreground text-xs">Monto Seña:</span>
+                      <span className="font-semibold">{formatCurrency(editingRes.depositAmount || 0)}</span>
+                    </div>
+
+                    {/* Método de Seña */}
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Método de Seña</label>
+                      <select
+                        value={editForm.depositMethod}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, depositMethod: e.target.value }))}
+                        className="w-full text-sm px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none"
+                      >
+                        <option value="TRANSFER">Transferencia</option>
+                        <option value="CASH">Efectivo</option>
+                      </select>
+                    </div>
+
+                    {editForm.depositMethod === "TRANSFER" && (
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Cuenta / Receptor de la Seña</label>
+                        <select
+                          value={editForm.depositReceiverId}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, depositReceiverId: e.target.value }))}
+                          className="w-full text-sm px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none font-medium"
+                        >
+                          <option value="">Seleccionar cuenta receptor...</option>
+                          {receivers.map((rec) => (
+                            <option key={rec.id} value={rec.id}>
+                              {rec.name} {rec.accountInfo ? `(${rec.accountInfo})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* PAGO FINAL: only for PAID reservations */}
+                {_isPaid && (
+                  <div className="space-y-3 border-t pt-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">Pago Final / Saldo</h4>
+
+                    {/* Monto pago final: read-only */}
+                    <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-sm">
+                      <span className="text-muted-foreground text-xs">Monto Cobrado (Total):</span>
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                        {formatCurrency(
+                          editingRes.currency === "USD"
+                            ? editingRes.totalAmount * (editingRes.exchangeRate && editingRes.exchangeRate > 1 ? editingRes.exchangeRate : dollarRate)
+                            : editingRes.totalAmount
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Método de Pago Final */}
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Método de Pago Final</label>
+                      <select
+                        value={editForm.paymentMethod}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, paymentMethod: e.target.value }))}
+                        className="w-full text-sm px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none"
+                      >
+                        <option value="CASH">Efectivo</option>
+                        <option value="TRANSFER">Transferencia</option>
+                      </select>
+                    </div>
+
+                    {editForm.paymentMethod === "TRANSFER" && (
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Cuenta / Receptor Pago Final</label>
+                        <select
+                          value={editForm.paymentReceiverId}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, paymentReceiverId: e.target.value }))}
+                          className="w-full text-sm px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none font-medium"
+                        >
+                          <option value="">Seleccionar cuenta receptor...</option>
+                          {receivers.map((rec) => (
+                            <option key={rec.id} value={rec.id}>
+                              {rec.name} {rec.accountInfo ? `(${rec.accountInfo})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* PENDIENTE sin seña: info message */}
+                {!_isCancelled && !_isPartial && !_isPaid && !_hasDeposit && (
+                  <div className="border-t pt-3">
+                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-700 dark:text-amber-300">
+                      Esta reserva está pendiente de pago. No hay montos ni métodos que asignar aún.
+                    </div>
                   </div>
                 )}
               </div>
-
-              {/* 2. PAGO FINAL / SALDO */}
-              <div className="space-y-2 border-t pt-3">
-                <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">2. Pago Final / Saldo</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Estado de Pago</label>
-                    <select
-                      value={editForm.paymentStatus}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, paymentStatus: e.target.value }))}
-                      className="w-full text-sm px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none font-medium"
-                    >
-                      <option value="PAID">PAGADO (Completo)</option>
-                      <option value="PARTIAL">PARCIAL (Solo seña)</option>
-                      <option value="UNPAID">PENDIENTE</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Método de Pago Final</label>
-                    <select
-                      value={editForm.paymentMethod}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, paymentMethod: e.target.value }))}
-                      className="w-full text-sm px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none"
-                    >
-                      <option value="CASH">Efectivo</option>
-                      <option value="TRANSFER">Transferencia</option>
-                    </select>
-                  </div>
-                </div>
-
-                {editForm.paymentMethod === "TRANSFER" && (
-                  <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Cuenta / Receptor Pago Final</label>
-                    <select
-                      value={editForm.paymentReceiverId}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, paymentReceiverId: e.target.value }))}
-                      className="w-full text-sm px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none font-medium"
-                    >
-                      <option value="">Seleccionar cuenta receptor...</option>
-                      {receivers.map((rec) => (
-                        <option key={rec.id} value={rec.id}>
-                          {rec.name} {rec.accountInfo ? `(${rec.accountInfo})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
