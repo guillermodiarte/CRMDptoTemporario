@@ -17,6 +17,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
     const body = bodyText ? JSON.parse(bodyText) : {};
     const depositAmount = body.depositAmount ? Number(body.depositAmount) : 0;
     const forceApprove = body.forceApprove === true;
+    const depositMethod = (body.depositMethod === 'CASH' || body.depositMethod === 'TRANSFER') ? body.depositMethod : null;
+    const depositReceiverId = typeof body.depositReceiverId === 'string' && body.depositReceiverId.trim() ? body.depositReceiverId.trim() : null;
 
     // Fetch all reservations in this group to calculate total and find the first one
     const groupReservations = await prisma.reservation.findMany({
@@ -124,6 +126,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
       const isFirst = res.id === firstReservationId;
       const resDeposit = isFirst ? depositAmount : 0;
       const paymentStatus = resDeposit > 0 ? 'PARTIAL' : 'UNPAID';
+      const resolvedDepositMethod = resDeposit > 0 && depositMethod ? depositMethod : null;
+      const resolvedDepositReceiverId = resDeposit > 0 && resolvedDepositMethod === 'TRANSFER' ? depositReceiverId : null;
       
       let newNotes = res.notes;
       if (isFirst && resDeposit > 0) {
@@ -155,6 +159,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
             checkOut: splits[0].checkOut,
             totalAmount: splits[0].totalAmount,
             depositAmount: splits[0].depositAmount,
+            depositMethod: splits[0].depositAmount > 0 ? (resolvedDepositMethod as any) : null,
+            depositReceiverId: splits[0].depositAmount > 0 ? resolvedDepositReceiverId : null,
             cleaningFee: splits[0].cleaningFee,
             amenitiesFee: splits[0].amenitiesFee,
             paymentStatus,
@@ -198,6 +204,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
           data: {
             status: 'CONFIRMED',
             depositAmount: resDeposit,
+            depositMethod: resDeposit > 0 ? (resolvedDepositMethod as any) : null,
+            depositReceiverId: resDeposit > 0 ? resolvedDepositReceiverId : null,
             paymentStatus,
             notes: newNotes,
             groupId: null,
@@ -209,6 +217,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
     revalidatePath('/dashboard/approvals');
     revalidatePath('/dashboard/reservations');
     revalidatePath('/dashboard/calendar');
+    revalidatePath('/dashboard/balance');
 
     return NextResponse.json({ success: true });
   } catch (error) {

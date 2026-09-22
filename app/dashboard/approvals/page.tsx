@@ -15,6 +15,48 @@ export default async function ApprovalsPage() {
 
   const userRole = session.user?.role ?? 'VISUALIZER';
 
+  const isSuperAdmin = !!(session.user as any)?.isSuperAdmin;
+  let userEmail = session.user?.email?.toLowerCase().trim();
+  if (!userEmail && session.user?.id) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { email: true },
+    });
+    userEmail = dbUser?.email?.toLowerCase().trim();
+  }
+
+  // Check if user has access to balance panel
+  let hasBalanceAccess = isSuperAdmin;
+  if (!hasBalanceAccess && sessionId) {
+    const balanceSetting = await prisma.systemSettings.findFirst({
+      where: {
+        sessionId,
+        key: { in: ["BALANCE_ENABLED_USERS", "SHOW_BALANCE_MENU"] },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+    if (balanceSetting?.value) {
+      try {
+        const enabledUsers: string[] = JSON.parse(balanceSetting.value);
+        hasBalanceAccess = userEmail
+          ? enabledUsers.map((e) => e.toLowerCase().trim()).includes(userEmail)
+          : false;
+      } catch {
+        hasBalanceAccess = false;
+      }
+    }
+  }
+
+  const canTrackBalance = userRole === 'ADMIN' && hasBalanceAccess;
+
+  const paymentReceivers = canTrackBalance && sessionId && prisma.paymentReceiver
+    ? await prisma.paymentReceiver.findMany({
+        where: { sessionId, isActive: true },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+        select: { id: true, name: true, accountInfo: true, isDefault: true }
+      })
+    : [];
+
   // Find all PENDING_APPROVAL groupIds in this session
   const pendingInSession = await prisma.reservation.findMany({
     where: { status: 'PENDING_APPROVAL', sessionId },
@@ -135,7 +177,13 @@ export default async function ApprovalsPage() {
         <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Aprobaciones Pendientes</h1>
       </div>
 
-      <ApprovalsClient initialApprovals={approvals} currentSessionId={sessionId} userRole={userRole} />
+      <ApprovalsClient
+        initialApprovals={approvals}
+        currentSessionId={sessionId}
+        userRole={userRole}
+        canTrackBalance={canTrackBalance}
+        paymentReceivers={paymentReceivers}
+      />
     </div>
   );
 }
