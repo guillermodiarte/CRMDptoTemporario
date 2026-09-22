@@ -101,11 +101,11 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const [isTotalManuallyModified, setIsTotalManuallyModified] = useState(!!(initialData?.totalAmount && initialData.totalAmount > 0));
   // Deposit & Payment tracking (payment balance system)
   const [depositMethod, setDepositMethod] = useState<'CASH' | 'TRANSFER' | null>(
-    initialData?.depositMethod || null
+    initialData?.depositMethod || (initialData ? null : 'TRANSFER')
   );
   const [depositReceiverId, setDepositReceiverId] = useState<string | null>(() => {
     if (!showPaymentTracking) return null;
-    return initialData?.depositReceiverId || paymentReceivers.find(r => r.isDefault)?.id || null;
+    return initialData?.depositReceiverId || paymentReceivers.find(r => r.isDefault)?.id || paymentReceivers[0]?.id || null;
   });
 
   const [finalPaymentMethod, setFinalPaymentMethod] = useState<'CASH' | 'TRANSFER' | null>(
@@ -267,10 +267,18 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       if (currentDeposit === 0) {
         form.setValue("depositAmount", 10000);
       }
+      // Ensure deposit method defaults to TRANSFER
+      if (!depositMethod) {
+        setDepositMethod("TRANSFER");
+      }
+      if (!depositReceiverId && showPaymentTracking) {
+        const defaultRecv = paymentReceivers.find(r => r.isDefault)?.id || paymentReceivers[0]?.id || null;
+        if (defaultRecv) setDepositReceiverId(defaultRecv);
+      }
     } else if (paymentStatus === "UNPAID") {
       form.setValue("depositAmount", 0);
     }
-  }, [paymentStatus, form]);
+  }, [paymentStatus, form, depositMethod, depositReceiverId, showPaymentTracking, paymentReceivers]);
 
   // Auto-calculate Total Amount based on Prices * Nights
   const checkInDate = form.watch("checkIn");
@@ -420,7 +428,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       let resolvedStatus = initialData?.status;
       if (values.paymentStatus === "CANCELLED") {
         resolvedStatus = "CANCELLED";
-      } else if (values.paymentStatus !== "CANCELLED") {
+      } else {
         if (!resolvedStatus || resolvedStatus === "CANCELLED") {
           resolvedStatus = "CONFIRMED";
         }
@@ -525,240 +533,142 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
 
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="departmentId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Departamento</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleccione depto" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {filteredDepartments.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-
-
-
-
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="checkIn"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Ingreso</FormLabel>
-                <FormControl>
-                  <Input
-                    type="date"
-                    {...field}
-                    className="cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                    onClick={(e) => {
-                      try {
-                        e.currentTarget.showPicker?.();
-                      } catch {}
-                    }}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="checkOut"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center gap-2">
-                  <FormLabel>Egreso</FormLabel>
-                  {calculatedNights > 0 && (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80">
-                      <Moon className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
-                      {calculatedNights} {calculatedNights === 1 ? "noche" : "noches"}
-                    </span>
-                  )}
-                </div>
-                <FormControl>
-                  <Input
-                    type="date"
-                    {...field}
-                    className="cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                    onClick={(e) => {
-                      try {
-                        e.currentTarget.showPicker?.();
-                      } catch {}
-                    }}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div >
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="guestName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Huésped</FormLabel>
-                <FormControl>
-                  <Input placeholder="Nombre completo" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="guestPhone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Teléfono</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="+54 9 11 ..."
-                    {...field}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9+\-()\s]/g, "");
-                      field.onChange(val);
-                    }}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="guestDni"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>DNI / Cédula (Opcional)</FormLabel>
-              <FormControl>
-                <Input placeholder="Número de documento" {...field} value={field.value || ""} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {unitType !== "PARKING" && (
-          <FormField
-            control={form.control}
-            name="hasParking"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-xl border p-4 shadow-xs bg-blue-50/50 dark:bg-slate-800/80 border-blue-100 dark:border-slate-700">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel className="text-slate-900 dark:text-slate-100 font-semibold">
-                    ¿Requiere Cochera?
-                  </FormLabel>
-                  <FormDescription className="text-slate-500 dark:text-slate-400">
-                    Marcar si el huésped solicita lugar en la cochera.
-                  </FormDescription>
-                </div>
-              </FormItem>
-            )}
-          />
-        )}
-
-        {unitType !== "PARKING" && (
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="guestPeopleCount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cantidad Personas</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="bedsRequired"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Camas Necesarias</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={1}
-                      onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        )}
-
-
-
-        {/* Partial Payment or Cancelled Logic */}
-        {
-          (form.watch("paymentStatus") === "PARTIAL" || form.watch("paymentStatus") === "CANCELLED") && (
-            <div className={`p-4 border rounded-xl space-y-4 transition-colors ${
-              form.watch("paymentStatus") === "CANCELLED"
-                ? "bg-red-50/90 border-red-200 text-red-950 dark:bg-red-950/40 dark:border-red-900/60 dark:text-red-100"
-                : "bg-muted/50 border-border text-foreground"
-            }`}>
+        {/* Two-Column Responsive Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+          {/* LEFT COLUMN: Datos de la Reserva y Huésped */}
+          <div className="space-y-3.5">
+            {/* Departamento / Cochera y Plataforma */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField
                 control={form.control}
-                name="depositAmount"
+                name="departmentId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={form.watch("paymentStatus") === "CANCELLED" ? "text-red-900 dark:text-red-200 font-semibold" : "font-semibold"}>
-                      {form.watch("paymentStatus") === "CANCELLED" ? "Ganancia Seña (Retenido)" : "Monto Abonado (Seña)"}
-                    </FormLabel>
+                    <FormLabel>{unitType === "PARKING" ? "Cochera" : "Departamento"}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={unitType === "PARKING" ? "Seleccione cochera" : "Seleccione depto"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {filteredDepartments.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="source"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Plataforma</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || "DIRECT"}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar plataforma" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="DIRECT">Directo</SelectItem>
+                        <SelectItem value="AIRBNB">Airbnb</SelectItem>
+                        <SelectItem value="BOOKING">Booking</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Fechas de Ingreso y Egreso */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="checkIn"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ingreso</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                        type="date"
                         {...field}
-                        value={field.value ?? ""}
-                        className={form.watch("paymentStatus") === "CANCELLED"
-                          ? "bg-white dark:bg-slate-900/90 border-red-200 dark:border-red-900/70 text-slate-900 dark:text-white font-medium focus-visible:ring-red-500"
-                          : "bg-background"
-                        }
+                        className="cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                        onClick={(e) => {
+                          try { e.currentTarget.showPicker?.(); } catch {}
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="checkOut"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Egreso</FormLabel>
+                      {calculatedNights > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80">
+                          <Moon className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
+                          {calculatedNights} {calculatedNights === 1 ? "noche" : "noches"}
+                        </span>
+                      )}
+                    </div>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        className="cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                        onClick={(e) => {
+                          try { e.currentTarget.showPicker?.(); } catch {}
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Huésped */}
+            <FormField
+              control={form.control}
+              name="guestName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Huésped</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Nombre completo" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Teléfono y DNI */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="guestPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Teléfono</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="+54 9 11 ..."
+                        {...field}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9+\-()\s]/g, "");
+                          field.onChange(val);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -766,329 +676,464 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                 )}
               />
 
-              {/* Deposit tracking: method + receiver (only for PARTIAL + tracking enabled) */}
-              {showPaymentTracking && form.watch("paymentStatus") === "PARTIAL" && (
-                <div className="space-y-3 pt-1">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">¿Cómo se recibió la seña?</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setDepositMethod('CASH')}
-                      className={`flex items-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
-                        depositMethod === 'CASH'
-                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300'
-                          : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300'
-                      }`}
-                    >
-                      <Banknote className="h-4 w-4" />
-                      Efectivo
-                      {depositMethod === 'CASH' && <Check className="h-3 w-3 ml-auto text-emerald-500" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDepositMethod('TRANSFER')}
-                      className={`flex items-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
-                        depositMethod === 'TRANSFER'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
-                          : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'
-                      }`}
-                    >
-                      <CreditCard className="h-4 w-4" />
-                      Transferencia
-                      {depositMethod === 'TRANSFER' && <Check className="h-3 w-3 ml-auto text-blue-500" />}
-                    </button>
-                  </div>
+              <FormField
+                control={form.control}
+                name="guestDni"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>DNI / Cédula <span className="text-xs text-muted-foreground font-normal">(Opcional)</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="Número de documento" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-                  {/* Receiver selector */}
-                  {depositMethod === 'TRANSFER' && paymentReceivers.length > 0 && (
-                    <div className="space-y-1.5">
-                      <p className="text-xs font-semibold text-muted-foreground">¿Quién recibió la seña?</p>
-                      {paymentReceivers.map(receiver => (
-                        <button
-                          key={receiver.id}
-                          type="button"
-                          onClick={() => setDepositReceiverId(receiver.id)}
-                          className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-left text-sm transition-all cursor-pointer ${
-                            depositReceiverId === receiver.id
-                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
-                              : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'
-                          }`}
-                        >
-                          <div>
-                            <span className="font-medium">{receiver.name}</span>
-                            {receiver.accountInfo && <span className="ml-2 text-xs text-muted-foreground">{receiver.accountInfo}</span>}
-                          </div>
-                          {depositReceiverId === receiver.id && <Check className="h-4 w-4 text-blue-500 shrink-0" />}
-                        </button>
-                      ))}
+            {/* Personas y Camas */}
+            {unitType !== "PARKING" && (
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="guestPeopleCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cantidad Personas</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="bedsRequired"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Camas Necesarias</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {/* Requiere Cochera */}
+            {unitType !== "PARKING" && (
+              <FormField
+                control={form.control}
+                name="hasParking"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-xl border p-3 shadow-2xs bg-blue-50/40 dark:bg-slate-800/60 border-blue-100 dark:border-slate-700">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-0.5 leading-none">
+                      <FormLabel className="text-slate-900 dark:text-slate-100 font-semibold cursor-pointer">
+                        ¿Requiere Cochera?
+                      </FormLabel>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Marcar si el huésped solicita lugar en la cochera.
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Notas */}
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notas</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Observaciones o pedidos..." className="resize-none h-18 text-sm" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* RIGHT COLUMN: Estado, Montos y Cobros */}
+          <div className="space-y-3.5">
+            {/* Tarjeta de Estado y Precios */}
+            <div className="p-4 rounded-xl border bg-slate-50/70 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 space-y-3">
+              <FormField
+                control={form.control}
+                name="paymentStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-semibold text-slate-900 dark:text-slate-100">Estado del Pago</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={form.watch("source") === "AIRBNB"}>
+                      <FormControl>
+                        <SelectTrigger className="font-medium">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="UNPAID">Pendiente (Sin Pago)</SelectItem>
+                        <SelectItem value="PARTIAL" disabled={form.watch("source") === "AIRBNB"}>Parcial (Con Seña)</SelectItem>
+                        <SelectItem value="PAID">Pagado (Total)</SelectItem>
+                        <SelectItem value="CANCELLED">Cancelado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form.watch("source") === "AIRBNB" && <p className="text-[10px] text-muted-foreground mt-1">Airbnb es siempre Pagado</p>}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="totalAmount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <FormLabel>Total</FormLabel>
+                          {isTotalManuallyModified && (
+                            <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium border border-amber-500/20">
+                              Manual
+                            </span>
+                          )}
+                        </div>
+                        {isTotalManuallyModified && (
+                          <button
+                            type="button"
+                            onClick={recalculateAutoTotal}
+                            className="text-[11px] text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 flex items-center gap-0.5 hover:underline cursor-pointer"
+                            title="Calcular automáticamente según noches y personas"
+                          >
+                            <RotateCcw className="h-2.5 w-2.5" />
+                            Auto
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold text-muted-foreground">$</span>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              const val = e.target.value;
+                              if (val === "") {
+                                setIsTotalManuallyModified(false);
+                              } else {
+                                setIsTotalManuallyModified(true);
+                              }
+                            }}
+                            value={field.value ?? ""}
+                            className="font-semibold text-base"
+                          />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Moneda</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={form.watch("source") === "AIRBNB"}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ARS">ARS (Pesos)</SelectItem>
+                          <SelectItem value="USD">USD (Dólares)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Limpieza e Insumos */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-200/80 dark:border-slate-800/80">
+                <FormField
+                  control={form.control}
+                  name="cleaningFee"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Gasto Limpieza (ARS)</FormLabel>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-muted-foreground">$</span>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {unitType !== "PARKING" && (
+                  <FormItem>
+                    <FormLabel className="text-xs flex items-center gap-1">
+                      Insumos <span className="text-[10px] text-muted-foreground font-normal">(Global)</span>
+                    </FormLabel>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-muted-foreground">$</span>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          value={amenitiesCost}
+                          disabled={true}
+                          className="bg-muted text-xs"
+                          title="Configurable en Sistema"
+                        />
+                      </FormControl>
+                    </div>
+                  </FormItem>
+                )}
+              </div>
+            </div>
+
+            {/* Sección de Pago Parcial / Seña */}
+            {(form.watch("paymentStatus") === "PARTIAL" || form.watch("paymentStatus") === "CANCELLED") && (
+              <div className={`p-4 border rounded-xl space-y-3.5 transition-colors ${
+                form.watch("paymentStatus") === "CANCELLED"
+                  ? "bg-red-50/90 border-red-200 text-red-950 dark:bg-red-950/40 dark:border-red-900/60 dark:text-red-100"
+                  : "bg-blue-50/60 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900/60 text-foreground"
+              }`}>
+                <FormField
+                  control={form.control}
+                  name="depositAmount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={form.watch("paymentStatus") === "CANCELLED" ? "text-red-900 dark:text-red-200 font-semibold" : "font-semibold text-blue-950 dark:text-blue-100"}>
+                        {form.watch("paymentStatus") === "CANCELLED" ? "Ganancia Seña (Retenido)" : "Monto Abonado (Seña)"}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                          {...field}
+                          value={field.value ?? ""}
+                          className={form.watch("paymentStatus") === "CANCELLED"
+                            ? "bg-white dark:bg-slate-900/90 border-red-200 dark:border-red-900/70 text-slate-900 dark:text-white font-medium focus-visible:ring-red-500"
+                            : "bg-background font-semibold text-base"
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Deposit tracking: method + receiver (only for PARTIAL + tracking enabled) */}
+                {showPaymentTracking && form.watch("paymentStatus") === "PARTIAL" && (
+                  <div className="space-y-3 pt-1 border-t border-blue-200/70 dark:border-blue-900/70">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                      ¿Cómo se recibió la seña?
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDepositMethod('CASH')}
+                        className={`flex items-center gap-2 p-2.5 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                          depositMethod === 'CASH'
+                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-300'
+                        }`}
+                      >
+                        <Banknote className="h-4 w-4 shrink-0" />
+                        <span>Efectivo</span>
+                        {depositMethod === 'CASH' && <Check className="h-3.5 w-3.5 ml-auto text-emerald-500" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDepositMethod('TRANSFER')}
+                        className={`flex items-center gap-2 p-2.5 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                          depositMethod === 'TRANSFER'
+                            ? 'border-blue-500 bg-blue-100/70 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 font-semibold'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-blue-300'
+                        }`}
+                      >
+                        <CreditCard className="h-4 w-4 shrink-0" />
+                        <span>Transferencia</span>
+                        {depositMethod === 'TRANSFER' && <Check className="h-3.5 w-3.5 ml-auto text-blue-500" />}
+                      </button>
+                    </div>
+
+                    {/* Receiver selector */}
+                    {depositMethod === 'TRANSFER' && paymentReceivers.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">¿Quién recibió la seña?</p>
+                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                          {paymentReceivers.map(receiver => (
+                            <button
+                              key={receiver.id}
+                              type="button"
+                              onClick={() => setDepositReceiverId(receiver.id)}
+                              className={`w-full flex items-center justify-between p-2 rounded-lg border text-left text-xs sm:text-sm transition-all cursor-pointer ${
+                                depositReceiverId === receiver.id
+                                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 font-medium'
+                                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-blue-300'
+                              }`}
+                            >
+                              <div className="truncate">
+                                <span>{receiver.name}</span>
+                                {receiver.accountInfo && <span className="ml-1.5 text-xs text-muted-foreground">({receiver.accountInfo})</span>}
+                              </div>
+                              {depositReceiverId === receiver.id && <Check className="h-3.5 w-3.5 text-blue-500 shrink-0 ml-2" />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Resumen financiero */}
+                <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800/80 space-y-1">
+                  <div className={`flex justify-between items-center text-xs sm:text-sm font-medium ${
+                    form.watch("paymentStatus") === "CANCELLED" ? "text-red-900 dark:text-red-200" : "text-muted-foreground"
+                  }`}>
+                    <span>Monto Total:</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">${formatNumber(form.watch("totalAmount"))}</span>
+                  </div>
+                  {form.watch("paymentStatus") !== "CANCELLED" && (
+                    <div className="flex justify-between items-center text-xs sm:text-sm font-medium text-red-600 dark:text-red-400">
+                      <span>Resta Cobrar:</span>
+                      <span className="font-bold text-base">${formatNumber((form.watch("totalAmount") || 0) - (form.watch("depositAmount") || 0))}</span>
                     </div>
                   )}
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Payment tracking: method + receiver (only for PAID + tracking enabled) */}
-              {showPaymentTracking && form.watch("paymentStatus") === "PAID" && (
-                <div className="space-y-3 pt-1">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">¿Cómo se recibió el pago?</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setFinalPaymentMethod('CASH')}
-                      className={`flex items-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
-                        finalPaymentMethod === 'CASH'
-                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300'
-                          : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300'
-                      }`}
-                    >
-                      <Banknote className="h-4 w-4" />
-                      Efectivo
-                      {finalPaymentMethod === 'CASH' && <Check className="h-3 w-3 ml-auto text-emerald-500" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFinalPaymentMethod('TRANSFER')}
-                      className={`flex items-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
-                        finalPaymentMethod === 'TRANSFER'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
-                          : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'
-                      }`}
-                    >
-                      <CreditCard className="h-4 w-4" />
-                      Transferencia
-                      {finalPaymentMethod === 'TRANSFER' && <Check className="h-3 w-3 ml-auto text-blue-500" />}
-                    </button>
-                  </div>
+            {/* Sección de Pago Total (PAGADO) */}
+            {showPaymentTracking && form.watch("paymentStatus") === "PAID" && (
+              <div className="p-4 border rounded-xl space-y-3 bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900/50">
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                  ¿Cómo se recibió el pago?
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFinalPaymentMethod('CASH')}
+                    className={`flex items-center gap-2 p-2.5 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                      finalPaymentMethod === 'CASH'
+                        ? 'border-emerald-500 bg-emerald-100/70 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 font-semibold'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-300'
+                    }`}
+                  >
+                    <Banknote className="h-4 w-4 shrink-0" />
+                    <span>Efectivo</span>
+                    {finalPaymentMethod === 'CASH' && <Check className="h-3.5 w-3.5 ml-auto text-emerald-500" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFinalPaymentMethod('TRANSFER')}
+                    className={`flex items-center gap-2 p-2.5 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                      finalPaymentMethod === 'TRANSFER'
+                        ? 'border-blue-500 bg-blue-100/70 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 font-semibold'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-blue-300'
+                    }`}
+                  >
+                    <CreditCard className="h-4 w-4 shrink-0" />
+                    <span>Transferencia</span>
+                    {finalPaymentMethod === 'TRANSFER' && <Check className="h-3.5 w-3.5 ml-auto text-blue-500" />}
+                  </button>
+                </div>
 
-                  {/* Receiver selector */}
-                  {finalPaymentMethod === 'TRANSFER' && paymentReceivers.length > 0 && (
-                    <div className="space-y-1.5">
-                      <p className="text-xs font-semibold text-muted-foreground">¿Quién recibió el pago?</p>
+                {/* Receiver selector */}
+                {finalPaymentMethod === 'TRANSFER' && paymentReceivers.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">¿Quién recibió el pago?</p>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                       {paymentReceivers.map(receiver => (
                         <button
                           key={receiver.id}
                           type="button"
                           onClick={() => setFinalPaymentReceiverId(receiver.id)}
-                          className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-left text-sm transition-all cursor-pointer ${
+                          className={`w-full flex items-center justify-between p-2 rounded-lg border text-left text-xs sm:text-sm transition-all cursor-pointer ${
                             finalPaymentReceiverId === receiver.id
-                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
-                              : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 font-medium'
+                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-blue-300'
                           }`}
                         >
-                          <div>
-                            <span className="font-medium">{receiver.name}</span>
-                            {receiver.accountInfo && <span className="ml-2 text-xs text-muted-foreground">{receiver.accountInfo}</span>}
+                          <div className="truncate">
+                            <span>{receiver.name}</span>
+                            {receiver.accountInfo && <span className="ml-1.5 text-xs text-muted-foreground">({receiver.accountInfo})</span>}
                           </div>
-                          {finalPaymentReceiverId === receiver.id && <Check className="h-4 w-4 text-blue-500 shrink-0" />}
+                          {finalPaymentReceiverId === receiver.id && <Check className="h-3.5 w-3.5 text-blue-500 shrink-0 ml-2" />}
                         </button>
                       ))}
                     </div>
-                  )}
-                </div>
-              )}
-
-              <div className={`flex justify-between items-center text-sm font-medium ${
-                form.watch("paymentStatus") === "CANCELLED" ? "text-red-900 dark:text-red-200" : "text-muted-foreground"
-              }`}>
-                <span>Monto Total:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">${formatNumber(form.watch("totalAmount"))}</span>
-              </div>
-              {form.watch("paymentStatus") !== "CANCELLED" && (
-                <div className="flex justify-between items-center text-sm font-medium text-red-600 dark:text-red-400">
-                  <span>Restante a Pagar:</span>
-                  <span className="font-semibold">${formatNumber((form.watch("totalAmount") || 0) - (form.watch("depositAmount") || 0))}</span>
-                </div>
-              )}
-            </div>
-          )
-        }
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="cleaningFee"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Gasto de Limpieza (ARS)</FormLabel>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-muted-foreground">$</span>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {unitType !== "PARKING" && (
-            <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                Gasto de Insumos (Global)
-                <span className="text-[10px] font-normal text-muted-foreground">(Informativo)</span>
-              </FormLabel>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-muted-foreground">$</span>
-                <FormControl>
-                  <Input
-                    type="number"
-                    value={amenitiesCost}
-                    disabled={true}
-                    className="bg-muted"
-                    title="Configurable en Sistema"
-                  />
-                </FormControl>
-              </div>
-            </FormItem>
-          )}
-
-          <FormField
-            control={form.control}
-            name="totalAmount"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FormLabel>Total</FormLabel>
-                    {isTotalManuallyModified && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium border border-amber-500/20">
-                        Manual
-                      </span>
-                    )}
                   </div>
-                  {isTotalManuallyModified && (
-                    <button
-                      type="button"
-                      onClick={recalculateAutoTotal}
-                      className="text-xs text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 flex items-center gap-1 hover:underline cursor-pointer transition-colors"
-                      title="Calcular automáticamente según noches y cantidad de personas"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                      Auto-calcular
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-muted-foreground">$</span>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
-                      {...field}
-                      onChange={(e) => {
-                        field.onChange(e);
-                        const val = e.target.value;
-                        if (val === "") {
-                          setIsTotalManuallyModified(false);
-                        } else {
-                          setIsTotalManuallyModified(true);
-                        }
-                      }}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                </div>
-                <FormMessage />
-              </FormItem>
+                )}
+              </div>
             )}
-          />
-          <FormField
-            control={form.control}
-            name="currency"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Moneda</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={form.watch("source") === "AIRBNB"}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="ARS">ARS</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.watch("source") === "AIRBNB" && <p className="text-[10px] text-muted-foreground mt-1">Airbnb es siempre USD</p>}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="paymentStatus"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Estado Pago</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={form.watch("source") === "AIRBNB"}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="UNPAID">Pendiente</SelectItem>
-                    <SelectItem value="PARTIAL" disabled={form.watch("source") === "AIRBNB"}>Parcial</SelectItem>
-                    <SelectItem value="PAID">Pagado</SelectItem>
-                    <SelectItem value="CANCELLED">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.watch("source") === "AIRBNB" && <p className="text-[10px] text-muted-foreground mt-1">Airbnb es siempre Pagado</p>}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          </div>
         </div>
 
-        <FormField
-          control={form.control}
-          name="source"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Plataforma</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || "DIRECT"}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar plataforma" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="DIRECT">Directo</SelectItem>
-                  <SelectItem value="AIRBNB">Airbnb</SelectItem>
-                  <SelectItem value="BOOKING">Booking</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notas</FormLabel>
-              <FormControl>
-                <Textarea {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Guardando..." : (initialData ? "Actualizar Reserva" : "Crear Reserva")}
-        </Button>
-      </form >
+        {/* Action Buttons Footer */}
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="min-w-[160px] font-semibold"
+          >
+            {loading ? "Guardando..." : (initialData ? "Actualizar Reserva" : "Crear Reserva")}
+          </Button>
+        </div>
+      </form>
 
       <AlertDialog open={bedWarning} onOpenChange={setBedWarning}>
         <AlertDialogContent>
