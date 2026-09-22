@@ -400,32 +400,30 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             </div>
           </div>
 
-          <DialogContent className="w-[95vw] sm:max-w-[700px] md:max-w-4xl lg:max-w-5xl md:h-[700px] max-h-[92vh] flex flex-col p-4 sm:p-6 rounded-2xl overflow-hidden" onCloseAutoFocus={(e) => e.preventDefault()}>
+          <DialogContent className="w-[95vw] sm:max-w-[720px] md:max-w-4xl lg:max-w-5xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 rounded-2xl" onCloseAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader className="shrink-0 pb-1">
               <DialogTitle className="text-xl font-bold">{editingRes ? "Editar Reserva" : "Nueva Reserva"}</DialogTitle>
             </DialogHeader>
-            <div className="flex-1 overflow-y-auto pr-1 -mr-1">
-              <ReservationForm
-                departments={departments}
-                setOpen={setOpen}
-                initialData={editingRes}
-                showPaymentTracking={showPaymentTracking}
-                paymentReceivers={paymentReceivers}
-                onReservationCreated={(info) => {
-                  setTimeout(() => {
-                    setReminderModal({
-                      isOpen: true,
-                      source: info.source,
-                      items: [{
-                        departmentName: info.departmentName,
-                        checkIn: info.checkIn,
-                        checkOut: info.checkOut,
-                      }],
-                    });
-                  }, 150);
-                }}
-              />
-            </div>
+            <ReservationForm
+              departments={departments}
+              setOpen={setOpen}
+              initialData={editingRes}
+              showPaymentTracking={showPaymentTracking}
+              paymentReceivers={paymentReceivers}
+              onReservationCreated={(info) => {
+                setTimeout(() => {
+                  setReminderModal({
+                    isOpen: true,
+                    source: info.source,
+                    items: [{
+                      departmentName: info.departmentName,
+                      checkIn: info.checkIn,
+                      checkOut: info.checkOut,
+                    }],
+                  });
+                }, 150);
+              }}
+            />
           </DialogContent>
         </Dialog>
       ) : (

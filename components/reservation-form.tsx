@@ -33,7 +33,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Department, Reservation } from "@prisma/client";
 import { format, addDays } from "date-fns";
-import { RotateCcw, Moon, Banknote, CreditCard, Check } from "lucide-react";
+import { RotateCcw, Moon, Banknote, CreditCard, Check, Clock } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 
 // Removed Alert import
@@ -534,11 +534,11 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
 
         {/* Two-Column Responsive Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 items-start">
           {/* LEFT COLUMN: Datos de la Reserva y Huésped */}
-          <div className="space-y-3.5">
+          <div className="space-y-2.5">
             {/* Departamento / Cochera y Plataforma */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <FormField
                 control={form.control}
                 name="departmentId"
@@ -587,7 +587,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
             </div>
 
             {/* Fechas de Ingreso y Egreso */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <FormField
                 control={form.control}
                 name="checkIn"
@@ -654,7 +654,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
             />
 
             {/* Teléfono y DNI */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <FormField
                 control={form.control}
                 name="guestPhone"
@@ -693,13 +693,13 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
             {/* Personas y Camas */}
             {unitType !== "PARKING" && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <FormField
                   control={form.control}
                   name="guestPeopleCount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cantidad Personas</FormLabel>
+                      <FormLabel>Personas</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -719,7 +719,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                   name="bedsRequired"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Camas Necesarias</FormLabel>
+                      <FormLabel>Camas Nec.</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -742,7 +742,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                 control={form.control}
                 name="hasParking"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-xl border p-3 shadow-2xs bg-blue-50/40 dark:bg-slate-800/60 border-blue-100 dark:border-slate-700">
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-xl border p-2.5 shadow-2xs bg-blue-50/40 dark:bg-slate-800/60 border-blue-100 dark:border-slate-700">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
@@ -770,7 +770,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                 <FormItem>
                   <FormLabel>Notas</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Observaciones o pedidos..." className="resize-none h-28 text-sm" {...field} />
+                    <Textarea placeholder="Observaciones o pedidos..." className="resize-none h-20 text-sm" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -779,9 +779,9 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
           </div>
 
           {/* RIGHT COLUMN: Estado, Montos y Cobros */}
-          <div className="space-y-3.5">
+          <div className="space-y-2.5">
             {/* Tarjeta de Estado y Precios */}
-            <div className="p-4 rounded-xl border bg-slate-50/70 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="p-3.5 rounded-xl border bg-slate-50/70 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 space-y-2.5">
               <FormField
                 control={form.control}
                 name="paymentStatus"
@@ -801,13 +801,13 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                         <SelectItem value="CANCELLED">Cancelado</SelectItem>
                       </SelectContent>
                     </Select>
-                    {form.watch("source") === "AIRBNB" && <p className="text-[10px] text-muted-foreground mt-1">Airbnb es siempre Pagado</p>}
+                    {form.watch("source") === "AIRBNB" && <p className="text-[10px] text-muted-foreground mt-0.5">Airbnb es siempre Pagado</p>}
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <FormField
                   control={form.control}
                   name="totalAmount"
@@ -886,7 +886,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
               </div>
 
               {/* Limpieza e Insumos */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-200/80 dark:border-slate-800/80">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-slate-200/80 dark:border-slate-800/80">
                 <FormField
                   control={form.control}
                   name="cleaningFee"
@@ -933,9 +933,32 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
               </div>
             </div>
 
+            {/* Sección Pendiente (Sin Pago) */}
+            {form.watch("paymentStatus") === "UNPAID" && (
+              <div className="p-3.5 border rounded-xl space-y-2.5 bg-amber-50/50 border-amber-200/80 dark:bg-amber-950/20 dark:border-amber-900/50 text-slate-700 dark:text-slate-300">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-semibold text-xs">
+                  <Clock className="h-4 w-4 shrink-0" />
+                  <span>Pendiente de Cobro</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  No se registra pago anticipado. El importe total quedará pendiente para cobrar al momento del check-in o ingreso del huésped.
+                </p>
+                <div className="pt-2 border-t border-amber-200/70 dark:border-amber-900/70 space-y-1">
+                  <div className="flex justify-between items-center text-xs font-medium text-muted-foreground">
+                    <span>Monto Total:</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">${formatNumber(form.watch("totalAmount"))}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs font-medium text-amber-600 dark:text-amber-400">
+                    <span>Resta Cobrar al Ingreso:</span>
+                    <span className="font-bold text-sm">${formatNumber(form.watch("totalAmount"))}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Sección de Pago Parcial / Seña */}
             {(form.watch("paymentStatus") === "PARTIAL" || form.watch("paymentStatus") === "CANCELLED") && (
-              <div className={`p-4 border rounded-xl space-y-3.5 transition-colors ${
+              <div className={`p-3.5 border rounded-xl space-y-2.5 transition-colors ${
                 form.watch("paymentStatus") === "CANCELLED"
                   ? "bg-red-50/90 border-red-200 text-red-950 dark:bg-red-950/40 dark:border-red-900/60 dark:text-red-100"
                   : "bg-blue-50/60 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900/60 text-foreground"
@@ -969,53 +992,53 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
                 {/* Deposit tracking: method + receiver (only for PARTIAL + tracking enabled) */}
                 {showPaymentTracking && form.watch("paymentStatus") === "PARTIAL" && (
-                  <div className="space-y-3 pt-1 border-t border-blue-200/70 dark:border-blue-900/70">
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                  <div className="space-y-2 pt-1 border-t border-blue-200/70 dark:border-blue-900/70">
+                    <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
                       ¿Cómo se recibió la seña?
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => setDepositMethod('CASH')}
-                        className={`flex items-center gap-2 p-2.5 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                        className={`flex items-center gap-2 p-2 rounded-lg border-2 text-xs font-medium transition-all cursor-pointer ${
                           depositMethod === 'CASH'
                             ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
                             : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-300'
                         }`}
                       >
-                        <Banknote className="h-4 w-4 shrink-0" />
+                        <Banknote className="h-3.5 w-3.5 shrink-0" />
                         <span>Efectivo</span>
-                        {depositMethod === 'CASH' && <Check className="h-3.5 w-3.5 ml-auto text-emerald-500" />}
+                        {depositMethod === 'CASH' && <Check className="h-3 w-3 ml-auto text-emerald-500" />}
                       </button>
                       <button
                         type="button"
                         onClick={() => setDepositMethod('TRANSFER')}
-                        className={`flex items-center gap-2 p-2.5 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                        className={`flex items-center gap-2 p-2 rounded-lg border-2 text-xs font-medium transition-all cursor-pointer ${
                           depositMethod === 'TRANSFER'
                             ? 'border-blue-500 bg-blue-100/70 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 font-semibold'
                             : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-blue-300'
                         }`}
                       >
-                        <CreditCard className="h-4 w-4 shrink-0" />
+                        <CreditCard className="h-3.5 w-3.5 shrink-0" />
                         <span>Transferencia</span>
-                        {depositMethod === 'TRANSFER' && <Check className="h-3.5 w-3.5 ml-auto text-blue-500" />}
+                        {depositMethod === 'TRANSFER' && <Check className="h-3 w-3 ml-auto text-blue-500" />}
                       </button>
                     </div>
 
                     {/* Receiver selector as Select dropdown */}
                     {depositMethod === 'TRANSFER' && paymentReceivers.length > 0 && (
-                      <div className="space-y-1.5 pt-1">
-                        <FormLabel className="text-xs font-semibold text-slate-600 dark:text-slate-400">¿Quién recibió la seña?</FormLabel>
+                      <div className="space-y-1 pt-0.5">
+                        <FormLabel className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">¿Quién recibió la seña?</FormLabel>
                         <Select
                           value={depositReceiverId || ""}
                           onValueChange={(val) => setDepositReceiverId(val)}
                         >
-                          <SelectTrigger className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+                          <SelectTrigger className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-xs h-8">
                             <SelectValue placeholder="Seleccionar receptor / cuenta" />
                           </SelectTrigger>
                           <SelectContent>
                             {paymentReceivers.map((receiver) => (
-                              <SelectItem key={receiver.id} value={receiver.id}>
+                              <SelectItem key={receiver.id} value={receiver.id} className="text-xs">
                                 {receiver.name} {receiver.accountInfo ? `(${receiver.accountInfo})` : ""}
                               </SelectItem>
                             ))}
@@ -1027,17 +1050,17 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                 )}
 
                 {/* Resumen financiero */}
-                <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800/80 space-y-1">
-                  <div className={`flex justify-between items-center text-xs sm:text-sm font-medium ${
+                <div className="pt-1.5 border-t border-slate-200/80 dark:border-slate-800/80 space-y-1">
+                  <div className={`flex justify-between items-center text-xs font-medium ${
                     form.watch("paymentStatus") === "CANCELLED" ? "text-red-900 dark:text-red-200" : "text-muted-foreground"
                   }`}>
                     <span>Monto Total:</span>
                     <span className="font-semibold text-slate-900 dark:text-white">${formatNumber(form.watch("totalAmount"))}</span>
                   </div>
                   {form.watch("paymentStatus") !== "CANCELLED" && (
-                    <div className="flex justify-between items-center text-xs sm:text-sm font-medium text-red-600 dark:text-red-400">
+                    <div className="flex justify-between items-center text-xs font-medium text-red-600 dark:text-red-400">
                       <span>Resta Cobrar:</span>
-                      <span className="font-bold text-base">${formatNumber((form.watch("totalAmount") || 0) - (form.watch("depositAmount") || 0))}</span>
+                      <span className="font-bold text-sm">${formatNumber((form.watch("totalAmount") || 0) - (form.watch("depositAmount") || 0))}</span>
                     </div>
                   )}
                 </div>
@@ -1046,53 +1069,53 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
             {/* Sección de Pago Total (PAGADO) */}
             {showPaymentTracking && form.watch("paymentStatus") === "PAID" && (
-              <div className="p-4 border rounded-xl space-y-3 bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900/50">
-                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+              <div className="p-3.5 border rounded-xl space-y-2.5 bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900/50">
+                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
                   ¿Cómo se recibió el pago?
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setFinalPaymentMethod('CASH')}
-                    className={`flex items-center gap-2 p-2.5 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 p-2 rounded-lg border-2 text-xs font-medium transition-all cursor-pointer ${
                       finalPaymentMethod === 'CASH'
                         ? 'border-emerald-500 bg-emerald-100/70 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 font-semibold'
                         : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-300'
                     }`}
                   >
-                    <Banknote className="h-4 w-4 shrink-0" />
+                    <Banknote className="h-3.5 w-3.5 shrink-0" />
                     <span>Efectivo</span>
-                    {finalPaymentMethod === 'CASH' && <Check className="h-3.5 w-3.5 ml-auto text-emerald-500" />}
+                    {finalPaymentMethod === 'CASH' && <Check className="h-3 w-3 ml-auto text-emerald-500" />}
                   </button>
                   <button
                     type="button"
                     onClick={() => setFinalPaymentMethod('TRANSFER')}
-                    className={`flex items-center gap-2 p-2.5 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 p-2 rounded-lg border-2 text-xs font-medium transition-all cursor-pointer ${
                       finalPaymentMethod === 'TRANSFER'
                         ? 'border-blue-500 bg-blue-100/70 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 font-semibold'
                         : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-blue-300'
                     }`}
                   >
-                    <CreditCard className="h-4 w-4 shrink-0" />
+                    <CreditCard className="h-3.5 w-3.5 shrink-0" />
                     <span>Transferencia</span>
-                    {finalPaymentMethod === 'TRANSFER' && <Check className="h-3.5 w-3.5 ml-auto text-blue-500" />}
+                    {finalPaymentMethod === 'TRANSFER' && <Check className="h-3 w-3 ml-auto text-blue-500" />}
                   </button>
                 </div>
 
                 {/* Receiver selector as Select dropdown */}
                 {finalPaymentMethod === 'TRANSFER' && paymentReceivers.length > 0 && (
-                  <div className="space-y-1.5 pt-1">
-                    <FormLabel className="text-xs font-semibold text-slate-600 dark:text-slate-400">¿Quién recibió el pago?</FormLabel>
+                  <div className="space-y-1 pt-0.5">
+                    <FormLabel className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">¿Quién recibió el pago?</FormLabel>
                     <Select
                       value={finalPaymentReceiverId || ""}
                       onValueChange={(val) => setFinalPaymentReceiverId(val)}
                     >
-                      <SelectTrigger className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+                      <SelectTrigger className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-xs h-8">
                         <SelectValue placeholder="Seleccionar receptor / cuenta" />
                       </SelectTrigger>
                       <SelectContent>
                         {paymentReceivers.map((receiver) => (
-                          <SelectItem key={receiver.id} value={receiver.id}>
+                          <SelectItem key={receiver.id} value={receiver.id} className="text-xs">
                             {receiver.name} {receiver.accountInfo ? `(${receiver.accountInfo})` : ""}
                           </SelectItem>
                         ))}
@@ -1100,13 +1123,20 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                     </Select>
                   </div>
                 )}
+
+                <div className="pt-1.5 border-t border-emerald-200/80 dark:border-emerald-900/80 space-y-1">
+                  <div className="flex justify-between items-center text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                    <span>Monto Total Cobrado:</span>
+                    <span className="font-bold text-sm text-emerald-900 dark:text-emerald-200">${formatNumber(form.watch("totalAmount"))}</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </div>
 
         {/* Action Buttons Footer */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
+        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
           <Button
             type="button"
             variant="outline"
