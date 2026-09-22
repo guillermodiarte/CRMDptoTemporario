@@ -770,7 +770,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                 <FormItem>
                   <FormLabel>Notas</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Observaciones o pedidos..." className="resize-none h-18 text-sm" {...field} />
+                    <Textarea placeholder="Observaciones o pedidos..." className="resize-none h-28 text-sm" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -1002,30 +1002,25 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                       </button>
                     </div>
 
-                    {/* Receiver selector */}
+                    {/* Receiver selector as Select dropdown */}
                     {depositMethod === 'TRANSFER' && paymentReceivers.length > 0 && (
                       <div className="space-y-1.5 pt-1">
-                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">¿Quién recibió la seña?</p>
-                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                          {paymentReceivers.map(receiver => (
-                            <button
-                              key={receiver.id}
-                              type="button"
-                              onClick={() => setDepositReceiverId(receiver.id)}
-                              className={`w-full flex items-center justify-between p-2 rounded-lg border text-left text-xs sm:text-sm transition-all cursor-pointer ${
-                                depositReceiverId === receiver.id
-                                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 font-medium'
-                                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-blue-300'
-                              }`}
-                            >
-                              <div className="truncate">
-                                <span>{receiver.name}</span>
-                                {receiver.accountInfo && <span className="ml-1.5 text-xs text-muted-foreground">({receiver.accountInfo})</span>}
-                              </div>
-                              {depositReceiverId === receiver.id && <Check className="h-3.5 w-3.5 text-blue-500 shrink-0 ml-2" />}
-                            </button>
-                          ))}
-                        </div>
+                        <FormLabel className="text-xs font-semibold text-slate-600 dark:text-slate-400">¿Quién recibió la seña?</FormLabel>
+                        <Select
+                          value={depositReceiverId || ""}
+                          onValueChange={(val) => setDepositReceiverId(val)}
+                        >
+                          <SelectTrigger className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+                            <SelectValue placeholder="Seleccionar receptor / cuenta" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {paymentReceivers.map((receiver) => (
+                              <SelectItem key={receiver.id} value={receiver.id}>
+                                {receiver.name} {receiver.accountInfo ? `(${receiver.accountInfo})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                   </div>
@@ -1084,30 +1079,25 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                   </button>
                 </div>
 
-                {/* Receiver selector */}
+                {/* Receiver selector as Select dropdown */}
                 {finalPaymentMethod === 'TRANSFER' && paymentReceivers.length > 0 && (
                   <div className="space-y-1.5 pt-1">
-                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">¿Quién recibió el pago?</p>
-                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                      {paymentReceivers.map(receiver => (
-                        <button
-                          key={receiver.id}
-                          type="button"
-                          onClick={() => setFinalPaymentReceiverId(receiver.id)}
-                          className={`w-full flex items-center justify-between p-2 rounded-lg border text-left text-xs sm:text-sm transition-all cursor-pointer ${
-                            finalPaymentReceiverId === receiver.id
-                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 font-medium'
-                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-blue-300'
-                          }`}
-                        >
-                          <div className="truncate">
-                            <span>{receiver.name}</span>
-                            {receiver.accountInfo && <span className="ml-1.5 text-xs text-muted-foreground">({receiver.accountInfo})</span>}
-                          </div>
-                          {finalPaymentReceiverId === receiver.id && <Check className="h-3.5 w-3.5 text-blue-500 shrink-0 ml-2" />}
-                        </button>
-                      ))}
-                    </div>
+                    <FormLabel className="text-xs font-semibold text-slate-600 dark:text-slate-400">¿Quién recibió el pago?</FormLabel>
+                    <Select
+                      value={finalPaymentReceiverId || ""}
+                      onValueChange={(val) => setFinalPaymentReceiverId(val)}
+                    >
+                      <SelectTrigger className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+                        <SelectValue placeholder="Seleccionar receptor / cuenta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {paymentReceivers.map((receiver) => (
+                          <SelectItem key={receiver.id} value={receiver.id}>
+                            {receiver.name} {receiver.accountInfo ? `(${receiver.accountInfo})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
               </div>
