@@ -33,6 +33,8 @@ import { MobileNav } from "@/components/mobile-nav";
 import { NotificationBell } from "@/components/notification-bell";
 import { AdminThemeProvider } from "@/components/admin-theme-provider";
 import { AdminThemeToggle } from "@/components/admin-theme-toggle";
+import { ApprovalsProvider } from "@/components/approvals-provider";
+import { ApprovalsNavLink } from "@/components/approvals-nav-link";
 import Image from "next/image";
 
 import type { Metadata } from "next";
@@ -142,7 +144,8 @@ export default async function DashboardLayout({
 
   return (
     <AdminThemeProvider>
-      <div className="grid min-h-screen w-full md:grid-cols-[240px_1fr] lg:grid-cols-[280px_1fr]">
+      <ApprovalsProvider>
+        <div className="grid min-h-screen w-full md:grid-cols-[240px_1fr] lg:grid-cols-[280px_1fr]">
         <div className="hidden border-r bg-muted/40 md:block">
           <div className="flex h-full max-h-screen flex-col gap-2">
             <div
@@ -182,13 +185,7 @@ export default async function DashboardLayout({
                   <CalendarDays className="h-5 w-5 text-purple-500" />
                   Calendario
                 </Link>
-                <Link
-                  href="/dashboard/approvals"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                >
-                  <ClipboardCheck className="h-5 w-5 text-amber-500" />
-                  Aprobaciones
-                </Link>
+                <ApprovalsNavLink />
                 <Link
                   href="/dashboard/reservations"
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
@@ -339,6 +336,7 @@ export default async function DashboardLayout({
           </main>
         </div>
       </div>
-    </AdminThemeProvider>
-  )
+    </ApprovalsProvider>
+  </AdminThemeProvider>
+)
 }

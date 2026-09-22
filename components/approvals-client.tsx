@@ -96,6 +96,9 @@ export function ApprovalsClient({
         setConflictWarning(null);
         setHighlightedGroupIds([]);
         setApprovals(prev => prev.filter(g => g.groupId !== groupId));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('approvals-updated'));
+        }
 
         if (action === 'approve' && approvedGroup) {
           const allRes = approvedGroup.pendingForSession?.length ? approvedGroup.pendingForSession : approvedGroup.reservations || [];

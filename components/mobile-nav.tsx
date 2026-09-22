@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { UserMenu } from "@/components/user-menu";
+import { ApprovalsNavLink } from "@/components/approvals-nav-link";
 
 interface MobileNavProps {
   role: string | undefined;
@@ -120,14 +121,7 @@ export function MobileNav({
             <CalendarDays className="h-5 w-5 text-purple-500" />
             Calendario
           </Link>
-          <Link
-            href="/dashboard/approvals"
-            className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-            onClick={() => setOpen(false)}
-          >
-            <ClipboardCheck className="h-5 w-5 text-amber-500" />
-            Aprobaciones
-          </Link>
+          <ApprovalsNavLink mobile onClick={() => setOpen(false)} />
           <Link
             href="/dashboard/reservations"
             className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"

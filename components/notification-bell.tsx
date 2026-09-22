@@ -1,66 +1,19 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, Clock, Building2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-
-type Reservation = {
-  id: string;
-  departmentId: string;
-  sessionId: string | null;
-  status: string;
-  guestName: string;
-  department: { name: string };
-};
-
-type ApprovalGroup = {
-  groupId: string;
-  pendingForSession: Reservation[];
-};
+import { useApprovals } from '@/components/approvals-provider';
 
 export function NotificationBell() {
-  const [groups, setGroups] = useState<ApprovalGroup[]>([]);
-  const [pulse, setPulse] = useState(false);
+  const { groups, pendingCount: count, pulse } = useApprovals();
   const [open, setOpen] = useState(false);
   const router = useRouter();
-
-  const fetchApprovals = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/approvals', { cache: 'no-store' });
-      if (res.ok) {
-        const data: ApprovalGroup[] = await res.json();
-        const pending = data.filter(g => g.pendingForSession.length > 0);
-        
-        setGroups(prevGroups => {
-          if (pending.length > prevGroups.length && prevGroups.length === 0) {
-            setPulse(true);
-          }
-          return pending;
-        });
-      }
-    } catch { }
-  }, []);
-
-  useEffect(() => {
-    fetchApprovals();
-    const interval = setInterval(fetchApprovals, 15000);
-    return () => clearInterval(interval);
-  }, [fetchApprovals]);
-
-  useEffect(() => {
-    if (pulse) {
-      const t = setTimeout(() => setPulse(false), 1000);
-      return () => clearTimeout(t);
-    }
-  }, [pulse]);
-
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const count = groups.length;
 
   if (!mounted) {
     return (
