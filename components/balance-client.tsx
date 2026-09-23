@@ -42,6 +42,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { PartnerExpensesModal } from "@/components/partner-expenses-modal";
 
 interface Receiver {
   id: string;
@@ -57,6 +58,8 @@ interface ExpenseRow {
   type: string;
   description: string;
   amount: number;
+  quantity?: number | null;
+  unitPrice?: number | null;
   date: string | Date;
   department?: { name: string } | null;
   paymentReceiver?: { id: string; name: string } | null;
@@ -711,6 +714,42 @@ export function BalanceClient({
     };
   }, [periodExpenses, receivers]);
 
+  // ─── Modal for Partner Expenses Breakdown ───
+  const [partnerExpensesModal, setPartnerExpensesModal] = useState<{
+    isOpen: boolean;
+    receiverId: string | "all" | "unassigned";
+    receiverName: string;
+  }>({
+    isOpen: false,
+    receiverId: "all",
+    receiverName: "",
+  });
+
+  const modalExpenses = useMemo(() => {
+    if (!partnerExpensesModal.isOpen) return [];
+    if (partnerExpensesModal.receiverId === "all") {
+      return periodExpenses;
+    }
+    if (partnerExpensesModal.receiverId === "unassigned") {
+      return periodExpenses.filter((e) => !e.paymentReceiverId && !e.paymentReceiver?.id);
+    }
+    return periodExpenses.filter((e) => {
+      const recId = e.paymentReceiverId || e.paymentReceiver?.id;
+      return recId === partnerExpensesModal.receiverId;
+    });
+  }, [periodExpenses, partnerExpensesModal]);
+
+  const modalTotalAmount = useMemo(() => {
+    if (partnerExpensesModal.receiverId === "all") {
+      return directExpensesTotal;
+    }
+    if (partnerExpensesModal.receiverId === "unassigned") {
+      return expensesByReceiver.unassigned;
+    }
+    const info = expensesByReceiver.byReceiver[partnerExpensesModal.receiverId];
+    return info ? info.amount : 0;
+  }, [partnerExpensesModal.receiverId, directExpensesTotal, expensesByReceiver]);
+
   // Partner profit split & settlement
   // Partner profit split & settlement (incorporating Airbnb priority allocation to Guillermo)
   const partnerSettlements = useMemo(() => {
@@ -1204,10 +1243,24 @@ export function BalanceClient({
                       </div>
                     )}
 
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Gastos desembolsados:</span>
-                      <span className="font-bold text-red-700 dark:text-red-400">
+                    <div
+                      onClick={() =>
+                        setPartnerExpensesModal({
+                          isOpen: true,
+                          receiverId: item.receiver.id,
+                          receiverName: item.receiver.name,
+                        })
+                      }
+                      className="flex justify-between items-center p-1.5 -mx-1.5 rounded-lg hover:bg-red-50/70 dark:hover:bg-red-950/40 cursor-pointer transition-colors group/exp"
+                      title={`Ver gastos desembolsados de ${item.receiver.name}`}
+                    >
+                      <span className="text-muted-foreground group-hover/exp:text-red-700 dark:group-hover/exp:text-red-400 font-medium flex items-center gap-1.5">
+                        <Receipt className="h-3.5 w-3.5 text-red-500/70 group-hover/exp:text-red-600 transition-colors shrink-0" />
+                        Gastos desembolsados:
+                      </span>
+                      <span className="font-bold text-red-700 dark:text-red-400 group-hover/exp:underline underline-offset-2 flex items-center gap-1">
                         {item.expensesPaid > 0 ? formatSignedCurrency(-item.expensesPaid) : "$ 0"}
+                        <ChevronRight className="h-3.5 w-3.5 text-red-500 opacity-60 group-hover/exp:opacity-100 transition-opacity shrink-0" />
                       </span>
                     </div>
 
@@ -1314,13 +1367,26 @@ export function BalanceClient({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="p-3.5 rounded-xl border bg-slate-50/60 dark:bg-slate-800/40">
-            <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider block">Total Gastos</span>
-            <span className="text-lg font-bold text-red-700 dark:text-red-400 block mt-0.5">
+          <div
+            onClick={() =>
+              setPartnerExpensesModal({
+                isOpen: true,
+                receiverId: "all",
+                receiverName: "Todos los Socios (Gastos del Período)",
+              })
+            }
+            className="p-3.5 rounded-xl border bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer transition-all hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-xs group/card"
+            title="Ver todos los gastos del período"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider block">Total Gastos</span>
+              <Receipt className="h-3.5 w-3.5 text-muted-foreground opacity-40 group-hover/card:opacity-100 group-hover/card:text-red-600 transition-all shrink-0" />
+            </div>
+            <span className="text-lg font-bold text-red-700 dark:text-red-400 block mt-0.5 group-hover/card:underline underline-offset-2">
               {formatSignedCurrency(-totalPeriodExpenses)}
             </span>
             <span className="text-[10px] text-muted-foreground block mt-1">
-              {periodExpenses.length} movimientos en total
+              {periodExpenses.length} movimientos en total • Clic para ver
             </span>
           </div>
 
@@ -1329,30 +1395,57 @@ export function BalanceClient({
             const amt = expInfo?.amount || 0;
             const count = expInfo?.count || 0;
             return (
-              <div key={recv.id} className="p-3.5 rounded-xl border bg-slate-50/60 dark:bg-slate-800/40">
-                <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider block truncate">
-                  Pagado por {recv.name}
-                </span>
-                <span className="text-lg font-bold text-red-700 dark:text-red-400 block mt-0.5">
+              <div
+                key={recv.id}
+                onClick={() =>
+                  setPartnerExpensesModal({
+                    isOpen: true,
+                    receiverId: recv.id,
+                    receiverName: recv.name,
+                  })
+                }
+                className="p-3.5 rounded-xl border bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer transition-all hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-xs group/card"
+                title={`Ver gastos pagados por ${recv.name}`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider block truncate">
+                    Pagado por {recv.name}
+                  </span>
+                  <Receipt className="h-3.5 w-3.5 text-muted-foreground opacity-40 group-hover/card:opacity-100 group-hover/card:text-red-600 transition-all shrink-0" />
+                </div>
+                <span className="text-lg font-bold text-red-700 dark:text-red-400 block mt-0.5 group-hover/card:underline underline-offset-2">
                   {amt > 0 ? formatSignedCurrency(-amt) : "$ 0"}
                 </span>
                 <span className="text-[10px] text-muted-foreground block mt-1">
-                  {count} {count === 1 ? "gasto registrado" : "gastos registrados"}
+                  {count} {count === 1 ? "gasto registrado" : "gastos registrados"} • Clic para ver
                 </span>
               </div>
             );
           })}
 
           {expensesByReceiver.unassigned > 0 && (
-            <div className="p-3.5 rounded-xl border bg-slate-50/60 dark:bg-slate-800/40">
-              <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider block truncate">
-                Sin Socio Asignado
-              </span>
-              <span className="text-lg font-bold text-red-700 dark:text-red-400 block mt-0.5">
+            <div
+              onClick={() =>
+                setPartnerExpensesModal({
+                  isOpen: true,
+                  receiverId: "unassigned",
+                  receiverName: "Sin Socio Asignado (Gastos Generales)",
+                })
+              }
+              className="p-3.5 rounded-xl border bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer transition-all hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-xs group/card"
+              title="Ver gastos sin socio asignado"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider block truncate">
+                  Sin Socio Asignado
+                </span>
+                <Receipt className="h-3.5 w-3.5 text-muted-foreground opacity-40 group-hover/card:opacity-100 group-hover/card:text-red-600 transition-all shrink-0" />
+              </div>
+              <span className="text-lg font-bold text-red-700 dark:text-red-400 block mt-0.5 group-hover/card:underline underline-offset-2">
                 {formatSignedCurrency(-expensesByReceiver.unassigned)}
               </span>
               <span className="text-[10px] text-muted-foreground block mt-1">
-                {expensesByReceiver.unassignedCount} gastos generales
+                {expensesByReceiver.unassignedCount} gastos generales • Clic para ver
               </span>
             </div>
           )}
@@ -1885,6 +1978,16 @@ export function BalanceClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Partner Expenses Breakdown Modal */}
+      <PartnerExpensesModal
+        isOpen={partnerExpensesModal.isOpen}
+        onClose={() => setPartnerExpensesModal((prev) => ({ ...prev, isOpen: false }))}
+        receiverName={partnerExpensesModal.receiverName}
+        periodLabel={periodLabel}
+        expenses={modalExpenses}
+        totalExpensesAmount={modalTotalAmount}
+      />
     </div>
   );
 }
