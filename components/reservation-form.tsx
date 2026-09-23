@@ -29,14 +29,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Department, Reservation } from "@prisma/client";
 import { format, addDays } from "date-fns";
-import { RotateCcw, Moon, Banknote, CreditCard, Check, Clock } from "lucide-react";
-import { formatNumber } from "@/lib/utils";
-
-// Removed Alert import
+import { es } from "date-fns/locale";
+import { Calendar as CalendarIcon, RotateCcw, Moon, Banknote, CreditCard, Check, Clock } from "lucide-react";
+import { formatNumber, cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { type DateRange } from "react-day-picker";
 
 const formSchema = z.object({
   departmentId: z.string().min(1, "Departamento requerido"),
@@ -115,6 +117,9 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     if (!showPaymentTracking) return null;
     return initialData?.paymentReceiverId || paymentReceivers.find(r => r.isDefault)?.id || null;
   });
+
+  // ─── Single Calendar Date Range Picker State ───
+  const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
 
   // Initialize Type
   const initialType = (initialData?.department as any)?.type ||
@@ -300,6 +305,100 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
       return 0;
     }
   }, [checkInDate, checkOutDate]);
+
+  const parseDateString = (str?: string) => {
+    if (!str) return undefined;
+    const [y, m, d] = str.split("-").map(Number);
+    if (!y || !m || !d) return undefined;
+    return new Date(y, m - 1, d, 12, 0, 0);
+  };
+
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    const from = parseDateString(form.getValues("checkIn"));
+    const to = parseDateString(form.getValues("checkOut"));
+    return from ? { from, to } : undefined;
+  });
+
+  useEffect(() => {
+    const from = parseDateString(checkInDate);
+    const to = parseDateString(checkOutDate);
+    if (from && to) {
+      setDateRange({ from, to });
+    } else if (from) {
+      setDateRange({ from, to: undefined });
+    } else {
+      setDateRange(undefined);
+    }
+  }, [checkInDate, checkOutDate]);
+
+  // We are awaiting checkout if checkIn is set, BUT checkOut is empty / not selected yet.
+  const isAwaitingCheckout = Boolean(checkInDate && !checkOutDate);
+
+  const handleDayClick = (day: Date) => {
+    if (!isAwaitingCheckout) {
+      // PRIMER CLICK (siempre):
+      // Establece el check-in y BORRA el check-out para esperar al segundo click
+      const formattedCheckIn = format(day, "yyyy-MM-dd");
+      setDateRange({ from: day, to: undefined });
+      form.setValue("checkIn", formattedCheckIn, { shouldValidate: true });
+      form.setValue("checkOut", "", { shouldValidate: true });
+    } else {
+      // SEGUNDO CLICK:
+      const currentFrom = dateRange?.from || parseDateString(form.getValues("checkIn"));
+      if (currentFrom && day > currentFrom) {
+        // Establece el checkout y cierra automáticamente el popover
+        const formattedCheckOut = format(day, "yyyy-MM-dd");
+        setDateRange({ from: currentFrom, to: day });
+        form.setValue("checkOut", formattedCheckOut, { shouldValidate: true });
+        setTimeout(() => setIsDatePopoverOpen(false), 180);
+      } else {
+        // El usuario hizo click en la misma fecha o una anterior -> cambia el check-in y el check-out sigue borrado
+        const formattedCheckIn = format(day, "yyyy-MM-dd");
+        setDateRange({ from: day, to: undefined });
+        form.setValue("checkIn", formattedCheckIn, { shouldValidate: true });
+        form.setValue("checkOut", "", { shouldValidate: true });
+      }
+    }
+  };
+
+  const handleClearDates = () => {
+    setDateRange(undefined);
+    form.setValue("checkIn", "", { shouldValidate: true });
+    form.setValue("checkOut", "", { shouldValidate: true });
+  };
+
+  // Ref to trigger for auto-centering calendar on mobile screen
+  const dateTriggerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isDatePopoverOpen) {
+      const timer = setTimeout(() => {
+        if (!dateTriggerRef.current) return;
+        const dialogContent = (dateTriggerRef.current.closest("[data-slot='dialog-content']") ||
+          dateTriggerRef.current.closest(".overflow-y-auto")) as HTMLElement | null;
+
+        if (dialogContent) {
+          const triggerRect = dateTriggerRef.current.getBoundingClientRect();
+          const dialogRect = dialogContent.getBoundingClientRect();
+          const relativeTop = triggerRect.top - dialogRect.top + dialogContent.scrollTop;
+
+          // Desired offset from top of dialog to place the trigger + calendar in vertical center
+          const idealTopOffset = Math.max(50, Math.round((dialogContent.clientHeight - 480) / 2));
+          const targetScroll = Math.max(0, Math.round(relativeTop - idealTopOffset));
+
+          dialogContent.scrollTo({
+            top: targetScroll,
+            behavior: "smooth",
+          });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isDatePopoverOpen]);
+
+  // Midnight today (local) used to mark past days in the calendar
+  const calendarToday = new Date();
+  calendarToday.setHours(0, 0, 0, 0);
 
   const recalculateAutoTotal = () => {
     setIsTotalManuallyModified(false);
@@ -586,56 +685,203 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
               />
             </div>
 
-            {/* Fechas de Ingreso y Egreso */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <FormField
-                control={form.control}
-                name="checkIn"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ingreso</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        {...field}
-                        className="cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                        onClick={(e) => {
-                          try { e.currentTarget.showPicker?.(); } catch {}
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+            {/* Fechas de Estadía (Rango de Ingreso y Egreso en un solo calendario) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-xs font-semibold text-foreground">Fechas de Estadía</FormLabel>
+                {calculatedNights > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80">
+                    <Moon className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
+                    {calculatedNights} {calculatedNights === 1 ? "noche" : "noches"}
+                  </span>
                 )}
-              />
-              <FormField
-                control={form.control}
-                name="checkOut"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Egreso</FormLabel>
-                      {calculatedNights > 0 && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80">
-                          <Moon className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
-                          {calculatedNights} {calculatedNights === 1 ? "noche" : "noches"}
+              </div>
+
+              <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
+                <PopoverTrigger asChild>
+                  <div
+                    ref={dateTriggerRef}
+                    className={cn(
+                      "grid grid-cols-2 gap-2 p-1 rounded-xl border border-input bg-background hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer transition-all shadow-xs",
+                      isDatePopoverOpen && "ring-2 ring-primary border-primary",
+                      (form.formState.errors.checkIn || form.formState.errors.checkOut) && "border-destructive ring-1 ring-destructive"
+                    )}
+                  >
+                    {/* Ingreso Card */}
+                    <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                      <CalendarIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                      <div className="min-w-0 text-left flex-1">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                          Ingreso
                         </span>
-                      )}
+                        <span className="text-sm font-bold text-foreground block truncate">
+                          {checkInDate ? format(parseDateString(checkInDate)!, "dd/MM/yyyy") : "Seleccionar"}
+                        </span>
+                      </div>
                     </div>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        {...field}
-                        className="cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+
+                    {/* Egreso Card */}
+                    <div
+                      className={cn(
+                        "flex items-center gap-2.5 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors",
+                        isAwaitingCheckout && "ring-2 ring-primary/80 bg-primary/5 dark:bg-primary/10"
+                      )}
+                    >
+                      <CalendarIcon className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                      <div className="min-w-0 text-left flex-1">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                          {isAwaitingCheckout ? "Elegir Salida" : "Egreso"}
+                        </span>
+                        <span
+                          className={cn(
+                            "text-sm font-bold block truncate",
+                            checkOutDate ? "text-foreground" : "text-muted-foreground italic font-normal"
+                          )}
+                        >
+                          {checkOutDate ? format(parseDateString(checkOutDate)!, "dd/MM/yyyy") : "Seleccionar"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverTrigger>
+
+                <PopoverContent
+                  className="p-0 z-50 shadow-2xl rounded-2xl border border-border/80 overflow-hidden"
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                  align="start"
+                  sideOffset={6}
+                >
+                  <div className="w-full">
+                  {/* Calendar Header */}
+                  <div className="p-3 border-b bg-muted/40 flex items-center justify-between gap-3 text-xs">
+                    <div>
+                      <span className="font-semibold block text-foreground">Seleccionar fechas de estadía</span>
+                      <span className="text-muted-foreground text-[11px]">
+                        {!checkInDate
+                          ? "1. Haz clic en el día de ingreso"
+                          : !checkOutDate
+                          ? "2. Haz clic en el día de egreso"
+                          : `${calculatedNights} ${calculatedNights === 1 ? "noche seleccionada" : "noches seleccionadas"}`}
+                      </span>
+                    </div>
+                    {checkInDate && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-muted-foreground hover:text-foreground"
                         onClick={(e) => {
-                          try { e.currentTarget.showPicker?.(); } catch {}
+                          e.stopPropagation();
+                          handleClearDates();
                         }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      >
+                        Limpiar
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="p-2.5 sm:p-3 w-full">
+                    <Calendar
+                      mode="range"
+                      defaultMonth={dateRange?.from || new Date()}
+                      selected={dateRange}
+                      onSelect={() => {}}
+                      onDayClick={handleDayClick}
+                      numberOfMonths={1}
+                      locale={es}
+                      initialFocus
+                      modifiers={{ past: (date) => date < calendarToday }}
+                      modifiersClassNames={{
+                        past: "line-through opacity-40 text-muted-foreground",
+                      }}
+                      className="w-full p-0"
+                    />
+                  </div>
+
+                  {/* Quick Shortcuts — shown after first click (awaiting checkout) */}
+                  {isAwaitingCheckout && dateRange?.from && (
+                    <div className="px-3 pb-2 flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] text-muted-foreground font-medium">Estadía rápida:</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[11px] px-2.5 py-0"
+                        onClick={() => {
+                          if (!dateRange?.from) return;
+                          const to = addDays(dateRange.from, 1);
+                          setDateRange({ from: dateRange.from, to });
+                          form.setValue("checkOut", format(to, "yyyy-MM-dd"), { shouldValidate: true });
+                          setTimeout(() => setIsDatePopoverOpen(false), 180);
+                        }}
+                      >
+                        1 noche
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[11px] px-2.5 py-0"
+                        onClick={() => {
+                          if (!dateRange?.from) return;
+                          const to = addDays(dateRange.from, 2);
+                          setDateRange({ from: dateRange.from, to });
+                          form.setValue("checkOut", format(to, "yyyy-MM-dd"), { shouldValidate: true });
+                          setTimeout(() => setIsDatePopoverOpen(false), 180);
+                        }}
+                      >
+                        2 noches
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[11px] px-2.5 py-0"
+                        onClick={() => {
+                          if (!dateRange?.from) return;
+                          const to = addDays(dateRange.from, 7);
+                          setDateRange({ from: dateRange.from, to });
+                          form.setValue("checkOut", format(to, "yyyy-MM-dd"), { shouldValidate: true });
+                          setTimeout(() => setIsDatePopoverOpen(false), 180);
+                        }}
+                      >
+                        7 noches
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Footer */}
+                  <div className="p-2.5 border-t bg-muted/20 flex items-center justify-between text-xs gap-2">
+                    <div className="text-muted-foreground text-[11px] truncate">
+                      {checkInDate && checkOutDate
+                        ? `${format(parseDateString(checkInDate)!, "d 'de' MMMM", { locale: es })} → ${format(parseDateString(checkOutDate)!, "d 'de' MMMM", { locale: es })}`
+                        : "Selecciona ambas fechas en el calendario"}
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 text-xs px-3"
+                      disabled={!checkInDate || !checkOutDate}
+                      onClick={() => setIsDatePopoverOpen(false)}
+                    >
+                      Listo
+                    </Button>
+                  </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Validation errors */}
+              {form.formState.errors.checkIn && (
+                <p className="text-xs font-medium text-destructive">
+                  {form.formState.errors.checkIn.message}
+                </p>
+              )}
+              {form.formState.errors.checkOut && (
+                <p className="text-xs font-medium text-destructive">
+                  {form.formState.errors.checkOut.message}
+                </p>
+              )}
             </div>
 
             {/* Huésped */}
