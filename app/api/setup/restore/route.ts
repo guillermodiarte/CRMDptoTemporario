@@ -110,6 +110,7 @@ export async function POST(req: Request) {
             isActive: item.isActive,
             showOnPublic: item.showOnPublic !== false,
             isArchived: item.isArchived,
+            order: item.order ?? 0,
             createdAt: parseDate(item.createdAt),
             updatedAt: parseDate(item.updatedAt),
             sessionId: item.sessionId,
