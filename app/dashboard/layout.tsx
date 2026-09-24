@@ -146,197 +146,197 @@ export default async function DashboardLayout({
     <AdminThemeProvider>
       <ApprovalsProvider>
         <div className="grid min-h-screen w-full md:grid-cols-[240px_1fr] lg:grid-cols-[280px_1fr]">
-        <div className="hidden border-r bg-muted/40 md:block">
-          <div className="flex h-full max-h-screen flex-col gap-2">
-            <div
-              className="flex items-center justify-center border-b px-4 lg:px-6 transition-all duration-200"
-              style={{ minHeight: `${Math.max(60, adminLogoSize + 16)}px`, padding: "8px 16px" }}
-            >
-              <Link href="/" className="flex items-center justify-center w-full">
-                {/* Light mode logo */}
-                <img
-                  src={adminLogo}
-                  alt={config.siteName || "Alojamientos Di'Arte"}
-                  style={{ height: `${adminLogoSize}px`, maxHeight: `${adminLogoSize}px` }}
-                  className="w-auto max-w-[220px] object-contain transition-all duration-200 dark:hidden"
-                />
-                {/* Dark mode logo */}
-                <img
-                  src={adminLogoDark}
-                  alt={config.siteName || "Alojamientos Di'Arte"}
-                  style={{ height: `${adminLogoSize}px`, maxHeight: `${adminLogoSize}px` }}
-                  className="w-auto max-w-[220px] object-contain transition-all duration-200 hidden dark:block"
-                />
-              </Link>
-            </div>
-            <div className="flex-1 flex flex-col justify-between overflow-y-auto">
-              <nav className="grid items-start px-2 text-base font-medium lg:px-4">
-                <Link
-                  href="/dashboard"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                >
-                  <Home className="h-5 w-5 text-sky-500" />
-                  Panel General
+          <div className="hidden border-r bg-muted/40 md:block">
+            <div className="flex h-full max-h-screen flex-col gap-2">
+              <div
+                className="flex items-center justify-center border-b px-4 lg:px-6 transition-all duration-200"
+                style={{ minHeight: `${Math.max(60, adminLogoSize + 16)}px`, padding: "8px 16px" }}
+              >
+                <Link href="/" className="flex items-center justify-center w-full">
+                  {/* Light mode logo */}
+                  <img
+                    src={adminLogo}
+                    alt={config.siteName || "Alojamientos Di'Arte"}
+                    style={{ height: `${adminLogoSize}px`, maxHeight: `${adminLogoSize}px` }}
+                    className="w-auto max-w-[220px] object-contain transition-all duration-200 dark:hidden"
+                  />
+                  {/* Dark mode logo */}
+                  <img
+                    src={adminLogoDark}
+                    alt={config.siteName || "Alojamientos Di'Arte"}
+                    style={{ height: `${adminLogoSize}px`, maxHeight: `${adminLogoSize}px` }}
+                    className="w-auto max-w-[220px] object-contain transition-all duration-200 hidden dark:block"
+                  />
                 </Link>
-                <Link
-                  href="/dashboard/calendar"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                >
-                  <CalendarDays className="h-5 w-5 text-purple-500" />
-                  Calendario
-                </Link>
-                <ApprovalsNavLink />
-                <Link
-                  href="/dashboard/reservations"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                >
-                  <CreditCard className="h-5 w-5 text-emerald-500" />
-                  Reservas
-                </Link>
-                <Link
-                  href="/dashboard/departments"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                >
-                  <Building className="h-5 w-5 text-blue-500" />
-                  Departamentos
-                </Link>
-                {showParking && (
+              </div>
+              <div className="flex-1 flex flex-col justify-between overflow-y-auto">
+                <nav className="grid items-start px-2 text-base font-medium lg:px-4">
                   <Link
-                    href="/dashboard/parking"
+                    href="/dashboard"
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                   >
-                    <Car className="h-5 w-5 text-indigo-500" />
-                    Cocheras
+                    <Home className="h-5 w-5 text-sky-500" />
+                    Panel General
                   </Link>
-                )}
-                <Link
-                  href="/dashboard/finance"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                >
-                  <LineChart className="h-5 w-5 text-green-500" />
-                  Finanzas
-                </Link>
-                {role === "ADMIN" && (
                   <Link
-                    href="/dashboard/users"
+                    href="/dashboard/calendar"
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                   >
-                    <Users className="h-5 w-5 text-pink-500" />
-                    Usuarios
+                    <CalendarDays className="h-5 w-5 text-purple-500" />
+                    Calendario
                   </Link>
-                )}
-                {role === "ADMIN" && (
+                  <ApprovalsNavLink />
                   <Link
-                    href="/dashboard/settings"
+                    href="/dashboard/reservations"
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                   >
-                    <Settings className="h-5 w-5 text-gray-500" />
-                    Configuración
+                    <CreditCard className="h-5 w-5 text-emerald-500" />
+                    Reservas
                   </Link>
-                )}
-                {role === "ADMIN" && (
                   <Link
-                    href="/dashboard/blacklist"
+                    href="/dashboard/departments"
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                   >
-                    <ShieldAlert className="h-5 w-5 text-red-500" />
-                    Lista Negra
+                    <Building className="h-5 w-5 text-blue-500" />
+                    Departamentos
                   </Link>
-                )}
-                {user?.isSuperAdmin && (
+                  {showParking && (
+                    <Link
+                      href="/dashboard/parking"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                    >
+                      <Car className="h-5 w-5 text-indigo-500" />
+                      Cocheras
+                    </Link>
+                  )}
                   <Link
-                    href="/dashboard/admin/sessions"
+                    href="/dashboard/finance"
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                   >
-                    <UserCog className="h-5 w-5 text-cyan-500" />
-                    Gestión de Sesiones
+                    <LineChart className="h-5 w-5 text-green-500" />
+                    Finanzas
                   </Link>
-                )}
-                {showBalance && (
+                  {role === "ADMIN" && (
+                    <Link
+                      href="/dashboard/users"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                    >
+                      <Users className="h-5 w-5 text-pink-500" />
+                      Usuarios
+                    </Link>
+                  )}
+                  {role === "ADMIN" && (
+                    <Link
+                      href="/dashboard/settings"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                    >
+                      <Settings className="h-5 w-5 text-gray-500" />
+                      Configuración
+                    </Link>
+                  )}
+                  {role === "ADMIN" && (
+                    <Link
+                      href="/dashboard/blacklist"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                    >
+                      <ShieldAlert className="h-5 w-5 text-red-500" />
+                      Lista Negra
+                    </Link>
+                  )}
+                  {user?.isSuperAdmin && (
+                    <Link
+                      href="/dashboard/admin/sessions"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                    >
+                      <UserCog className="h-5 w-5 text-cyan-500" />
+                      Gestión de Sesiones
+                    </Link>
+                  )}
+                  {showBalance && (
+                    <Link
+                      href="/dashboard/balance"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                    >
+                      <BarChart3 className="h-5 w-5 text-violet-500" />
+                      Balance
+                    </Link>
+                  )}
                   <Link
-                    href="/dashboard/balance"
+                    href="/dashboard/departments/gallery"
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                   >
-                    <BarChart3 className="h-5 w-5 text-violet-500" />
-                    Balance
+                    <Images className="h-5 w-5 text-violet-500" />
+                    Galería
                   </Link>
-                )}
-                <Link
-                  href="/dashboard/departments/gallery"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                >
-                  <Images className="h-5 w-5 text-violet-500" />
-                  Galería
-                </Link>
-                <div className="my-2 border-t" />
-                <Link
-                  href="/?preview=true"
-                  target="_blank"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                >
-                  <Building className="h-5 w-5 text-teal-500" />
-                  Ver Sitio Público
-                </Link>
-              </nav>
+                  <div className="my-2 border-t" />
+                  <Link
+                    href="/?preview=true"
+                    target="_blank"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                  >
+                    <Building className="h-5 w-5 text-teal-500" />
+                    Ver Sitio Público
+                  </Link>
+                </nav>
 
-              {/* Version Indicator */}
-              <div className="p-3 border-t text-center text-xs text-muted-foreground font-semibold">
-                Versión 2.0
+                {/* Version Indicator */}
+                <div className="p-3 border-t text-center text-xs text-muted-foreground font-semibold">
+                  Versión 2.5
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="flex flex-col min-w-0 w-full">
-          <header className="sticky top-0 z-50 flex h-14 items-center gap-2 sm:gap-4 border-b bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/85 px-2.5 sm:px-4 lg:h-[60px] lg:px-6 min-w-0 w-full shadow-xs">
-            <MobileNav
-              role={role}
-              user={userForMenu}
-              showParking={showParking}
-              isSuperAdmin={user?.isSuperAdmin}
-              showBalance={showBalance}
-              adminLogo={adminLogo}
-              adminLogoDark={adminLogoDark}
-              adminLogoSize={adminLogoSize}
-            />
-            <div className="w-full flex-1 min-w-0">
-              <form action="/dashboard/search">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    name="q"
-                    placeholder="Buscar reserva global..."
-                    className="w-full appearance-none bg-background pl-8 shadow-none text-xs sm:text-sm md:w-2/3 lg:w-1/3"
-                  />
-                </div>
-              </form>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-              <div className="hidden sm:flex items-center gap-4 border-r pr-4">
-                {user?.name && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground">Usuario:</span>
-                    <span className="text-sm font-bold tracking-tight">{user.name}</span>
+          <div className="flex flex-col min-w-0 w-full">
+            <header className="sticky top-0 z-50 flex h-14 items-center gap-2 sm:gap-4 border-b bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/85 px-2.5 sm:px-4 lg:h-[60px] lg:px-6 min-w-0 w-full shadow-xs">
+              <MobileNav
+                role={role}
+                user={userForMenu}
+                showParking={showParking}
+                isSuperAdmin={user?.isSuperAdmin}
+                showBalance={showBalance}
+                adminLogo={adminLogo}
+                adminLogoDark={adminLogoDark}
+                adminLogoSize={adminLogoSize}
+              />
+              <div className="w-full flex-1 min-w-0">
+                <form action="/dashboard/search">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      name="q"
+                      placeholder="Buscar reserva global..."
+                      className="w-full appearance-none bg-background pl-8 shadow-none text-xs sm:text-sm md:w-2/3 lg:w-1/3"
+                    />
                   </div>
-                )}
-                {currentSessionName && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground">Sesión:</span>
-                    <span className="text-sm font-bold tracking-tight">{currentSessionName}</span>
-                  </div>
-                )}
+                </form>
               </div>
-              <AdminThemeToggle />
-              <NotificationBell />
-              <UserMenu user={userForMenu} />
-            </div>
-          </header>
-          <main className="flex flex-1 flex-col gap-4 p-3 sm:p-4 lg:gap-6 lg:p-6 min-w-0 w-full max-w-full">
-            {children}
-          </main>
+              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                <div className="hidden sm:flex items-center gap-4 border-r pr-4">
+                  {user?.name && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground">Usuario:</span>
+                      <span className="text-sm font-bold tracking-tight">{user.name}</span>
+                    </div>
+                  )}
+                  {currentSessionName && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground">Sesión:</span>
+                      <span className="text-sm font-bold tracking-tight">{currentSessionName}</span>
+                    </div>
+                  )}
+                </div>
+                <AdminThemeToggle />
+                <NotificationBell />
+                <UserMenu user={userForMenu} />
+              </div>
+            </header>
+            <main className="flex flex-1 flex-col gap-4 p-3 sm:p-4 lg:gap-6 lg:p-6 min-w-0 w-full max-w-full">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
-    </ApprovalsProvider>
-  </AdminThemeProvider>
-)
+      </ApprovalsProvider>
+    </AdminThemeProvider>
+  )
 }

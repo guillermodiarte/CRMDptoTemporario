@@ -27,6 +27,8 @@ import {
   Sparkles,
   CheckCircle2,
   RotateCcw,
+  Landmark,
+  HandCoins,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -177,34 +179,76 @@ function MiniPieChart({ segments }: { segments: { value: number; color: string; 
   );
 }
 
+// Airbnb Bélo icon (official shape from simple-icons)
+function AirbnbIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-label="Airbnb"
+    >
+      <path d="M12.001 18.275c-1.353-1.697-2.148-3.184-2.413-4.457-.263-1.027-.16-1.848.291-2.465.477-.71 1.188-1.056 2.121-1.056s1.643.345 2.12 1.063c.446.61.558 1.432.286 2.465-.291 1.298-1.085 2.785-2.412 4.458zm9.601 1.14c-.185 1.246-1.034 2.28-2.2 2.783-2.253.98-4.483-.583-6.392-2.704 3.157-3.951 3.74-7.028 2.385-9.018-.795-1.14-1.933-1.695-3.394-1.695-2.944 0-4.563 2.49-3.927 5.382.37 1.565 1.352 3.343 2.917 5.332-.98 1.085-1.91 1.856-2.732 2.333-.636.344-1.245.558-1.828.609-2.679.399-4.778-2.2-3.825-4.88.132-.345.395-.98.845-1.961l.025-.053c1.464-3.178 3.242-6.79 5.285-10.795l.053-.132.58-1.116c.45-.822.635-1.19 1.351-1.643.346-.21.77-.315 1.246-.315.954 0 1.698.558 2.016 1.007.158.239.345.557.582.953l.558 1.089.08.159c2.041 4.004 3.821 7.608 5.279 10.794l.026.025.533 1.22.318.764c.243.613.294 1.222.213 1.858zm1.22-2.39c-.186-.583-.505-1.271-.9-2.094v-.03c-1.889-4.006-3.642-7.608-5.307-10.844l-.111-.163C15.317 1.461 14.468 0 12.001 0c-2.44 0-3.476 1.695-4.535 3.898l-.081.16c-1.669 3.236-3.421 6.843-5.303 10.847v.053l-.559 1.22c-.21.504-.317.768-.345.847C-.172 20.74 2.611 24 5.98 24c.027 0 .132 0 .265-.027h.372c1.75-.213 3.554-1.325 5.384-3.317 1.829 1.989 3.635 3.104 5.382 3.317h.372c.133.027.239.027.265.027 3.37.003 6.152-3.261 4.802-6.975z" />
+    </svg>
+  );
+}
+
 function StatCard({
   icon: Icon,
   label,
   amount,
   color,
+  iconStyle,
   sub,
 }: {
   icon: React.ElementType;
   label: string;
   amount: number;
   color: string;
+  iconStyle?: { bg: string; fg: string };
   sub?: string;
 }) {
+  const bgClass = iconStyle
+    ? iconStyle.bg
+    : color.includes("emerald")
+    ? "bg-emerald-50 dark:bg-emerald-950/40"
+    : color.includes("rose")
+    ? "bg-rose-50 dark:bg-rose-950/40"
+    : color.includes("blue")
+    ? "bg-blue-50 dark:bg-blue-950/40"
+    : color.includes("amber")
+    ? "bg-amber-50 dark:bg-amber-950/40"
+    : color.includes("indigo")
+    ? "bg-indigo-50 dark:bg-indigo-950/40"
+    : "bg-slate-100 dark:bg-slate-800";
+
+  const fgClass = iconStyle
+    ? iconStyle.fg
+    : color.includes("emerald")
+    ? "text-emerald-600 dark:text-emerald-400"
+    : color.includes("rose")
+    ? "text-rose-600 dark:text-rose-400"
+    : color.includes("blue")
+    ? "text-blue-600 dark:text-blue-400"
+    : color.includes("amber")
+    ? "text-amber-600 dark:text-amber-400"
+    : color.includes("indigo")
+    ? "text-indigo-600 dark:text-indigo-400"
+    : "text-slate-600 dark:text-slate-300";
+
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border p-4 md:p-5 bg-white dark:bg-slate-900 shadow-xs hover:shadow-md transition-shadow`}
+      className="relative overflow-hidden rounded-2xl border p-3.5 sm:p-4 md:p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-sm transition-all"
     >
-      <div
-        className={`absolute top-0 right-0 w-20 h-20 rounded-full opacity-10 -translate-y-5 translate-x-5 ${color}`}
-      />
-      <div className="flex items-start gap-3">
-        <div className={`p-2 md:p-2.5 rounded-xl ${color} bg-opacity-15 shrink-0`}>
-          <Icon className={`h-4 w-4 md:h-5 md:w-5 ${color.replace("bg-", "text-")}`} />
+      <div className="flex items-start gap-2.5 sm:gap-3">
+        <div className={`p-2 sm:p-2.5 rounded-xl ${bgClass} shrink-0`}>
+          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${fgClass}`} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] md:text-xs text-muted-foreground font-medium uppercase tracking-wide truncate">{label}</p>
-          <p className="text-lg md:text-xl xl:text-2xl font-bold tracking-tight mt-0.5 break-all leading-tight">{formatCurrency(amount)}</p>
-          {sub && <p className="text-[10px] md:text-xs text-muted-foreground mt-1 truncate">{sub}</p>}
+          <p className="text-[10px] sm:text-xs text-muted-foreground font-semibold uppercase tracking-wide truncate">{label}</p>
+          <p className="text-base sm:text-lg md:text-xl font-bold tracking-tight mt-0.5 break-words leading-tight">{formatCurrency(amount)}</p>
+          {sub && <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate">{sub}</p>}
         </div>
       </div>
     </div>
@@ -947,32 +991,143 @@ export function BalanceClient({
       </div>
 
       {/* Primary Financial Summary: Ingresos, Gastos, Ganancia Neta */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4">
-        <StatCard
-          icon={TrendingUp}
-          label="Ingresos Totales"
-          amount={grandTotal}
-          color="bg-emerald-500"
-          sub={`${periodReservations.filter((r) => r.paymentStatus === "PAID" || (r.depositAmount || 0) > 0).length} reservas cobradas`}
-        />
-        <StatCard
-          icon={Receipt}
-          label="Gastos del Período"
-          amount={totalPeriodExpenses}
-          color="bg-rose-500"
-          sub={
-            cleaningExpenseEnabled
-              ? `${periodExpenses.length} gastos + limpieza computada`
-              : `${periodExpenses.length} gastos · limpieza sin computar`
-          }
-        />
-        <StatCard
-          icon={Scale}
-          label="Ganancia Neta"
-          amount={netPeriodProfit}
-          color={netPeriodProfit >= 0 ? "bg-indigo-500" : "bg-red-500"}
-          sub={`${formatCurrency(grandTotal)} - ${formatCurrency(totalPeriodExpenses)}`}
-        />
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 lg:gap-4">
+        {/* GANANCIA NETA - Hero Card (Full width on mobile, 3rd column on desktop) */}
+        <div
+          className={cn(
+            "col-span-2 sm:col-span-1 order-1 sm:order-3 relative overflow-hidden rounded-2xl border p-4 sm:p-5 shadow-xs transition-all",
+            netPeriodProfit >= 0
+              ? "bg-gradient-to-br from-indigo-50/90 via-white to-indigo-50/40 dark:from-indigo-950/40 dark:via-slate-900 dark:to-slate-900 border-indigo-200/80 dark:border-indigo-800/60"
+              : "bg-gradient-to-br from-red-50/90 via-white to-red-50/40 dark:from-red-950/40 dark:via-slate-900 dark:to-slate-900 border-red-200/80 dark:border-red-800/60"
+          )}
+        >
+          {/* Subtle decorative blob */}
+          <div
+            className={cn(
+              "absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-15 pointer-events-none blur-xl",
+              netPeriodProfit >= 0 ? "bg-indigo-500" : "bg-red-500"
+            )}
+          />
+
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div
+                className={cn(
+                  "p-2 sm:p-2.5 rounded-xl shrink-0 shadow-xs",
+                  netPeriodProfit >= 0
+                    ? "bg-indigo-600 text-white"
+                    : "bg-red-600 text-white"
+                )}
+              >
+                <Scale className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
+              <div>
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 block">
+                  Ganancia Neta
+                </span>
+                <span className="text-[10px] sm:text-[11px] text-muted-foreground block -mt-0.5">
+                  Resultado operativo
+                </span>
+              </div>
+            </div>
+
+            {grandTotal > 0 && (
+              <span
+                className={cn(
+                  "text-[11px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-2xs",
+                  netPeriodProfit >= 0
+                    ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                    : "bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
+                )}
+              >
+                {netPeriodProfit >= 0
+                  ? `+${Math.round((netPeriodProfit / grandTotal) * 100)}% margen`
+                  : `${Math.round((netPeriodProfit / grandTotal) * 100)}% déficit`}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-3 sm:mt-4">
+            <div className="text-2xl sm:text-2xl lg:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
+              {formatCurrency(netPeriodProfit)}
+            </div>
+
+            {/* Quick breakdown subtitle */}
+            <div className="text-[11px] sm:text-xs text-muted-foreground mt-2 flex items-center gap-1.5 flex-wrap">
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">+{formatCurrency(grandTotal, 'ARS', 0)}</span>
+              <span>-</span>
+              <span className="text-rose-600 dark:text-rose-400 font-semibold">{formatCurrency(totalPeriodExpenses, 'ARS', 0)}</span>
+            </div>
+
+            {/* Visual ratio bar */}
+            {grandTotal > 0 && (
+              <div className="w-full bg-slate-200/80 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2.5 flex">
+                <div
+                  className="bg-emerald-500 h-full transition-all duration-500 rounded-l-full"
+                  style={{ width: `${Math.min(100, Math.max(0, ((grandTotal - totalPeriodExpenses) / grandTotal) * 100))}%` }}
+                  title="Ganancia"
+                />
+                <div
+                  className="bg-rose-500 h-full transition-all duration-500 rounded-r-full"
+                  style={{ width: `${Math.min(100, Math.max(0, (totalPeriodExpenses / grandTotal) * 100))}%` }}
+                  title="Gastos"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* INGRESOS TOTALES */}
+        <div className="col-span-1 order-2 sm:order-1 relative overflow-hidden rounded-2xl border p-3.5 sm:p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-300 dark:hover:border-emerald-800/60 transition-all flex flex-col justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block truncate">
+                Ingresos
+              </span>
+              <span className="text-[10px] sm:text-[11px] text-muted-foreground block truncate">
+                {periodReservations.filter((r) => r.paymentStatus === "PAID" || (r.depositAmount || 0) > 0).length} cobradas
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-2.5 sm:mt-3">
+            <div className="text-base sm:text-lg lg:text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 break-words leading-tight">
+              {formatCurrency(grandTotal)}
+            </div>
+            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate">
+              Total facturado
+            </div>
+          </div>
+        </div>
+
+        {/* GASTOS DEL PERÍODO */}
+        <div className="col-span-1 order-3 sm:order-2 relative overflow-hidden rounded-2xl border p-3.5 sm:p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:border-rose-300 dark:hover:border-rose-800/60 transition-all flex flex-col justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 shrink-0">
+              <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block truncate">
+                Gastos
+              </span>
+              <span className="text-[10px] sm:text-[11px] text-muted-foreground block truncate">
+                {periodExpenses.length} registrados
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-2.5 sm:mt-3">
+            <div className="text-base sm:text-lg lg:text-2xl font-black tracking-tight text-rose-600 dark:text-rose-400 break-words leading-tight">
+              {formatCurrency(totalPeriodExpenses)}
+            </div>
+            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate">
+              {cleaningExpenseEnabled ? "Con limpieza" : "Sin computar limp."}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Payment Channels Breakdown */}
@@ -982,6 +1137,7 @@ export function BalanceClient({
           label="Efectivo en Mano"
           amount={computedStats.totalCash}
           color="bg-emerald-500"
+          iconStyle={{ bg: "bg-emerald-50 dark:bg-emerald-950/40", fg: "text-emerald-600 dark:text-emerald-400" }}
           sub={
             computedStats.isManualAdjustmentActive
               ? "Restante por ajuste manual"
@@ -991,10 +1147,11 @@ export function BalanceClient({
           }
         />
         <StatCard
-          icon={CreditCard}
+          icon={Landmark}
           label="Transferencias"
           amount={computedStats.totalTransfer}
           color="bg-blue-500"
+          iconStyle={{ bg: "bg-blue-50 dark:bg-blue-950/40", fg: "text-blue-600 dark:text-blue-400" }}
           sub={
             computedStats.isManualAdjustmentActive
               ? "Base manual + posteriores"
@@ -1004,17 +1161,19 @@ export function BalanceClient({
           }
         />
         <StatCard
-          icon={Globe}
+          icon={AirbnbIcon}
           label="Airbnb"
           amount={computedStats.totalAirbnb}
           color="bg-rose-500"
+          iconStyle={{ bg: "bg-rose-50 dark:bg-rose-950/40", fg: "text-[#FF5A5F]" }}
           sub={computedStats.airbnbCount > 0 ? `${computedStats.airbnbCount} res. · USD ${computedStats.totalAirbnbUSD.toFixed(1)}` : "0 reservas"}
         />
         <StatCard
-          icon={Gift}
+          icon={HandCoins}
           label="Señas Recibidas"
           amount={computedStats.totalDeposits}
           color="bg-amber-500"
+          iconStyle={{ bg: "bg-amber-50 dark:bg-amber-950/40", fg: "text-amber-600 dark:text-amber-400" }}
           sub={`${computedStats.depositCount} reservas con seña`}
         />
       </div>
@@ -1491,7 +1650,7 @@ export function BalanceClient({
             </option>
           ))}
         </select>
-        <span className="text-xs text-muted-foreground ml-auto">
+        <span className="text-xs text-muted-foreground w-full sm:w-auto text-right sm:ml-auto">
           {filtered.length} {filtered.length === 1 ? "reserva" : "reservas"} en{" "}
           {filterMonth === "all"
             ? `el año ${filterYear}`
@@ -1499,8 +1658,8 @@ export function BalanceClient({
         </span>
       </div>
 
-      {/* Reservations table */}
-      <div className="rounded-2xl border bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+      {/* Reservations table (Desktop) */}
+      <div className="hidden md:block rounded-2xl border bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -1663,6 +1822,208 @@ export function BalanceClient({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Reservations Mobile Cards View */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="text-center py-10 px-4 rounded-2xl border bg-white dark:bg-slate-900 shadow-xs text-muted-foreground text-sm">
+            Sin reservas para los filtros seleccionados ({periodLabel}).
+          </div>
+        ) : (
+          filtered.map((res) => {
+            const isCancelled = res.status === "CANCELLED" || res.paymentStatus === "CANCELLED";
+            const isAirbnb = res.source === "AIRBNB";
+            const isUSD = res.currency === "USD";
+            const rate = res.exchangeRate && res.exchangeRate > 1 ? res.exchangeRate : dollarRate;
+            const totalARS = isUSD ? res.totalAmount * rate : res.totalAmount;
+            const depositARS = isUSD ? (res.depositAmount || 0) * rate : res.depositAmount || 0;
+            const remaining = Math.max(0, totalARS - depositARS);
+            const isPaid = res.paymentStatus === "PAID";
+            const isPartial = res.paymentStatus === "PARTIAL";
+
+            return (
+              <div
+                key={res.id}
+                className={cn(
+                  "p-4 rounded-xl border bg-white dark:bg-slate-900 shadow-xs space-y-3 relative overflow-hidden transition-all",
+                  isCancelled
+                    ? "bg-red-50/50 dark:bg-rose-950/20 border-red-200 dark:border-red-900/40"
+                    : "border-slate-200 dark:border-slate-800"
+                )}
+              >
+                {/* Header: Platform + Guest + Dept + Status */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <div className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 p-1 mt-0.5">
+                      {res.source === "AIRBNB" && (
+                        <img src="/icons/airbnb.png" alt="Airbnb" className="h-5 w-5 object-contain" />
+                      )}
+                      {res.source === "BOOKING" && (
+                        <img src="/icons/booking.png" alt="Booking" className="h-5 w-5 object-contain" />
+                      )}
+                      {res.source === "DIRECT" && (
+                        <img src="/icons/direct.png" alt="Directo" className="h-5 w-5 object-contain" />
+                      )}
+                      {!["AIRBNB", "BOOKING", "DIRECT"].includes(res.source || "") && (
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div
+                        className={cn(
+                          "font-bold text-base text-slate-900 dark:text-slate-100 leading-snug break-words",
+                          isCancelled && "line-through text-muted-foreground"
+                        )}
+                      >
+                        {res.guestName}
+                      </div>
+                      <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mt-0.5">
+                        {res.department.name}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status badge */}
+                  <div className="shrink-0">
+                    {isCancelled ? (
+                      <span className="px-2 py-0.5 text-xs font-bold rounded-md bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400">
+                        Cancelada
+                      </span>
+                    ) : isAirbnb ? (
+                      <span className="px-2 py-0.5 text-xs font-bold rounded-md bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                        Airbnb
+                      </span>
+                    ) : isPaid ? (
+                      <span className="px-2 py-0.5 text-xs font-bold rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                        Pagado
+                      </span>
+                    ) : isPartial ? (
+                      <span className="px-2 py-0.5 text-xs font-bold rounded-md bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
+                        Parcial
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-xs font-bold rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
+                        Pendiente
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Dates */}
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1 border-t border-slate-100 dark:border-slate-800">
+                  <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                    {format(new Date(res.checkIn), "dd/MM/yy")} → {format(new Date(res.checkOut), "dd/MM/yy")}
+                  </span>
+                </div>
+
+                {/* Financial Details Box */}
+                <div className="bg-slate-50/80 dark:bg-slate-800/40 rounded-xl p-3 space-y-2.5 text-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[11px] text-muted-foreground font-medium block">Total Reserva</span>
+                      <span className="font-bold text-base text-slate-900 dark:text-white block">
+                        {formatCurrency(totalARS)}
+                      </span>
+                      {isUSD && (
+                        <span className="text-[10px] text-muted-foreground block">
+                          USD {res.totalAmount.toFixed(2)}
+                        </span>
+                      )}
+                      {isCancelled && depositARS > 0 && (
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold block mt-0.5">
+                          Seña retenida: {formatCurrency(depositARS)}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[11px] text-muted-foreground font-medium block">Seña</span>
+                      {depositARS > 0 ? (
+                        <div>
+                          <span className="font-semibold text-sm text-amber-600 dark:text-amber-400 block">
+                            {formatCurrency(depositARS)}
+                          </span>
+                          {res.depositMethod && (
+                            <span className="text-[11px] text-muted-foreground block">
+                              {res.depositMethod === "CASH"
+                                ? "💵 Efectivo"
+                                : `💳 ${res.depositReceiver?.name || "Transf."}`}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm block">-</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Pago Final */}
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/50 flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-muted-foreground font-medium">Pago Final:</span>
+                    <div className="text-right">
+                      {isAirbnb ? (
+                        <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 rounded-full">
+                          AIRBNB PAY
+                        </span>
+                      ) : isCancelled ? (
+                        <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full">
+                          SEÑA RETENIDA
+                        </span>
+                      ) : isPaid ? (
+                        <div className="flex items-center gap-1.5 justify-end">
+                          {remaining > 0 && (
+                            <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(remaining)}
+                            </span>
+                          )}
+                          {res.paymentMethod ? (
+                            <span className="text-[11px] text-muted-foreground">
+                              {res.paymentMethod === "CASH"
+                                ? "💵 Efectivo"
+                                : `💳 ${res.paymentReceiver?.name || "Transf."}`}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full">
+                              PAGADO
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 justify-end">
+                          {remaining > 0 && (
+                            <span className="font-bold text-sm text-blue-600 dark:text-blue-400">
+                              {formatCurrency(remaining)}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full">
+                            PARCIAL
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Edit Action for Mobile */}
+                {!isVisualizer && (
+                  <div className="flex justify-end pt-0.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditModal(res)}
+                      className="h-8 px-3 text-xs gap-1.5 text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border-slate-200 dark:border-slate-700 cursor-pointer"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Editar pago
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* ─── Edit Payment Modal ─── */}

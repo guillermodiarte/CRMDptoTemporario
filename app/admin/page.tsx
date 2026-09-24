@@ -54,7 +54,7 @@ export default async function LoginPage() {
             <LoginForm />
 
             <div className="mt-8 text-center text-xs text-slate-400 dark:text-slate-500 font-medium">
-              &copy; {new Date().getFullYear()} {config.footerCopyright} &middot; Versión 2.0
+              &copy; {new Date().getFullYear()} {config.footerCopyright} &middot; Versión 2.5
             </div>
           </div>
         </div>

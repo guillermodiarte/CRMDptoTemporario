@@ -101,6 +101,8 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
   const [amenitiesCost, setAmenitiesCost] = useState(initialData?.amenitiesFee || 0);
   const [globalCleaningFee, setGlobalCleaningFee] = useState<number | null>(null);
   const [isTotalManuallyModified, setIsTotalManuallyModified] = useState(!!(initialData?.totalAmount && initialData.totalAmount > 0));
+  // Track if user manually changed payment status (so Airbnb→other doesn't reset a deliberate choice)
+  const [isPaymentStatusUserModified, setIsPaymentStatusUserModified] = useState(false);
   // Deposit & Payment tracking (payment balance system)
   const [depositMethod, setDepositMethod] = useState<'CASH' | 'TRANSFER' | null>(
     initialData?.depositMethod || (initialData ? null : 'TRANSFER')
@@ -250,18 +252,28 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
 
   // Airbnb Logic
   const source = form.watch("source");
+  const prevSourceRef = useRef<string | undefined>(undefined);
   useEffect(() => {
+    const prevSource = prevSourceRef.current;
+    prevSourceRef.current = source;
+
     if (source === "AIRBNB") {
       form.setValue("currency", "USD");
+      // Set PAID and clear the "user modified" flag (Airbnb forces PAID)
       form.setValue("paymentStatus", "PAID");
+      setIsPaymentStatusUserModified(false);
 
       // Only reset totalAmount if we are NOT editing an existing Airbnb reservation
       const isExistingAirbnb = initialData?.source === "AIRBNB";
       if (!isExistingAirbnb) {
         form.setValue("totalAmount", 0);
       }
+    } else if (prevSource === "AIRBNB" && !isPaymentStatusUserModified) {
+      // Switched away from Airbnb and user never manually chose a status → restore UNPAID
+      form.setValue("paymentStatus", "UNPAID");
     }
-  }, [source, form, initialData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source]);
 
   // Default Deposit for Partial Payment & Reset for Unpaid
   const paymentStatus = form.watch("paymentStatus");
@@ -637,6 +649,8 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
           {/* LEFT COLUMN: Datos de la Reserva y Huésped */}
           <div className="space-y-2.5">
             {/* Departamento / Cochera y Plataforma */}
+            {/* On mobile: depto on its own row, then platform buttons below */}
+            {/* On sm+: two-col grid as before */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <FormField
                 control={form.control}
@@ -667,23 +681,47 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Plataforma</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || "DIRECT"}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar plataforma" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="DIRECT">Directo</SelectItem>
-                        <SelectItem value="AIRBNB">Airbnb</SelectItem>
-                        <SelectItem value="BOOKING">Booking</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { value: "DIRECT", label: "Directo", img: "/icons/direct.png" },
+                        { value: "BOOKING", label: "Booking", img: "/icons/booking.png" },
+                        { value: "AIRBNB", label: "Airbnb", img: "/icons/airbnb.png" },
+                      ].map((opt) => {
+                        const isSelected = (field.value || "DIRECT") === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => field.onChange(opt.value)}
+                            className={cn(
+                              "relative flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl border-2 transition-all cursor-pointer select-none",
+                              isSelected
+                                ? "border-primary bg-primary/5 dark:bg-primary/10 shadow-sm"
+                                : "border-border bg-background hover:border-primary/40 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                            )}
+                          >
+                            <img
+                              src={opt.img}
+                              alt={opt.label}
+                              className="h-6 w-6 object-contain"
+                            />
+                            <span className={cn(
+                              "text-[10px] font-semibold",
+                              isSelected ? "text-primary" : "text-muted-foreground"
+                            )}>
+                              {opt.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
             </div>
+
 
             {/* Fechas de Estadía (Rango de Ingreso y Egreso en un solo calendario) */}
             <div className="space-y-1.5">
@@ -1034,7 +1072,14 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-semibold text-slate-900 dark:text-slate-100">Estado del Pago</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={form.watch("source") === "AIRBNB"}>
+                    <Select
+                      onValueChange={(val) => {
+                        field.onChange(val);
+                        setIsPaymentStatusUserModified(true);
+                      }}
+                      value={field.value}
+                      disabled={form.watch("source") === "AIRBNB"}
+                    >
                       <FormControl>
                         <SelectTrigger className="font-medium">
                           <SelectValue />
@@ -1091,12 +1136,8 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                             {...field}
                             onChange={(e) => {
                               field.onChange(e);
-                              const val = e.target.value;
-                              if (val === "") {
-                                setIsTotalManuallyModified(false);
-                              } else {
-                                setIsTotalManuallyModified(true);
-                              }
+                              // Empty OR any user input = manually modified (prevents auto-refill)
+                              setIsTotalManuallyModified(true);
                             }}
                             value={field.value ?? ""}
                             className="font-semibold text-base"
@@ -1237,7 +1278,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                 />
 
                 {/* Deposit tracking: method + receiver (only for PARTIAL + tracking enabled) */}
-                {showPaymentTracking && form.watch("paymentStatus") === "PARTIAL" && (
+                {showPaymentTracking && form.watch("paymentStatus") === "PARTIAL" && form.watch("source") !== "AIRBNB" && (
                   <div className="space-y-2 pt-1 border-t border-blue-200/70 dark:border-blue-900/70">
                     <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
                       ¿Cómo se recibió la seña?
@@ -1314,7 +1355,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
             )}
 
             {/* Sección de Pago Total (PAGADO) */}
-            {showPaymentTracking && form.watch("paymentStatus") === "PAID" && (
+            {showPaymentTracking && form.watch("paymentStatus") === "PAID" && form.watch("source") !== "AIRBNB" && (
               <div className="p-3.5 border rounded-xl space-y-2.5 bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900/50">
                 <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
                   ¿Cómo se recibió el pago?

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, cloneElement, isValidElement, useEffect } from "react";
+import { useState, cloneElement, isValidElement, useEffect, useRef } from "react";
 import { Department, Reservation } from "@prisma/client";
 import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble, X, Home, ShieldAlert, DollarSign, Ban, UserX, XCircle, ChevronDown, Banknote, CreditCard, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -156,12 +156,15 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
     }
   };
 
-  // Auto-open "New Reservation" if query param exists
+  // Auto-open "New Reservation" if query param exists — only once on initial mount
+  const didAutoOpenNew = useRef(false);
   useEffect(() => {
-    if (searchParams.get("new") === "true") {
+    if (!didAutoOpenNew.current && searchParams.get("new") === "true") {
+      didAutoOpenNew.current = true;
       setOpen(true);
     }
-  }, [searchParams]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-open "Edit/View Reservation" if edit query param exists
   useEffect(() => {
@@ -400,7 +403,11 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             </div>
           </div>
 
-          <DialogContent className="w-[95vw] sm:max-w-[720px] md:max-w-4xl lg:max-w-5xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 rounded-2xl" onCloseAutoFocus={(e) => e.preventDefault()}>
+          <DialogContent
+            className="w-[95vw] sm:max-w-[720px] md:max-w-4xl lg:max-w-5xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 rounded-2xl"
+            onCloseAutoFocus={(e) => e.preventDefault()}
+            onInteractOutside={(e) => e.preventDefault()}
+          >
             <DialogHeader className="shrink-0 pb-1">
               <DialogTitle className="text-xl font-bold">{editingRes ? "Editar Reserva" : "Nueva Reserva"}</DialogTitle>
             </DialogHeader>
