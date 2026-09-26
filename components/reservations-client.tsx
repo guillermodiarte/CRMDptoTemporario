@@ -488,8 +488,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
           </div>
         </div>
         {/* Desktop Table */}
-        <div className="hidden md:block rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-          <Table>
+        <div className="hidden md:block rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-x-auto">
+          <Table className="border-collapse">
             <TableHeader>
               <TableRow className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800">
                 <TableHead className="text-slate-700 dark:text-slate-200">Huésped</TableHead>
@@ -535,6 +535,9 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   rowClass += "bg-amber-100/85 dark:bg-amber-950/45 hover:bg-amber-200/85 dark:hover:bg-amber-900/65 text-slate-900 dark:text-slate-100";
                 }
 
+                if (isNext && !isCancelled) {
+                  rowClass += " [&>td]:border-t-[3px] [&>td]:border-t-sky-400 dark:[&>td]:border-t-sky-500 [&>td]:border-b-[3px] [&>td]:border-b-sky-400 dark:[&>td]:border-b-sky-500";
+                }
                 if (searchParams.get("edit") === res.id) {
                   rowClass += " ring-2 ring-emerald-500/80";
                 }
@@ -552,7 +555,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
 
                 return (
                   <TableRow key={res.id} id={`res-${res.id}`} className={rowClass}>
-                    <TableCell className="font-medium">
+                    <TableCell className={`font-medium${isNext && !isCancelled ? " border-l-[3px] border-l-sky-400 dark:border-l-sky-500" : ""}`}>
                       <div className="flex items-center gap-3">
                         {/* Icono Izquierda */}
                         <div className="shrink-0 flex items-center justify-center w-8">
@@ -693,7 +696,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             <span className="text-muted-foreground text-xs font-semibold">-</span>
                           ))}
                     </TableCell>
-                    <TableCell className="text-right w-[260px] min-w-[260px]">
+                    <TableCell className={`text-right w-[260px] min-w-[260px]${isNext && !isCancelled ? " border-r-[3px] border-r-sky-400 dark:border-r-sky-500" : ""}`}>
                       <div className="flex items-center justify-end gap-1">
                         {!isVisualizer && (
                           <>
@@ -851,7 +854,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
               cardClass += "bg-amber-100/85 dark:bg-amber-950/45";
             }
 
-            if (isNext && !isCancelled) cardClass += " ring-1 ring-sky-400/60";
+            if (isNext && !isCancelled) cardClass += " outline outline-[3px] outline-sky-400 dark:outline-sky-500";
             if (searchParams.get("edit") === res.id) cardClass += " ring-2 ring-emerald-500/80";
             if (searchParams.get("highlight") === res.id) cardClass += " ring-2 ring-blue-500/80";
 
