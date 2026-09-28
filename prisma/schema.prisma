@@ -188,10 +188,12 @@ model Reservation {
   paymentMethod     PaymentMethod? // How the final payment was received
   paymentReceiverId String?        // Who received the final payment
   paymentReceiver   PaymentReceiver? @relation("FinalPayment", fields: [paymentReceiverId], references: [id], onDelete: SetNull)
+  paymentDate       DateTime?      // When the final payment was made
 
   depositMethod     PaymentMethod? // How the deposit/seña was received
   depositReceiverId String?        // Who received the deposit/seña
   depositReceiver   PaymentReceiver? @relation("DepositPayment", fields: [depositReceiverId], references: [id], onDelete: SetNull)
+  depositDate       DateTime?      // When the deposit/seña was made
 
   hasParking Boolean @default(false)
 

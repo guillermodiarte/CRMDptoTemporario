@@ -56,6 +56,30 @@ export async function POST(req: Request) {
     return new NextResponse("Missing required fields", { status: 400 });
   }
 
+  // Capture snapshot of reservations that already had deposit or were paid before this manual cutoff
+  const allReservations = await prisma.reservation.findMany({
+    where: { sessionId },
+    select: {
+      id: true,
+      status: true,
+      paymentStatus: true,
+      depositAmount: true,
+    },
+  });
+
+  const paidReservationIds: string[] = [];
+  const depositReservationIds: string[] = [];
+
+  for (const r of allReservations) {
+    if (r.paymentStatus === "PAID") {
+      paidReservationIds.push(r.id);
+    }
+    const hasDeposit = (r.depositAmount || 0) > 0 && (r.paymentStatus === "PARTIAL" || r.paymentStatus === "PAID" || r.status === "CANCELLED");
+    if (hasDeposit) {
+      depositReservationIds.push(r.id);
+    }
+  }
+
   const key = makeKey(Number(year), Number(month));
   const payload = {
     year: Number(year),
@@ -63,6 +87,10 @@ export async function POST(req: Request) {
     editedAt: new Date().toISOString(),
     editedBy: session.user?.email || "unknown",
     receivers,
+    snapshot: {
+      paidReservationIds,
+      depositReservationIds,
+    },
   };
 
   await prisma.systemSettings.upsert({

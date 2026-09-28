@@ -90,6 +90,12 @@ export async function PATCH(
             amenitiesFee: split.amenitiesFee,
             currency: body.currency || firstPart.currency,
             paymentStatus: effectiveGroupPaymentStatus,
+            paymentMethod: body.paymentMethod !== undefined ? body.paymentMethod : firstPart.paymentMethod,
+            paymentReceiverId: body.paymentReceiverId !== undefined ? body.paymentReceiverId : firstPart.paymentReceiverId,
+            paymentDate: body.paymentDate !== undefined ? (body.paymentDate ? new Date(body.paymentDate) : null) : firstPart.paymentDate,
+            depositMethod: body.depositMethod !== undefined ? body.depositMethod : firstPart.depositMethod,
+            depositReceiverId: body.depositReceiverId !== undefined ? body.depositReceiverId : firstPart.depositReceiverId,
+            depositDate: body.depositDate !== undefined ? (body.depositDate ? new Date(body.depositDate) : null) : firstPart.depositDate,
             source: body.source || firstPart.source,
             notes: body.notes || firstPart.notes,
             hasParking: body.hasParking !== undefined ? !!body.hasParking : firstPart.hasParking,
@@ -104,6 +110,7 @@ export async function PATCH(
       revalidatePath("/dashboard/reservations");
       revalidatePath("/dashboard/calendar");
       revalidatePath("/dashboard/finance");
+      revalidatePath("/dashboard/balance");
 
       return NextResponse.json({ message: "Group updated", groupId });
 
@@ -123,6 +130,7 @@ export async function PATCH(
               ...(sib.id === id ? {
                 paymentMethod: body.paymentMethod || null,
                 paymentReceiverId: body.paymentReceiverId || null,
+                paymentDate: body.paymentDate ? new Date(body.paymentDate) : new Date(),
               } : {})
             }
           }))
@@ -159,6 +167,8 @@ export async function PATCH(
         paymentReceiverId,
         depositMethod,
         depositReceiverId,
+        depositDate,
+        paymentDate,
         source,
         hasParking,
         notes,
@@ -237,6 +247,8 @@ export async function PATCH(
           paymentReceiverId: paymentReceiverId !== undefined ? paymentReceiverId : undefined,
           depositMethod: depositMethod !== undefined ? depositMethod : undefined,
           depositReceiverId: depositReceiverId !== undefined ? depositReceiverId : undefined,
+          depositDate: depositDate !== undefined ? (depositDate ? new Date(depositDate) : null) : undefined,
+          paymentDate: paymentDate !== undefined ? (paymentDate ? new Date(paymentDate) : null) : undefined,
           source,
           notes,
           hasParking,
@@ -255,8 +267,9 @@ export async function PATCH(
       return NextResponse.json(reservation);
     }
 
-  } catch (error) {
-    console.log("[RESERVATION_PATCH]", error);
+  } catch (error: any) {
+    console.error("[RESERVATION_PATCH] Error:", error?.message || error);
+    if (error?.code) console.error("[RESERVATION_PATCH] Prisma code:", error.code, "meta:", error.meta);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
@@ -280,6 +293,7 @@ export async function DELETE(
     revalidatePath("/dashboard/reservations");
     revalidatePath("/dashboard/calendar");
     revalidatePath("/dashboard/finance");
+    revalidatePath("/dashboard/balance");
 
     return NextResponse.json(reservation);
 

@@ -151,6 +151,44 @@ if [ -f ".next/standalone/server.js" ]; then
         cp -r scripts .next/standalone/scripts
         log "Copied scripts -> .next/standalone/scripts"
     fi
+
+    # 5. Setup Automatic Daily Backup (cron at 00:00)
+    log "Configurando backup automático diario..."
+    BACKUP_SCRIPT="$(pwd)/scripts/backup.sh"
+    if [ -f "$BACKUP_SCRIPT" ]; then
+        chmod +x "$BACKUP_SCRIPT"
+        # Install crond if available (Alpine Linux)
+        if command -v crond >/dev/null 2>&1; then
+            # Create cron directory and crontab file
+            mkdir -p /etc/cron.d
+            echo "0 0 * * * root BACKUP_DIR=/app/crm_backups DATABASE_URL=$DATABASE_URL $BACKUP_SCRIPT >> /app/crm_backups/backup.log 2>&1" > /etc/cron.d/crm-backup
+            chmod 644 /etc/cron.d/crm-backup
+            # Start cron daemon in background
+            crond -l 2 -b
+            log "✅ Cron de backup diario configurado (00:00 hs cada día)"
+        else
+            log "WARNING: crond no disponible. Iniciando backup manual con loop de 24hs..."
+            # Fallback: background loop every 24h
+            (
+                while true; do
+                    # Calculate seconds until next midnight
+                    NOW=$(date +%s)
+                    TOMORROW=$(date -d 'tomorrow 00:00:00' +%s 2>/dev/null || date -v0H -v0M -v0S -v+1d +%s 2>/dev/null || echo $((NOW + 86400)))
+                    SLEEP_SECS=$((TOMORROW - NOW))
+                    [ "$SLEEP_SECS" -lt 60 ] && SLEEP_SECS=86400
+                    sleep $SLEEP_SECS
+                    BACKUP_DIR=/app/crm_backups DATABASE_URL=$DATABASE_URL sh "$BACKUP_SCRIPT" >> /app/crm_backups/backup.log 2>&1
+                done
+            ) &
+            log "✅ Backup loop en background iniciado (cada 24hs)"
+        fi
+        # Run an initial backup right now on first start
+        mkdir -p /app/crm_backups
+        log "Ejecutando backup inicial..."
+        BACKUP_DIR=/app/crm_backups DATABASE_URL=$DATABASE_URL sh "$BACKUP_SCRIPT" >> /app/crm_backups/backup.log 2>&1 && log "Backup inicial completado." || log "WARNING: Backup inicial falló."
+    else
+        log "WARNING: scripts/backup.sh no encontrado. Backup automático omitido."
+    fi
     
     # Run the standalone server
     log "Entering standalone directory..."

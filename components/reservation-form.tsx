@@ -120,6 +120,26 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
     return initialData?.paymentReceiverId || paymentReceivers.find(r => r.isDefault)?.id || null;
   });
 
+  const [depositDate, setDepositDate] = useState<string>(() => {
+    if (initialData?.depositDate) {
+      return format(new Date(initialData.depositDate), "yyyy-MM-dd");
+    }
+    if (initialData?.createdAt) {
+      return format(new Date(initialData.createdAt), "yyyy-MM-dd");
+    }
+    return format(new Date(), "yyyy-MM-dd");
+  });
+
+  const [finalPaymentDate, setFinalPaymentDate] = useState<string>(() => {
+    if (initialData?.paymentDate) {
+      return format(new Date(initialData.paymentDate), "yyyy-MM-dd");
+    }
+    if (initialData?.updatedAt) {
+      return format(new Date(initialData.updatedAt), "yyyy-MM-dd");
+    }
+    return format(new Date(), "yyyy-MM-dd");
+  });
+
   // ─── Single Calendar Date Range Picker State ───
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
 
@@ -555,15 +575,17 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
           bedsRequired: unitType === 'PARKING' ? 0 : values.bedsRequired,
           amenitiesFee: unitType === 'PARKING' ? 0 : amenitiesCost,
           force: forceOverlap,
-          // Deposit tracking fields (only when feature is enabled)
-          ...(showPaymentTracking && values.paymentStatus === 'PARTIAL' && depositMethod ? {
+          // Deposit tracking fields (only when feature is enabled and deposit exists)
+          ...(showPaymentTracking && Number(values.depositAmount || 0) > 0 && depositMethod ? {
             depositMethod,
             depositReceiverId: depositMethod === 'TRANSFER' ? depositReceiverId : null,
+            depositDate: depositDate ? `${depositDate}T12:00:00Z` : null,
           } : {}),
           // Final payment tracking fields (only when feature is enabled)
           ...(showPaymentTracking && values.paymentStatus === 'PAID' && finalPaymentMethod ? {
             paymentMethod: finalPaymentMethod,
             paymentReceiverId: finalPaymentMethod === 'TRANSFER' ? finalPaymentReceiverId : null,
+            paymentDate: finalPaymentDate ? `${finalPaymentDate}T12:00:00Z` : null,
           } : {})
         }),
       });
@@ -575,7 +597,12 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
         return;
       }
 
-      if (!res.ok) throw new Error("Error creando reserva");
+      if (!res.ok) {
+        const errorBody = await res.text().catch(() => "");
+        console.error("[ReservationForm] Server error:", res.status, errorBody);
+        throw new Error(`Error creando reserva (${res.status}): ${errorBody}`);
+      }
+
 
       const isNewReservation = !initialData;
       const createdCheckIn = values.checkIn;
@@ -1333,6 +1360,17 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                         </Select>
                       </div>
                     )}
+
+                    {/* Fecha de cobro de seña */}
+                    <div className="space-y-1 pt-0.5">
+                      <FormLabel className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Fecha de cobro de la seña</FormLabel>
+                      <input
+                        type="date"
+                        value={depositDate}
+                        onChange={(e) => setDepositDate(e.target.value)}
+                        className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none font-medium h-8"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -1410,6 +1448,17 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                     </Select>
                   </div>
                 )}
+
+                {/* Fecha de cobro pago final */}
+                <div className="space-y-1 pt-0.5">
+                  <FormLabel className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Fecha de cobro</FormLabel>
+                  <input
+                    type="date"
+                    value={finalPaymentDate}
+                    onChange={(e) => setFinalPaymentDate(e.target.value)}
+                    className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none font-medium h-8"
+                  />
+                </div>
 
                 <div className="pt-1.5 border-t border-emerald-200/80 dark:border-emerald-900/80 space-y-1">
                   <div className="flex justify-between items-center text-xs font-medium text-emerald-800 dark:text-emerald-300">

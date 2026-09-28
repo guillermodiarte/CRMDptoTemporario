@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { formatCurrency, formatSignedCurrency, cn } from "@/lib/utils";
 import {
   Banknote,
@@ -29,6 +30,8 @@ import {
   RotateCcw,
   Landmark,
   HandCoins,
+  RefreshCw,
+  Building,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -75,6 +78,8 @@ interface ReservationRow {
   checkOut: string | Date;
   createdAt?: string | Date;
   updatedAt?: string | Date;
+  depositDate?: string | Date | null;
+  paymentDate?: string | Date | null;
   totalAmount: number;
   depositAmount: number;
   paymentStatus: string;
@@ -105,6 +110,10 @@ export interface ManualTransferAdjustment {
   editedAt: string;
   editedBy: string;
   receivers: Record<string, number>;
+  snapshot?: {
+    paidReservationIds: string[];
+    depositReservationIds: string[];
+  };
 }
 
 interface BalanceClientProps {
@@ -201,6 +210,7 @@ function StatCard({
   color,
   iconStyle,
   sub,
+  onClick,
 }: {
   icon: React.ElementType;
   label: string;
@@ -208,6 +218,7 @@ function StatCard({
   color: string;
   iconStyle?: { bg: string; fg: string };
   sub?: string;
+  onClick?: () => void;
 }) {
   const bgClass = iconStyle
     ? iconStyle.bg
@@ -239,14 +250,26 @@ function StatCard({
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border p-3.5 sm:p-4 md:p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-sm transition-all"
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      className={cn(
+        "relative overflow-hidden rounded-2xl border p-3.5 sm:p-4 md:p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs transition-all",
+        onClick && "cursor-pointer hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 group active:scale-[0.99]"
+      )}
+      title={onClick ? "Haz clic para ver el detalle de reservas de este canal" : undefined}
     >
       <div className="flex items-start gap-2.5 sm:gap-3">
         <div className={`p-2 sm:p-2.5 rounded-xl ${bgClass} shrink-0`}>
           <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${fgClass}`} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] sm:text-xs text-muted-foreground font-semibold uppercase tracking-wide truncate">{label}</p>
+          <div className="flex items-center justify-between gap-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground font-semibold uppercase tracking-wide truncate">{label}</p>
+            {onClick && (
+              <ChevronRight className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            )}
+          </div>
           <p className="text-base sm:text-lg md:text-xl font-bold tracking-tight mt-0.5 break-words leading-tight">{formatCurrency(amount)}</p>
           {sub && <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate">{sub}</p>}
         </div>
@@ -266,6 +289,7 @@ export function BalanceClient({
   manualTransfersEditEnabled = false,
   initialManualTransfers = {},
 }: BalanceClientProps) {
+  const router = useRouter();
   const isVisualizer = userRole === "VISUALIZER";
   const [reservations, setReservations] = useState<ReservationRow[]>(initialReservations);
   const [filterReceiver, setFilterReceiver] = useState<string>("all");
@@ -275,6 +299,33 @@ export function BalanceClient({
 
   // ─── Manual Transfers Adjustment State ───
   const [manualTransfers, setManualTransfers] = useState<Record<string, ManualTransferAdjustment>>(initialManualTransfers);
+
+  // Sync state whenever props from server change
+  useEffect(() => {
+    setReservations(initialReservations);
+  }, [initialReservations]);
+
+  useEffect(() => {
+    setManualTransfers(initialManualTransfers);
+  }, [initialManualTransfers]);
+
+  // Auto-refresh when tab/window regains focus or becomes visible
+  useEffect(() => {
+    const handleFocus = () => {
+      router.refresh();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        router.refresh();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [router]);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [manualModalMonth, setManualModalMonth] = useState<string>(() => String(new Date().getMonth()));
   const [manualModalAmounts, setManualModalAmounts] = useState<Record<string, number>>({});
@@ -285,27 +336,45 @@ export function BalanceClient({
   const activeAdjustmentKey = filterMonth !== "all" ? `${filterYear}_${filterMonth}` : null;
   const activeAdjustment = activeAdjustmentKey ? manualTransfers[activeAdjustmentKey] : null;
 
+  // ─── Receiver Detail Modal State ───
+  const [selectedReceiverForDetail, setSelectedReceiverForDetail] = useState<Receiver | null>(null);
+
+  // ─── Channel Detail Modal State (Efectivo, Transferencias, Airbnb, Señas) ───
+  const [selectedChannelForDetail, setSelectedChannelForDetail] = useState<"CASH" | "TRANSFER" | "AIRBNB" | "DEPOSIT" | null>(null);
+
   // ─── Edit Payment Modal State ───
   const [editingRes, setEditingRes] = useState<ReservationRow | null>(null);
   const [editForm, setEditForm] = useState({
     paymentStatus: "PAID",
     paymentMethod: "CASH",
     paymentReceiverId: "",
+    paymentDate: "",
     depositAmount: 0,
     depositMethod: "TRANSFER",
     depositReceiverId: "",
+    depositDate: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
 
   const openEditModal = (r: ReservationRow) => {
     setEditingRes(r);
+    const initialDepositDate = r.depositDate
+      ? format(new Date(r.depositDate), "yyyy-MM-dd")
+      : (r.createdAt ? format(new Date(r.createdAt), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"));
+
+    const initialPaymentDate = r.paymentDate
+      ? format(new Date(r.paymentDate), "yyyy-MM-dd")
+      : (r.updatedAt ? format(new Date(r.updatedAt), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"));
+
     setEditForm({
       paymentStatus: r.paymentStatus || "PAID",
       paymentMethod: r.paymentMethod || "CASH",
       paymentReceiverId: r.paymentReceiverId || r.paymentReceiver?.id || receivers.find((rec) => rec.isDefault)?.id || receivers[0]?.id || "",
+      paymentDate: initialPaymentDate,
       depositAmount: r.depositAmount || 0,
       depositMethod: r.depositMethod || "TRANSFER",
       depositReceiverId: r.depositReceiverId || r.depositReceiver?.id || receivers.find((rec) => rec.isDefault)?.id || receivers[0]?.id || "",
+      depositDate: initialDepositDate,
     });
   };
 
@@ -317,9 +386,11 @@ export function BalanceClient({
         paymentStatus: editForm.paymentStatus,
         paymentMethod: editForm.paymentMethod,
         paymentReceiverId: editForm.paymentMethod === "TRANSFER" ? editForm.paymentReceiverId || null : null,
+        paymentDate: editForm.paymentDate ? `${editForm.paymentDate}T12:00:00Z` : null,
         depositAmount: Number(editForm.depositAmount) || 0,
         depositMethod: editForm.depositMethod,
         depositReceiverId: editForm.depositMethod === "TRANSFER" ? editForm.depositReceiverId || null : null,
+        depositDate: editForm.depositDate ? `${editForm.depositDate}T12:00:00Z` : null,
       };
 
       const res = await fetch(`/api/reservations/${editingRes.id}`, {
@@ -342,6 +413,9 @@ export function BalanceClient({
             ? {
                 ...item,
                 ...payload,
+                depositDate: payload.depositDate,
+                paymentDate: payload.paymentDate,
+                updatedAt: new Date().toISOString(),
                 paymentReceiver: targetReceiver ? { id: targetReceiver.id, name: targetReceiver.name } : null,
                 depositReceiver: targetDepositReceiver ? { id: targetDepositReceiver.id, name: targetDepositReceiver.name } : null,
               }
@@ -351,6 +425,7 @@ export function BalanceClient({
 
       toast.success("Pago actualizado correctamente");
       setEditingRes(null);
+      router.refresh();
     } catch (err: any) {
       toast.error(err?.message || "Error al actualizar pago");
     } finally {
@@ -449,6 +524,7 @@ export function BalanceClient({
         }));
         toast.success("Ajuste manual de transferencias guardado con éxito");
         setIsManualModalOpen(false);
+        router.refresh();
       } else {
         toast.error("Error al guardar ajuste");
       }
@@ -473,6 +549,7 @@ export function BalanceClient({
           return next;
         });
         toast.success("Cálculo automático de transferencias restablecido");
+        router.refresh();
       } else {
         toast.error("Error al restablecer");
       }
@@ -498,7 +575,10 @@ export function BalanceClient({
     const depositByReceiver: Record<string, { name: string; amount: number }> = {};
 
     const cutoffDate = activeAdjustment ? new Date(activeAdjustment.editedAt) : null;
+    const snapshot = activeAdjustment?.snapshot;
     const futureTransfersByReceiver: Record<string, number> = {};
+    let futureDeposits = 0;
+    let futureDepositCount = 0;
 
     for (const res of periodReservations) {
       const isCancelled = res.status === "CANCELLED" || res.paymentStatus === "CANCELLED";
@@ -533,9 +613,15 @@ export function BalanceClient({
               transferByReceiver[res.depositReceiver.id].amount += depositARS;
 
               if (cutoffDate && res.depositReceiver) {
-                const isDepositFuture = res.createdAt ? new Date(res.createdAt) > cutoffDate : false;
+                const isDepositHistorical = snapshot?.depositReservationIds
+                  ? snapshot.depositReservationIds.includes(res.id)
+                  : (res.createdAt && cutoffDate ? new Date(res.createdAt) < cutoffDate : false);
+                const isDepositFuture = !isDepositHistorical;
+
                 if (isDepositFuture) {
                   futureTransfersByReceiver[res.depositReceiver.id] = (futureTransfersByReceiver[res.depositReceiver.id] || 0) + depositARS;
+                  futureDeposits += depositARS;
+                  futureDepositCount++;
                 }
               }
             }
@@ -557,8 +643,8 @@ export function BalanceClient({
       const isPaid = res.paymentStatus === "PAID";
       const isPartial = res.paymentStatus === "PARTIAL";
 
-      // Seña (deposit)
-      const hadDeposit = depositARS > 0 && (isPartial || depositARS < totalARS || !!res.depositMethod);
+      // Seña (deposit) — only count if money was actually received (PARTIAL or PAID)
+      const hadDeposit = depositARS > 0 && (isPartial || isPaid);
       const depositAmt = hadDeposit ? depositARS : 0;
 
       if (depositAmt > 0) {
@@ -583,9 +669,15 @@ export function BalanceClient({
             transferByReceiver[dRecv.id].amount += depositAmt;
 
             if (cutoffDate) {
-              const isDepositFuture = res.createdAt ? new Date(res.createdAt) > cutoffDate : false;
+              const isDepositHistorical = snapshot?.depositReservationIds
+                ? snapshot.depositReservationIds.includes(res.id)
+                : (res.createdAt && cutoffDate ? new Date(res.createdAt) < cutoffDate : false);
+              const isDepositFuture = !isDepositHistorical;
+
               if (isDepositFuture) {
                 futureTransfersByReceiver[dRecv.id] = (futureTransfersByReceiver[dRecv.id] || 0) + depositAmt;
+                futureDeposits += depositAmt;
+                futureDepositCount++;
               }
             }
           }
@@ -610,7 +702,11 @@ export function BalanceClient({
               transferByReceiver[payRecv.id].amount += remainingAmt;
 
               if (cutoffDate) {
-                const isFinalPaymentFuture = (new Date(res.checkIn) > cutoffDate) || (res.createdAt ? new Date(res.createdAt) > cutoffDate : false);
+                const isFinalPaymentHistorical = snapshot?.paidReservationIds
+                  ? snapshot.paidReservationIds.includes(res.id)
+                  : (res.updatedAt && cutoffDate ? new Date(res.updatedAt) < cutoffDate : false);
+                const isFinalPaymentFuture = !isFinalPaymentHistorical;
+
                 if (isFinalPaymentFuture) {
                   futureTransfersByReceiver[payRecv.id] = (futureTransfersByReceiver[payRecv.id] || 0) + remainingAmt;
                 }
@@ -652,8 +748,10 @@ export function BalanceClient({
         totalAirbnb,
         totalAirbnbUSD,
         airbnbCount,
-        totalDeposits,
-        depositCount,
+        // With manual adjustment, historical deposits are embedded in the manual base.
+        // Only subsequent deposits after the edit date/time are counted here.
+        totalDeposits: futureDeposits,
+        depositCount: futureDepositCount,
         cancelledWithDepositCount,
         transferByReceiver: Object.values(adjustedTransferByReceiver),
         depositByReceiver: Object.values(depositByReceiver),
@@ -795,7 +893,7 @@ export function BalanceClient({
   }, [partnerExpensesModal.receiverId, directExpensesTotal, expensesByReceiver]);
 
   // Partner profit split & settlement
-  // Partner profit split & settlement (incorporating Airbnb priority allocation to Guillermo)
+  // Partner profit split & settlement (incorporating Airbnb priority allocation to Guillermo and deficit sharing)
   const partnerSettlements = useMemo(() => {
     if (receivers.length === 0) return [];
 
@@ -807,9 +905,11 @@ export function BalanceClient({
       receivers.find((r) => r.name.toLowerCase().includes("guillermo")) || receivers[0];
 
     const airbnbTotal = computedStats.totalAirbnb;
+    const isDeficit = netPeriodProfit < -0.001;
     const totalProfit = Math.max(0, netPeriodProfit);
+    const totalCash = Math.max(0, computedStats.totalCash);
 
-    // Calculate base share percentages and ideal target profits
+    // Calculate base share percentages and ideal target results
     const receiverShares = receivers.map((recv) => {
       const sharePct = useConfigured
         ? (recv.profitSharePercent || 0) / 100
@@ -817,6 +917,7 @@ export function BalanceClient({
       return {
         recv,
         sharePct,
+        targetResult: netPeriodProfit * sharePct,
         targetProfit: totalProfit * sharePct,
         isAirbnbReceiver: recv.id === airbnbReceiver.id,
       };
@@ -828,7 +929,8 @@ export function BalanceClient({
       .filter((rs) => !rs.isAirbnbReceiver)
       .reduce((sum, rs) => sum + rs.targetProfit, 0);
 
-    return receiverShares.map(({ recv, sharePct, targetProfit, isAirbnbReceiver }) => {
+    // First pass: calculate account position and entitled target
+    const firstPass = receiverShares.map(({ recv, sharePct, targetResult, targetProfit, isAirbnbReceiver }) => {
       // Local transfer amount that entered this receiver's local account
       const localTransferAmt = computedStats.transferByReceiver.find((t) => t.name === recv.name)?.amount || 0;
 
@@ -840,32 +942,35 @@ export function BalanceClient({
       const expenseInfo = expensesByReceiver.byReceiver[recv.id];
       const expensesPaid = expenseInfo ? expenseInfo.amount : 0;
 
-      // Net money currently in this partner's power
+      // Net money currently in this partner's account (bank receipts minus paid expenses)
       const netHeld = totalIncomeInAccount - expensesPaid;
 
-      // Entitled profit according to the business rule:
-      // - If Airbnb <= Guillermo's target share: both receive their full target share.
-      // - If Airbnb > Guillermo's target share: Guillermo gets 100% of Airbnb, and others share the remaining non-Airbnb profit.
-      let entitledProfit = 0;
-      if (isAirbnbReceiver) {
-        if (nonAirbnbProfit >= othersTargetSum) {
-          entitledProfit = targetProfit;
-        } else {
-          entitledProfit = airbnbTotal;
-        }
+      // Final target financial result for this period
+      let finalTarget = 0;
+      if (isDeficit) {
+        // In deficit, each partner absorbs their share of the loss
+        finalTarget = targetResult;
       } else {
-        if (nonAirbnbProfit >= othersTargetSum) {
-          entitledProfit = targetProfit;
+        // In profit, apply Airbnb allocation rule
+        if (isAirbnbReceiver) {
+          if (nonAirbnbProfit >= othersTargetSum) {
+            finalTarget = targetProfit;
+          } else {
+            finalTarget = airbnbTotal;
+          }
         } else {
-          entitledProfit = othersTargetSum > 0 ? nonAirbnbProfit * (targetProfit / othersTargetSum) : 0;
+          if (nonAirbnbProfit >= othersTargetSum) {
+            finalTarget = targetProfit;
+          } else {
+            finalTarget = othersTargetSum > 0 ? nonAirbnbProfit * (targetProfit / othersTargetSum) : 0;
+          }
         }
       }
 
-      // Settlement adjustment:
-      // Entitled profit minus net money already held.
-      // > 0: what this partner withdraws from physical cash box (A cobrar en efectivo)
-      // < 0: partner holds surplus and must contribute (A transferir / liquidar)
-      const settlementAdjustment = entitledProfit - netHeld;
+      // Settlement adjustment: finalTarget minus current net position
+      // > 0: Partner has credit (spent more than their share or received less than profit)
+      // < 0: Partner owes / must transfer (spent less than their share or holds surplus bank receipts)
+      const settlementAdjustment = finalTarget - netHeld;
 
       return {
         receiver: recv,
@@ -876,8 +981,42 @@ export function BalanceClient({
         totalIncomeInAccount,
         expensesPaid,
         netHeld,
-        entitledProfit,
+        targetResult: finalTarget,
+        entitledProfit: !isDeficit ? finalTarget : 0,
         settlementAdjustment,
+      };
+    });
+
+    // Second pass: compute cash vs transfer breakdown for each partner
+    const totalPositiveAdjustment = firstPass
+      .filter((p) => p.settlementAdjustment > 0.001)
+      .reduce((sum, p) => sum + p.settlementAdjustment, 0);
+
+    return firstPass.map((p) => {
+      let cashPortion = 0;
+      let transferPortion = 0;
+
+      if (p.settlementAdjustment > 0.001) {
+        if (totalCash > 0 && totalPositiveAdjustment > 0) {
+          cashPortion = Math.min(
+            p.settlementAdjustment,
+            totalCash * (p.settlementAdjustment / totalPositiveAdjustment)
+          );
+        }
+        transferPortion = Math.max(0, p.settlementAdjustment - cashPortion);
+      }
+
+      // Find counterpart if there are 2 receivers
+      const otherReceiver = receivers.length === 2
+        ? receivers.find((r) => r.id !== p.receiver.id)
+        : undefined;
+
+      return {
+        ...p,
+        isDeficit,
+        cashPortion,
+        transferPortion,
+        counterpartName: otherReceiver?.name,
       };
     });
   }, [receivers, computedStats, expensesByReceiver, netPeriodProfit]);
@@ -908,6 +1047,412 @@ export function BalanceClient({
     filterMonth === "all"
       ? `Año ${filterYear}`
       : `${MONTHS.find((m) => m.value === filterMonth)?.label} ${filterYear}`;
+
+  // ─── Transfer events for selected receiver detail modal ───
+  const receiverTransferEvents = useMemo(() => {
+    if (!selectedReceiverForDetail) return [];
+
+    const cutoffDate = computedStats.isManualAdjustmentActive && computedStats.activeAdjustment
+      ? new Date(computedStats.activeAdjustment.editedAt)
+      : null;
+    const snapshot = computedStats.activeAdjustment?.snapshot;
+
+    const events: Array<{
+      id: string;
+      guestName: string;
+      departmentName: string;
+      checkIn: string | Date;
+      checkOut: string | Date;
+      type: "DEPOSIT" | "FINAL_PAYMENT";
+      typeLabel: string;
+      amount: number;
+      updatedAt?: string | Date;
+      isAfterCutoff: boolean;
+      paymentStatus: string;
+    }> = [];
+
+    for (const res of periodReservations) {
+      const isCancelled = res.status === "CANCELLED" || res.paymentStatus === "CANCELLED";
+      const isAirbnb = res.source === "AIRBNB";
+      if (isAirbnb) continue;
+
+      const isUSD = res.currency === "USD";
+      const rate = res.exchangeRate && res.exchangeRate > 1 ? res.exchangeRate : dollarRate;
+      const totalARS = isUSD ? res.totalAmount * rate : res.totalAmount;
+      const depositARS = isUSD ? (res.depositAmount || 0) * rate : res.depositAmount || 0;
+
+      // 1. Cancelled reservations that left a deposit
+      if (isCancelled) {
+        if (depositARS > 0 && res.depositMethod !== "CASH" && res.depositReceiver?.id === selectedReceiverForDetail.id) {
+          const isDepositHistorical = snapshot?.depositReservationIds
+            ? snapshot.depositReservationIds.includes(res.id)
+            : (res.createdAt && cutoffDate ? new Date(res.createdAt) < cutoffDate : false);
+          const isAfter = cutoffDate ? !isDepositHistorical : false;
+
+          events.push({
+            id: `${res.id}-deposit-cancelled`,
+            guestName: res.guestName,
+            departmentName: res.department?.name || "Departamento",
+            checkIn: res.checkIn,
+            checkOut: res.checkOut,
+            type: "DEPOSIT",
+            typeLabel: "Seña Retenida (Cancelada)",
+            amount: depositARS,
+            updatedAt: res.updatedAt,
+            isAfterCutoff: !!isAfter,
+            paymentStatus: "CANCELLED",
+          });
+        }
+        continue;
+      }
+
+      const isPaid = res.paymentStatus === "PAID";
+      const isPartial = res.paymentStatus === "PARTIAL";
+
+      // 2. Seña / Deposit
+      const hadDeposit = depositARS > 0 && (isPartial || isPaid);
+      const depositAmt = hadDeposit ? depositARS : 0;
+
+      if (depositAmt > 0 && (res.depositMethod || "TRANSFER") !== "CASH" && res.depositReceiver?.id === selectedReceiverForDetail.id) {
+        const isDepositHistorical = snapshot?.depositReservationIds
+          ? snapshot.depositReservationIds.includes(res.id)
+          : (res.createdAt && cutoffDate ? new Date(res.createdAt) < cutoffDate : false);
+        const isAfter = cutoffDate ? !isDepositHistorical : false;
+
+        events.push({
+          id: `${res.id}-deposit`,
+          guestName: res.guestName,
+          departmentName: res.department?.name || "Departamento",
+          checkIn: res.checkIn,
+          checkOut: res.checkOut,
+          type: "DEPOSIT",
+          typeLabel: "Seña / Anticipo",
+          amount: depositAmt,
+          updatedAt: res.updatedAt,
+          isAfterCutoff: !!isAfter,
+          paymentStatus: res.paymentStatus,
+        });
+      }
+
+      // 3. Final Payment (PAID only)
+      if (isPaid) {
+        const remainingAmt = Math.max(0, totalARS - depositAmt);
+        if (remainingAmt > 0 && (res.paymentMethod || "CASH") === "TRANSFER" && res.paymentReceiver?.id === selectedReceiverForDetail.id) {
+          const isFinalPaymentHistorical = snapshot?.paidReservationIds
+            ? snapshot.paidReservationIds.includes(res.id)
+            : (res.updatedAt && cutoffDate ? new Date(res.updatedAt) < cutoffDate : false);
+          const isAfter = cutoffDate ? !isFinalPaymentHistorical : false;
+
+          events.push({
+            id: `${res.id}-final`,
+            guestName: res.guestName,
+            departmentName: res.department?.name || "Departamento",
+            checkIn: res.checkIn,
+            checkOut: res.checkOut,
+            type: "FINAL_PAYMENT",
+            typeLabel: "Pago Final",
+            amount: remainingAmt,
+            updatedAt: res.updatedAt,
+            isAfterCutoff: !!isAfter,
+            paymentStatus: res.paymentStatus,
+          });
+        }
+      }
+    }
+
+    // Sort by updatedAt desc or checkIn desc
+    return events.sort((a, b) => {
+      const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : new Date(a.checkIn).getTime();
+      const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : new Date(b.checkIn).getTime();
+      return dateB - dateA;
+    });
+  }, [selectedReceiverForDetail, periodReservations, computedStats.isManualAdjustmentActive, computedStats.activeAdjustment, dollarRate]);
+
+  const selectedReceiverStats = useMemo(() => {
+    if (!selectedReceiverForDetail) return null;
+    const item = computedStats.transferByReceiver.find((t) => t.name === selectedReceiverForDetail.name);
+    const total = item?.amount || 0;
+    const manualBase = item?.manualBase || 0;
+    const futureTransfer = item?.futureTransfer || 0;
+    const afterCutoffEvents = receiverTransferEvents.filter((e) => e.isAfterCutoff);
+    const depositAmt = computedStats.depositByReceiver.find((d) => d.name === selectedReceiverForDetail.name)?.amount || 0;
+    const finalPaymentAmt = Math.max(0, total - depositAmt);
+
+    return {
+      total,
+      manualBase,
+      futureTransfer,
+      afterCutoffEvents,
+      depositAmt,
+      finalPaymentAmt,
+    };
+  }, [selectedReceiverForDetail, computedStats, receiverTransferEvents]);
+
+  // ─── Channel events for selected channel detail modal (Efectivo, Transferencias, Airbnb, Señas) ───
+  const channelEvents = useMemo(() => {
+    if (!selectedChannelForDetail) return [];
+
+    const cutoffDate = computedStats.isManualAdjustmentActive && computedStats.activeAdjustment
+      ? new Date(computedStats.activeAdjustment.editedAt)
+      : null;
+    const snapshot = computedStats.activeAdjustment?.snapshot;
+
+    const events: Array<{
+      id: string;
+      reservationId: string;
+      guestName: string;
+      departmentName: string;
+      checkIn: string | Date;
+      checkOut: string | Date;
+      collectionDate?: string | Date;
+      concept: string;
+      amount: number;
+      receiverName?: string;
+      isUSD?: boolean;
+      amountUSD?: number;
+      exchangeRate?: number;
+      isAfterCutoff: boolean;
+    }> = [];
+
+    for (const res of periodReservations) {
+      const isCancelled = res.status === "CANCELLED" || res.paymentStatus === "CANCELLED";
+      const isAirbnb = res.source === "AIRBNB";
+      const isUSD = res.currency === "USD";
+      const rate = res.exchangeRate && res.exchangeRate > 1 ? res.exchangeRate : dollarRate;
+      const totalARS = isUSD ? res.totalAmount * rate : res.totalAmount;
+      const depositARS = isUSD ? (res.depositAmount || 0) * rate : res.depositAmount || 0;
+
+      // ─── AIRBNB CHANNEL ───
+      if (selectedChannelForDetail === "AIRBNB") {
+        if (isAirbnb) {
+          events.push({
+            id: `${res.id}-airbnb`,
+            reservationId: res.id,
+            guestName: res.guestName,
+            departmentName: res.department?.name || "Departamento",
+            checkIn: res.checkIn,
+            checkOut: res.checkOut,
+            collectionDate: res.updatedAt || res.checkIn,
+            concept: "Reserva Airbnb",
+            amount: totalARS,
+            isUSD,
+            amountUSD: isUSD ? res.totalAmount : undefined,
+            exchangeRate: rate,
+            isAfterCutoff: true,
+          });
+        }
+        continue;
+      }
+
+      if (isAirbnb) continue;
+
+      // ─── CANCELLED RESERVATIONS WITH DEPOSIT ───
+      if (isCancelled) {
+        if (depositARS > 0) {
+          const isCash = res.depositMethod === "CASH";
+          const isTransfer = !isCash;
+          const isDepositHistorical = snapshot?.depositReservationIds
+            ? snapshot.depositReservationIds.includes(res.id)
+            : (res.createdAt && cutoffDate ? new Date(res.createdAt) < cutoffDate : false);
+          const isAfter = cutoffDate ? !isDepositHistorical : false;
+
+          if (selectedChannelForDetail === "DEPOSIT") {
+            events.push({
+              id: `${res.id}-cancelled-deposit`,
+              reservationId: res.id,
+              guestName: res.guestName,
+              departmentName: res.department?.name || "Departamento",
+              checkIn: res.checkIn,
+              checkOut: res.checkOut,
+              collectionDate: res.depositDate || res.createdAt || res.checkIn,
+              concept: isCash ? "Seña Retenida (Cancelada) en Efectivo" : "Seña Retenida (Cancelada) por Transferencia",
+              amount: depositARS,
+              receiverName: isTransfer ? res.depositReceiver?.name : undefined,
+              isAfterCutoff: !!isAfter,
+            });
+          } else if (selectedChannelForDetail === "CASH" && isCash) {
+            events.push({
+              id: `${res.id}-cancelled-cash`,
+              reservationId: res.id,
+              guestName: res.guestName,
+              departmentName: res.department?.name || "Departamento",
+              checkIn: res.checkIn,
+              checkOut: res.checkOut,
+              collectionDate: res.depositDate || res.createdAt || res.checkIn,
+              concept: "Seña Retenida (Cancelada) en Efectivo",
+              amount: depositARS,
+              isAfterCutoff: !!isAfter,
+            });
+          } else if (selectedChannelForDetail === "TRANSFER" && isTransfer) {
+            events.push({
+              id: `${res.id}-cancelled-transfer`,
+              reservationId: res.id,
+              guestName: res.guestName,
+              departmentName: res.department?.name || "Departamento",
+              checkIn: res.checkIn,
+              checkOut: res.checkOut,
+              collectionDate: res.depositDate || res.createdAt || res.checkIn,
+              concept: "Seña Retenida (Cancelada) por Transferencia",
+              amount: depositARS,
+              receiverName: res.depositReceiver?.name || "Sin receptor",
+              isAfterCutoff: !!isAfter,
+            });
+          }
+        }
+        continue;
+      }
+
+      // ─── ACTIVE RESERVATIONS ───
+      const isPaid = res.paymentStatus === "PAID";
+      const isPartial = res.paymentStatus === "PARTIAL";
+
+      const hadDeposit = depositARS > 0 && (isPartial || isPaid);
+      const depositAmt = hadDeposit ? depositARS : 0;
+      const dMethod = res.depositMethod || "TRANSFER";
+      const isDepositCash = dMethod === "CASH";
+      const isDepositTransfer = !isDepositCash;
+
+      const isDepositHistorical = snapshot?.depositReservationIds
+        ? snapshot.depositReservationIds.includes(res.id)
+        : (res.createdAt && cutoffDate ? new Date(res.createdAt) < cutoffDate : false);
+      const isDepositAfter = cutoffDate ? !isDepositHistorical : false;
+
+      // Deposit portion
+      if (depositAmt > 0) {
+        if (selectedChannelForDetail === "DEPOSIT") {
+          events.push({
+            id: `${res.id}-dep`,
+            reservationId: res.id,
+            guestName: res.guestName,
+            departmentName: res.department?.name || "Departamento",
+            checkIn: res.checkIn,
+            checkOut: res.checkOut,
+            collectionDate: res.depositDate || res.createdAt || res.checkIn,
+            concept: isDepositCash ? "Seña / Anticipo en Efectivo" : `Seña por Transferencia (${res.depositReceiver?.name || "Sin receptor"})`,
+            amount: depositAmt,
+            receiverName: isDepositTransfer ? res.depositReceiver?.name : undefined,
+            isAfterCutoff: !!isDepositAfter,
+          });
+        } else if (selectedChannelForDetail === "CASH" && isDepositCash) {
+          events.push({
+            id: `${res.id}-dep-cash`,
+            reservationId: res.id,
+            guestName: res.guestName,
+            departmentName: res.department?.name || "Departamento",
+            checkIn: res.checkIn,
+            checkOut: res.checkOut,
+            collectionDate: res.depositDate || res.createdAt || res.checkIn,
+            concept: "Seña / Anticipo en Efectivo",
+            amount: depositAmt,
+            isAfterCutoff: !!isDepositAfter,
+          });
+        } else if (selectedChannelForDetail === "TRANSFER" && isDepositTransfer) {
+          events.push({
+            id: `${res.id}-dep-transfer`,
+            reservationId: res.id,
+            guestName: res.guestName,
+            departmentName: res.department?.name || "Departamento",
+            checkIn: res.checkIn,
+            checkOut: res.checkOut,
+            collectionDate: res.depositDate || res.createdAt || res.checkIn,
+            concept: "Seña / Anticipo por Transferencia",
+            amount: depositAmt,
+            receiverName: res.depositReceiver?.name || "Sin receptor",
+            isAfterCutoff: !!isDepositAfter,
+          });
+        }
+      }
+
+      // Final payment portion (only for PAID)
+      if (isPaid) {
+        const remainingAmt = Math.max(0, totalARS - depositAmt);
+        if (remainingAmt > 0) {
+          const payMethod = res.paymentMethod || "CASH";
+          const isPayCash = payMethod === "CASH";
+          const isPayTransfer = payMethod === "TRANSFER";
+          const isFinalPaymentHistorical = snapshot?.paidReservationIds
+            ? snapshot.paidReservationIds.includes(res.id)
+            : (res.updatedAt && cutoffDate ? new Date(res.updatedAt) < cutoffDate : false);
+          const isFinalAfter = cutoffDate ? !isFinalPaymentHistorical : false;
+
+          if (selectedChannelForDetail === "CASH" && isPayCash) {
+            events.push({
+              id: `${res.id}-final-cash`,
+              reservationId: res.id,
+              guestName: res.guestName,
+              departmentName: res.department?.name || "Departamento",
+              checkIn: res.checkIn,
+              checkOut: res.checkOut,
+              collectionDate: res.paymentDate || res.updatedAt || res.checkIn,
+              concept: "Pago Final en Efectivo",
+              amount: remainingAmt,
+              isAfterCutoff: !!isFinalAfter,
+            });
+          } else if (selectedChannelForDetail === "TRANSFER" && isPayTransfer) {
+            events.push({
+              id: `${res.id}-final-transfer`,
+              reservationId: res.id,
+              guestName: res.guestName,
+              departmentName: res.department?.name || "Departamento",
+              checkIn: res.checkIn,
+              checkOut: res.checkOut,
+              collectionDate: res.paymentDate || res.updatedAt || res.checkIn,
+              concept: "Pago Final por Transferencia",
+              amount: remainingAmt,
+              receiverName: res.paymentReceiver?.name || "Sin receptor",
+              isAfterCutoff: !!isFinalAfter,
+            });
+          }
+        }
+      }
+    }
+
+    // Sort by collectionDate desc or checkIn desc
+    return events.sort((a, b) => {
+      const dateA = a.collectionDate ? new Date(a.collectionDate).getTime() : new Date(a.checkIn).getTime();
+      const dateB = b.collectionDate ? new Date(b.collectionDate).getTime() : new Date(b.checkIn).getTime();
+      return dateB - dateA;
+    });
+  }, [selectedChannelForDetail, periodReservations, computedStats.isManualAdjustmentActive, computedStats.activeAdjustment, dollarRate]);
+
+  const channelMeta = useMemo(() => {
+    switch (selectedChannelForDetail) {
+      case "CASH":
+        return {
+          title: "Detalle de Efectivo en Mano",
+          icon: Banknote,
+          color: "emerald",
+          total: computedStats.totalCash,
+          badgeColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300",
+        };
+      case "TRANSFER":
+        return {
+          title: "Detalle de Cobros por Transferencias",
+          icon: Landmark,
+          color: "blue",
+          total: computedStats.totalTransfer,
+          badgeColor: "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300",
+        };
+      case "AIRBNB":
+        return {
+          title: "Detalle de Ingresos por Airbnb",
+          icon: AirbnbIcon,
+          color: "rose",
+          total: computedStats.totalAirbnb,
+          badgeColor: "bg-rose-100 text-[#FF5A5F] dark:bg-rose-950/60",
+        };
+      case "DEPOSIT":
+        return {
+          title: "Detalle de Señas Recibidas",
+          icon: HandCoins,
+          color: "amber",
+          total: computedStats.totalDeposits,
+          badgeColor: "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300",
+        };
+      default:
+        return null;
+    }
+  }, [selectedChannelForDetail, computedStats]);
 
   return (
     <div className="flex-1 space-y-6 w-full">
@@ -977,6 +1522,19 @@ export function BalanceClient({
               ))}
             </select>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              router.refresh();
+              toast.success("Datos actualizados");
+            }}
+            title="Actualizar datos"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-2xs text-slate-700 dark:text-slate-200 cursor-pointer"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span className="hidden sm:inline">Actualizar</span>
+          </button>
 
           {isSuperAdmin && (
             <Link
@@ -1138,12 +1696,13 @@ export function BalanceClient({
           amount={computedStats.totalCash}
           color="bg-emerald-500"
           iconStyle={{ bg: "bg-emerald-50 dark:bg-emerald-950/40", fg: "text-emerald-600 dark:text-emerald-400" }}
+          onClick={() => setSelectedChannelForDetail("CASH")}
           sub={
             computedStats.isManualAdjustmentActive
-              ? "Restante por ajuste manual"
+              ? "Restante por ajuste manual · Clic para ver"
               : grandTotal > 0
-              ? `${Math.round((computedStats.totalCash / grandTotal) * 100)}% del total`
-              : undefined
+              ? `${Math.round((computedStats.totalCash / grandTotal) * 100)}% del total · Clic para ver`
+              : "Clic para ver detalle"
           }
         />
         <StatCard
@@ -1152,12 +1711,13 @@ export function BalanceClient({
           amount={computedStats.totalTransfer}
           color="bg-blue-500"
           iconStyle={{ bg: "bg-blue-50 dark:bg-blue-950/40", fg: "text-blue-600 dark:text-blue-400" }}
+          onClick={() => setSelectedChannelForDetail("TRANSFER")}
           sub={
             computedStats.isManualAdjustmentActive
-              ? "Base manual + posteriores"
+              ? "Base manual + posteriores · Clic para ver"
               : grandTotal > 0
-              ? `${Math.round((computedStats.totalTransfer / grandTotal) * 100)}% del total`
-              : undefined
+              ? `${Math.round((computedStats.totalTransfer / grandTotal) * 100)}% del total · Clic para ver`
+              : "Clic para ver detalle"
           }
         />
         <StatCard
@@ -1166,7 +1726,8 @@ export function BalanceClient({
           amount={computedStats.totalAirbnb}
           color="bg-rose-500"
           iconStyle={{ bg: "bg-rose-50 dark:bg-rose-950/40", fg: "text-[#FF5A5F]" }}
-          sub={computedStats.airbnbCount > 0 ? `${computedStats.airbnbCount} res. · USD ${computedStats.totalAirbnbUSD.toFixed(1)}` : "0 reservas"}
+          onClick={() => setSelectedChannelForDetail("AIRBNB")}
+          sub={computedStats.airbnbCount > 0 ? `${computedStats.airbnbCount} res. · USD ${computedStats.totalAirbnbUSD.toFixed(1)} · Clic para ver` : "0 reservas · Clic para ver"}
         />
         <StatCard
           icon={HandCoins}
@@ -1174,7 +1735,14 @@ export function BalanceClient({
           amount={computedStats.totalDeposits}
           color="bg-amber-500"
           iconStyle={{ bg: "bg-amber-50 dark:bg-amber-950/40", fg: "text-amber-600 dark:text-amber-400" }}
-          sub={`${computedStats.depositCount} reservas con seña`}
+          onClick={() => setSelectedChannelForDetail("DEPOSIT")}
+          sub={
+            computedStats.isManualAdjustmentActive
+              ? computedStats.depositCount > 0
+                ? `${computedStats.depositCount} reservas con seña posterior · Clic para ver`
+                : "0 (incluidas en base manual editada) · Clic para ver"
+              : `${computedStats.depositCount} reservas con seña · Clic para ver`
+          }
         />
       </div>
 
@@ -1276,25 +1844,40 @@ export function BalanceClient({
             {receivers.map((recv, i) => {
               const item = computedStats.transferByReceiver.find((t) => t.name === recv.name);
               const total = item?.amount || 0;
-              const manualBase = item?.manualBase;
-              const futureTransfer = item?.futureTransfer;
               const depositAmt =
                 computedStats.depositByReceiver.find((d) => d.name === recv.name)?.amount || 0;
               const finalPaymentAmt = Math.max(0, total - depositAmt);
-              const pct = grandTotal > 0 ? Math.round((total / grandTotal) * 100) : 0;
+              const totalTransfers = computedStats.totalTransfer;
+              const pct = totalTransfers > 0 ? Math.round((total / totalTransfers) * 100) : 0;
               return (
-                <div key={recv.id} className="space-y-1">
+                <div
+                  key={recv.id}
+                  onClick={() => setSelectedReceiverForDetail(recv)}
+                  className="group p-2.5 -mx-2.5 rounded-xl transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer space-y-1.5"
+                  title="Haz clic para ver el detalle de cobros de esta cuenta"
+                >
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      <span className="font-medium">{recv.name}</span>
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1.5">
+                        {recv.name}
+                        <ChevronRight className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </span>
                       {recv.isDefault && (
                         <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-semibold">
                           Por defecto
                         </span>
                       )}
                     </div>
-                    <span className="font-bold">{formatCurrency(total)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        {pct}%
+                      </span>
+                      <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(total)}</span>
+                      <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">
+                        Ver detalle →
+                      </span>
+                    </div>
                   </div>
                   <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
@@ -1303,21 +1886,8 @@ export function BalanceClient({
                     />
                   </div>
 
-                  {computedStats.isManualAdjustmentActive ? (
-                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground pt-0.5">
-                      <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                        Base manual: {formatCurrency(manualBase || 0)}
-                      </span>
-                      {futureTransfer !== undefined && futureTransfer > 0 ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                          + Posteriores: {formatCurrency(futureTransfer)}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-500">Sin transferencias posteriores</span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex gap-3 text-xs text-muted-foreground">
+                  {!computedStats.isManualAdjustmentActive && (
+                    <div className="flex gap-3 text-xs text-muted-foreground pt-0.5">
                       {depositAmt > 0 && <span>Señas: {formatCurrency(depositAmt)}</span>}
                       {finalPaymentAmt > 0 && <span>Pagos finales: {formatCurrency(finalPaymentAmt)}</span>}
                     </div>
@@ -1423,30 +1993,50 @@ export function BalanceClient({
                       </span>
                     </div>
 
-                    <div className="flex justify-between items-center border-t border-dashed border-slate-200 dark:border-slate-700 pt-2 font-medium">
-                      <span className="text-slate-700 dark:text-slate-300 font-semibold">Dinero neto en su poder:</span>
-                      <span
-                        className={cn(
-                          "font-bold",
-                          item.netHeld < -0.001
-                            ? "text-red-700 dark:text-red-400"
-                            : item.netHeld > 0.001
-                            ? "text-emerald-700 dark:text-emerald-400"
-                            : "text-slate-800 dark:text-slate-200"
-                        )}
-                      >
-                        {formatSignedCurrency(item.netHeld, item.netHeld > 0.001)}
-                      </span>
+                    <div className="flex flex-col border-t border-dashed border-slate-200 dark:border-slate-700 pt-2 space-y-1">
+                      <div className="flex justify-between items-center font-medium">
+                        <span className="text-slate-700 dark:text-slate-300 font-semibold">
+                          Saldo en cuenta (Cobros - Gastos):
+                        </span>
+                        <span
+                          className={cn(
+                            "font-bold",
+                            item.netHeld < -0.001
+                              ? "text-red-700 dark:text-red-400"
+                              : item.netHeld > 0.001
+                              ? "text-emerald-700 dark:text-emerald-400"
+                              : "text-slate-800 dark:text-slate-200"
+                          )}
+                        >
+                          {formatSignedCurrency(item.netHeld, item.netHeld > 0.001)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground text-right">
+                        {item.netHeld < -0.001
+                          ? "(Adelantó de su bolsillo más de lo que cobró)"
+                          : item.netHeld > 0.001
+                          ? "(Retiene fondos del negocio en su cuenta)"
+                          : "(Cobros y gastos equilibrados)"}
+                      </p>
                     </div>
 
                     <div className="flex flex-col pt-2 border-t border-slate-200 dark:border-slate-800">
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-700 dark:text-slate-300 font-semibold">Ganancia que le corresponde:</span>
-                        <span className="font-bold text-indigo-700 dark:text-indigo-400">
-                          {formatCurrency(item.entitledProfit)}
+                        <span className="text-slate-700 dark:text-slate-300 font-semibold">
+                          {item.isDeficit ? "Resultado que le corresponde:" : "Ganancia que le corresponde:"}
+                        </span>
+                        <span
+                          className={cn(
+                            "font-bold",
+                            item.isDeficit ? "text-red-700 dark:text-red-400" : "text-indigo-700 dark:text-indigo-400"
+                          )}
+                        >
+                          {item.isDeficit
+                            ? `${formatSignedCurrency(item.targetResult)} (${item.sharePct.toFixed(0)}% déficit)`
+                            : formatCurrency(item.entitledProfit)}
                         </span>
                       </div>
-                      {item.isAirbnbReceiver && item.airbnbIncome > 0 && (
+                      {item.isAirbnbReceiver && item.airbnbIncome > 0 && !item.isDeficit && (
                         <span className="text-[11px] text-muted-foreground mt-1">
                           ({formatCurrency(item.airbnbIncome)} cobrado por Airbnb + {formatCurrency(Math.max(0, item.entitledProfit - item.airbnbIncome))} a cobrar en efectivo)
                         </span>
@@ -1458,22 +2048,58 @@ export function BalanceClient({
                 {/* Settlement Badge */}
                 <div className="pt-2">
                   {item.settlementAdjustment > 0.5 ? (
-                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs sm:text-sm font-semibold flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <ArrowDownLeft className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" /> A cobrar en efectivo:
-                      </span>
-                      <span className="text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-400">
-                        {formatSignedCurrency(item.settlementAdjustment, true)}
-                      </span>
+                    <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100 space-y-2">
+                      <div className="flex items-center justify-between text-xs sm:text-sm font-semibold">
+                        <span className="flex items-center gap-1.5 font-bold text-emerald-800 dark:text-emerald-300">
+                          <ArrowDownLeft className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                          A favor / A recuperar:
+                        </span>
+                        <span className="text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-400">
+                          {formatSignedCurrency(item.settlementAdjustment, true)}
+                        </span>
+                      </div>
+
+                      {/* Desglose de cómo se cobra */}
+                      <div className="pt-1.5 border-t border-emerald-200/80 dark:border-emerald-800/80 space-y-1 text-[11px] sm:text-xs">
+                        {item.cashPortion > 0.5 && (
+                          <div className="flex justify-between items-center text-emerald-900 dark:text-emerald-200">
+                            <span className="flex items-center gap-1">
+                              💵 Retiro de caja física:
+                            </span>
+                            <span className="font-bold">{formatCurrency(item.cashPortion)}</span>
+                          </div>
+                        )}
+                        {item.transferPortion > 0.5 && (
+                          <div className="flex justify-between items-center text-emerald-900 dark:text-emerald-200">
+                            <span className="flex items-center gap-1">
+                              💳 Transf. a recibir {item.counterpartName ? `de ${item.counterpartName}` : "entre socios"}:
+                            </span>
+                            <span className="font-bold">{formatCurrency(item.transferPortion)}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ) : item.settlementAdjustment < -0.5 ? (
-                    <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-red-900 dark:text-red-200 text-xs sm:text-sm font-semibold flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <ArrowUpRight className="h-4 w-4 text-red-700 dark:text-red-400 shrink-0" /> A transferir / compensar:
-                      </span>
-                      <span className="text-sm sm:text-base font-extrabold text-red-700 dark:text-red-400">
-                        {formatSignedCurrency(item.settlementAdjustment)}
-                      </span>
+                    <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-red-950 dark:text-red-100 space-y-2">
+                      <div className="flex items-center justify-between text-xs sm:text-sm font-semibold">
+                        <span className="flex items-center gap-1.5 font-bold text-red-800 dark:text-red-300">
+                          <ArrowUpRight className="h-4 w-4 text-red-700 dark:text-red-400 shrink-0" />
+                          A transferir / compensar:
+                        </span>
+                        <span className="text-sm sm:text-base font-extrabold text-red-700 dark:text-red-400">
+                          {formatSignedCurrency(item.settlementAdjustment)}
+                        </span>
+                      </div>
+
+                      {/* Desglose a quién le transfiere */}
+                      <div className="pt-1.5 border-t border-red-200/80 dark:border-red-800/80 space-y-1 text-[11px] sm:text-xs">
+                        <div className="flex justify-between items-center text-red-900 dark:text-red-200">
+                          <span className="flex items-center gap-1">
+                            💳 Transferir {item.counterpartName ? `a ${item.counterpartName}` : "al socio a favor"}:
+                          </span>
+                          <span className="font-bold">{formatCurrency(Math.abs(item.settlementAdjustment))}</span>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-semibold flex items-center justify-between">
@@ -1493,7 +2119,10 @@ export function BalanceClient({
             <div className="flex items-center gap-2">
               <Banknote className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
               <span>
-                <strong>Efectivo en mano (caja física): {formatCurrency(computedStats.totalCash)}.</strong> Es el dinero disponible en billetes para que cada socio retire su monto <strong>"A cobrar en efectivo"</strong>.
+                <strong>Efectivo en mano (caja física): {formatCurrency(computedStats.totalCash)}.</strong>{" "}
+                {computedStats.totalCash > 0
+                  ? "Dinero disponible en billetes para liquidar retiros y compensaciones."
+                  : "No hay efectivo disponible en caja física."}
               </span>
             </div>
             {computedStats.totalAirbnb > 0 && (
@@ -1682,6 +2311,9 @@ export function BalanceClient({
                 <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground uppercase tracking-wide">
                   Pago Final
                 </th>
+                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground uppercase tracking-wide">
+                  Método Pago Final
+                </th>
                 {!isVisualizer && (
                   <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground uppercase tracking-wide">
                     Acción
@@ -1692,7 +2324,7 @@ export function BalanceClient({
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={isVisualizer ? 6 : 7} className="text-center py-10 text-muted-foreground text-sm">
+                  <td colSpan={isVisualizer ? 7 : 8} className="text-center py-10 text-muted-foreground text-sm">
                     Sin reservas para los filtros seleccionados ({periodLabel}).
                   </td>
                 </tr>
@@ -1753,20 +2385,21 @@ export function BalanceClient({
                           <span className="font-semibold text-amber-600 dark:text-amber-400">
                             {formatCurrency(depositARS)}
                           </span>
-                          {res.depositMethod && (
-                            <span className="text-[10px] text-muted-foreground">
-                              {res.depositMethod === "CASH"
-                                ? "💵 Efectivo"
-                                : `💳 ${res.depositReceiver?.name || "Transf."}`}
-                            </span>
-                          )}
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            {res.depositMethod === "CASH"
+                              ? "💵 Efectivo"
+                              : `💳 ${res.depositReceiver?.name ? `Transf. (${res.depositReceiver.name})` : "Transferencia"}`}
+                          </span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                            📅 {format(new Date(res.depositDate || res.createdAt || res.checkIn), "dd/MM/yy")}
+                          </span>
                         </div>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
 
-                    {/* Final Payment */}
+                    {/* Final Payment (Monto + Fecha) */}
                     <td className="px-4 py-3 text-center">
                       {isAirbnb ? (
                         <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 rounded-full">
@@ -1778,27 +2411,57 @@ export function BalanceClient({
                         </span>
                       ) : res.paymentStatus === "PAID" ? (
                         <div className="flex flex-col items-center gap-0.5">
-                          {remaining > 0 && (
+                          {remaining > 0 ? (
                             <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                               {formatCurrency(remaining)}
-                            </span>
-                          )}
-                          {res.paymentMethod ? (
-                            <span className="text-[10px] text-muted-foreground">
-                              {res.paymentMethod === "CASH"
-                                ? "💵 Efectivo"
-                                : `💳 ${res.paymentReceiver?.name || "Transf."}`}
                             </span>
                           ) : (
                             <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full">
                               PAGADO
                             </span>
                           )}
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                            📅 {format(new Date(res.paymentDate || res.updatedAt || res.checkIn), "dd/MM/yy")}
+                          </span>
                         </div>
                       ) : (
-                        <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full">
-                          PARCIAL
+                        <div className="flex flex-col items-center gap-0.5">
+                          {remaining > 0 && (
+                            <span className="font-semibold text-blue-600 dark:text-blue-400">
+                              Resta: {formatCurrency(remaining)}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full">
+                            PARCIAL
+                          </span>
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Método Pago Final (Nueva Columna) */}
+                    <td className="px-4 py-3 text-center">
+                      {isAirbnb ? (
+                        <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                          Airbnb
                         </span>
+                      ) : isCancelled ? (
+                        <span className="text-muted-foreground text-xs">-</span>
+                      ) : res.paymentStatus === "PAID" ? (
+                        res.paymentMethod === "CASH" ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            💵 Efectivo
+                          </span>
+                        ) : res.paymentMethod === "TRANSFER" ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            💳 Transf. {res.paymentReceiver?.name ? `(${res.paymentReceiver.name})` : ""}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">
+                            Sin especificar
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground text-xs">-</span>
                       )}
                     </td>
 
@@ -1941,17 +2604,18 @@ export function BalanceClient({
                     <div className="text-right">
                       <span className="text-[11px] text-muted-foreground font-medium block">Seña</span>
                       {depositARS > 0 ? (
-                        <div>
+                        <div className="space-y-0.5">
                           <span className="font-semibold text-sm text-amber-600 dark:text-amber-400 block">
                             {formatCurrency(depositARS)}
                           </span>
-                          {res.depositMethod && (
-                            <span className="text-[11px] text-muted-foreground block">
-                              {res.depositMethod === "CASH"
-                                ? "💵 Efectivo"
-                                : `💳 ${res.depositReceiver?.name || "Transf."}`}
-                            </span>
-                          )}
+                          <span className="text-[11px] text-muted-foreground block font-medium">
+                            {res.depositMethod === "CASH"
+                              ? "💵 Efectivo"
+                              : `💳 ${res.depositReceiver?.name || "Transferencia"}`}
+                          </span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                            📅 {format(new Date(res.depositDate || res.createdAt || res.checkIn), "dd/MM/yy")}
+                          </span>
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-sm block">-</span>
@@ -1972,23 +2636,26 @@ export function BalanceClient({
                           SEÑA RETENIDA
                         </span>
                       ) : isPaid ? (
-                        <div className="flex items-center gap-1.5 justify-end">
-                          {remaining > 0 && (
-                            <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                              {formatCurrency(remaining)}
-                            </span>
-                          )}
-                          {res.paymentMethod ? (
-                            <span className="text-[11px] text-muted-foreground">
+                        <div className="space-y-0.5 text-right">
+                          <div className="flex items-center gap-1.5 justify-end">
+                            {remaining > 0 ? (
+                              <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                                {formatCurrency(remaining)}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full">
+                                PAGADO
+                              </span>
+                            )}
+                            <span className="text-[11px] text-muted-foreground font-medium">
                               {res.paymentMethod === "CASH"
                                 ? "💵 Efectivo"
-                                : `💳 ${res.paymentReceiver?.name || "Transf."}`}
+                                : `💳 ${res.paymentReceiver?.name ? `Transf. (${res.paymentReceiver.name})` : "Transferencia"}`}
                             </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full">
-                              PAGADO
-                            </span>
-                          )}
+                          </div>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                            📅 {format(new Date(res.paymentDate || res.updatedAt || res.checkIn), "dd/MM/yy")}
+                          </span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 justify-end">
@@ -2119,6 +2786,17 @@ export function BalanceClient({
                         </select>
                       </div>
                     )}
+
+                    {/* Fecha de Cobro de Seña */}
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Fecha en que se cobró la Seña</label>
+                      <input
+                        type="date"
+                        value={editForm.depositDate}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, depositDate: e.target.value }))}
+                        className="w-full text-sm px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none font-medium"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -2169,6 +2847,17 @@ export function BalanceClient({
                         </select>
                       </div>
                     )}
+
+                    {/* Fecha de Cobro Pago Final */}
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Fecha en que se cobró el Pago Final</label>
+                      <input
+                        type="date"
+                        value={editForm.paymentDate}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, paymentDate: e.target.value }))}
+                        className="w-full text-sm px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none font-medium"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -2337,6 +3026,488 @@ export function BalanceClient({
               {savingManualAdjustment ? "Guardando..." : "Guardar Ajuste"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receiver Transfer Detail Modal */}
+      <Dialog
+        open={!!selectedReceiverForDetail}
+        onOpenChange={(open) => !open && setSelectedReceiverForDetail(null)}
+      >
+        <DialogContent className="max-w-2xl w-full max-h-[85vh] p-0 flex flex-col overflow-hidden">
+          {selectedReceiverForDetail && selectedReceiverStats && (
+            <>
+              <DialogHeader className="p-5 pb-4 border-b shrink-0 bg-slate-50/80 dark:bg-slate-900/80">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                      <Landmark className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                        <span>{selectedReceiverForDetail.name}</span>
+                        {selectedReceiverForDetail.isDefault && (
+                          <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-semibold">
+                            Cuenta por Defecto
+                          </span>
+                        )}
+                      </DialogTitle>
+                      <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                        Cobros por Transferencia · {periodLabel}
+                        {selectedReceiverForDetail.accountInfo && (
+                          <span className="ml-1.5 opacity-80">· {selectedReceiverForDetail.accountInfo}</span>
+                        )}
+                      </DialogDescription>
+                    </div>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="p-5 overflow-y-auto space-y-5 flex-1">
+                {computedStats.isManualAdjustmentActive && computedStats.activeAdjustment ? (
+                  // CASE A: MANUAL ADJUSTMENT ACTIVE
+                  <div className="space-y-4">
+                    {/* Summary cards: Base manual + Posteriores = Total */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* 1. Base manual */}
+                      <div className="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20">
+                        <div className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300 font-semibold mb-1">
+                          <Pencil className="h-3.5 w-3.5" />
+                          <span>Monto Fijado (Base)</span>
+                        </div>
+                        <div className="text-xl font-bold text-blue-950 dark:text-blue-100">
+                          {formatCurrency(selectedReceiverStats.manualBase)}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1">
+                          Editado el{" "}
+                          {format(new Date(computedStats.activeAdjustment.editedAt), "dd/MM/yyyy HH:mm", {
+                            locale: es,
+                          })}{" "}
+                          hs
+                        </div>
+                      </div>
+
+                      {/* 2. Posteriores */}
+                      <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20">
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300 font-semibold mb-1">
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                          <span>Cobros Posteriores</span>
+                        </div>
+                        <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                          +{formatCurrency(selectedReceiverStats.futureTransfer)}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1">
+                          {selectedReceiverStats.afterCutoffEvents.length} cobro(s) luego del ajuste
+                        </div>
+                      </div>
+
+                      {/* 3. Total actual */}
+                      <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
+                        <div className="text-xs text-muted-foreground font-semibold mb-1">
+                          Total Actual en Cuenta
+                        </div>
+                        <div className="text-xl font-extrabold text-slate-900 dark:text-white">
+                          {formatCurrency(selectedReceiverStats.total)}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1">
+                          Base manual + posteriores
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section of reservations paid after the edit */}
+                    <div className="space-y-2.5 pt-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                          <span>Transferencias Cobradas Luego de la Edición</span>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                            {selectedReceiverStats.afterCutoffEvents.length}
+                          </span>
+                        </h4>
+                      </div>
+
+                      {selectedReceiverStats.afterCutoffEvents.length === 0 ? (
+                        <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-center space-y-1">
+                          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Sin transferencias posteriores al ajuste
+                          </p>
+                          <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                            Todas las transferencias anteriores quedaron absorbidas en la base fija de{" "}
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              {formatCurrency(selectedReceiverStats.manualBase)}
+                            </span>
+                            . Cuando una reserva futura se marque como pagada por transferencia a esta cuenta, se listará aquí y se sumará al total.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                          {selectedReceiverStats.afterCutoffEvents.map((evt) => (
+                            <div
+                              key={evt.id}
+                              className="p-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-slate-900 dark:text-white">
+                                    {evt.guestName}
+                                  </span>
+                                  <span
+                                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                      evt.type === "DEPOSIT"
+                                        ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300"
+                                        : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"
+                                    }`}
+                                  >
+                                    {evt.typeLabel}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                                  <span className="flex items-center gap-1">
+                                    <Building className="h-3 w-3" />
+                                    {evt.departmentName}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {format(new Date(evt.checkIn), "dd/MM/yyyy")}
+                                  </span>
+                                  {evt.updatedAt && (
+                                    <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                                      Actualizado:{" "}
+                                      {format(new Date(evt.updatedAt), "dd/MM/yyyy HH:mm", { locale: es })} hs
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-left sm:text-right shrink-0">
+                                <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
+                                  +{formatCurrency(evt.amount)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  // CASE B: AUTOMATIC CALCULATION (NOT EDITED)
+                  <div className="space-y-4">
+                    {/* Summary card */}
+                    <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs text-muted-foreground font-semibold">
+                          Total Cobrado en Transferencias
+                        </div>
+                        <div className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+                          {formatCurrency(selectedReceiverStats.total)}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {receiverTransferEvents.length} transferencia(s) registradas en {periodLabel}
+                        </div>
+                      </div>
+                      <div className="flex sm:flex-col gap-2 sm:text-right">
+                        {selectedReceiverStats.depositAmt > 0 && (
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">Señas: </span>
+                            <span className="font-bold text-amber-600 dark:text-amber-400">
+                              {formatCurrency(selectedReceiverStats.depositAmt)}
+                            </span>
+                          </div>
+                        )}
+                        {selectedReceiverStats.finalPaymentAmt > 0 && (
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">Pagos finales: </span>
+                            <span className="font-bold text-blue-600 dark:text-blue-400">
+                              {formatCurrency(selectedReceiverStats.finalPaymentAmt)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* List of all transfers */}
+                    <div className="space-y-2.5 pt-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                          <span>Listado de Reservas con Transferencia</span>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
+                            {receiverTransferEvents.length}
+                          </span>
+                        </h4>
+                      </div>
+
+                      {receiverTransferEvents.length === 0 ? (
+                        <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-center text-sm text-muted-foreground">
+                          No se registraron cobros por transferencia para este receptor en {periodLabel}.
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                          {receiverTransferEvents.map((evt) => (
+                            <div
+                              key={evt.id}
+                              className="p-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-slate-900 dark:text-white">
+                                    {evt.guestName}
+                                  </span>
+                                  <span
+                                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                      evt.type === "DEPOSIT"
+                                        ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300"
+                                        : "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300"
+                                    }`}
+                                  >
+                                    {evt.typeLabel}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                                  <span className="flex items-center gap-1">
+                                    <Building className="h-3 w-3" />
+                                    {evt.departmentName}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {format(new Date(evt.checkIn), "dd/MM/yyyy")}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-left sm:text-right shrink-0">
+                                <span className="text-base font-extrabold text-slate-900 dark:text-white">
+                                  {formatCurrency(evt.amount)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter className="p-4 border-t bg-slate-50 dark:bg-slate-900/50 flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSelectedReceiverForDetail(null)}
+                  className="cursor-pointer"
+                >
+                  Cerrar
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Channel Detail Modal (Efectivo, Transferencias, Airbnb, Señas) */}
+      <Dialog
+        open={!!selectedChannelForDetail}
+        onOpenChange={(open) => !open && setSelectedChannelForDetail(null)}
+      >
+        <DialogContent className="max-w-2xl w-full max-h-[85vh] p-0 flex flex-col overflow-hidden">
+          {selectedChannelForDetail && channelMeta && (
+            <>
+              <DialogHeader className="p-5 pb-4 border-b shrink-0 bg-slate-50/80 dark:bg-slate-900/80">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl ${channelMeta.badgeColor} shrink-0`}>
+                    <channelMeta.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-lg font-bold">
+                      {channelMeta.title}
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                      {periodLabel} · Total canal: {formatCurrency(channelMeta.total)}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="p-5 overflow-y-auto space-y-4 flex-1">
+                {/* Notice if manual adjustment is active and channel is not Airbnb */}
+                {computedStats.isManualAdjustmentActive && computedStats.activeAdjustment && selectedChannelForDetail !== "AIRBNB" ? (
+                  <div className="space-y-4">
+                    <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-800/80 bg-amber-50/80 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2.5">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="font-semibold">
+                          Se editó &quot;Cobros por Transferencia Bancaria (Cuentas)&quot;
+                        </p>
+                        <p className="text-[11px] leading-relaxed opacity-90">
+                          El ajuste manual se guardó el{" "}
+                          <span className="font-semibold">
+                            {format(new Date(computedStats.activeAdjustment.editedAt), "dd/MM/yyyy HH:mm", { locale: es })} hs
+                          </span>
+                          . Las reservas anteriores quedaron absorbidas en la edición manual. A continuación se muestran únicamente las reservas cobradas con posterioridad a esa edición.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Filtered events: only after cutoff */}
+                    {(() => {
+                      const eventsAfterCutoff = channelEvents.filter((e) => e.isAfterCutoff);
+
+                      if (eventsAfterCutoff.length === 0) {
+                        return (
+                          <div className="p-6 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-center space-y-2">
+                            <Info className="h-8 w-8 text-slate-400 mx-auto" />
+                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                              Sin cobros registrados posteriores al ajuste
+                            </p>
+                            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                              Las reservas cobradas antes del ajuste quedaron absorbidas en la base editada. Las próximas reservas que se cobren por este medio se guardarán y aparecerán aquí automáticamente.
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      const subtotal = eventsAfterCutoff.reduce((acc, e) => acc + e.amount, 0);
+
+                      return (
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">
+                              Cobros posteriores al ajuste ({eventsAfterCutoff.length})
+                            </span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                              +{formatCurrency(subtotal)}
+                            </span>
+                          </div>
+
+                          <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                            {eventsAfterCutoff.map((evt) => (
+                              <div
+                                key={evt.id}
+                                className="p-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
+                              >
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-bold text-slate-900 dark:text-white">
+                                      {evt.guestName}
+                                    </span>
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                      {evt.concept}
+                                    </span>
+                                    {evt.receiverName && (
+                                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">
+                                        Cuenta: {evt.receiverName}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                                    <span className="flex items-center gap-1">
+                                      <Building className="h-3 w-3" />
+                                      {evt.departmentName}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      {format(new Date(evt.checkIn), "dd/MM/yyyy")}
+                                    </span>
+                                    {evt.collectionDate && (
+                                      <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                                        Cobrado:{" "}
+                                        {format(new Date(evt.collectionDate), "dd/MM/yyyy HH:mm", { locale: es })} hs
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-left sm:text-right shrink-0">
+                                  <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
+                                    +{formatCurrency(evt.amount)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  // Normal mode or Airbnb (not affected by manual transfer adjustment)
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pb-1">
+                      <span>{channelEvents.length} reservas registradas</span>
+                      <span className="font-bold text-slate-900 dark:text-white text-sm">
+                        {formatCurrency(channelMeta.total)}
+                      </span>
+                    </div>
+
+                    {channelEvents.length === 0 ? (
+                      <div className="p-6 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-center text-sm text-muted-foreground">
+                        No hay reservas registradas para este canal en {periodLabel}.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                        {channelEvents.map((evt) => (
+                          <div
+                            key={evt.id}
+                            className="p-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
+                          >
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-slate-900 dark:text-white">
+                                  {evt.guestName}
+                                </span>
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                  {evt.concept}
+                                </span>
+                                {evt.receiverName && (
+                                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">
+                                    Cuenta: {evt.receiverName}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                                <span className="flex items-center gap-1">
+                                  <Building className="h-3 w-3" />
+                                  {evt.departmentName}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {format(new Date(evt.checkIn), "dd/MM/yyyy")}
+                                </span>
+                                {evt.collectionDate && (
+                                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                                    Cobrado:{" "}
+                                    {format(new Date(evt.collectionDate), "dd/MM/yyyy HH:mm", { locale: es })} hs
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-left sm:text-right shrink-0">
+                              <span className="text-base font-extrabold text-slate-900 dark:text-white">
+                                {formatCurrency(evt.amount)}
+                              </span>
+                              {evt.isUSD && evt.amountUSD && (
+                                <span className="text-xs text-muted-foreground block">
+                                  USD {evt.amountUSD.toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter className="p-4 border-t bg-slate-50 dark:bg-slate-900/50 flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSelectedChannelForDetail(null)}
+                  className="cursor-pointer"
+                >
+                  Cerrar
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -33,8 +33,8 @@ ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV PORT 3000
 
-# Install necessary system libraries for Prisma
-RUN apk add --no-cache libc6-compat openssl
+# Install necessary system libraries for Prisma + cron for automatic backups
+RUN apk add --no-cache libc6-compat openssl busybox-suid sqlite
 
 # Install Prisma CLI globally for migrations on VPS
 RUN npm install -g prisma
@@ -44,6 +44,9 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copy built artifacts
 COPY --from=builder /app/public ./public
+
+# Create persistent directories
+RUN mkdir -p /app/crm_backups /app/database
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing

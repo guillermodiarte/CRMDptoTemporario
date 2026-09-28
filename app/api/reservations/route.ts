@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       departmentId, guestName, guestPhone, guestDni, guestNationality, guestPeopleCount, bedsRequired,
       checkIn, checkOut, totalAmount, depositAmount, cleaningFee, amenitiesFee,
       currency, paymentStatus, source, notes, force, hasParking, groupId, exchangeRate,
-      depositMethod, depositReceiverId, paymentMethod, paymentReceiverId
+      depositMethod, depositReceiverId, depositDate, paymentMethod, paymentReceiverId, paymentDate
     } = body;
 
     if (!departmentId || !guestName || !checkIn || !checkOut || totalAmount === undefined) {
@@ -139,8 +139,10 @@ export async function POST(req: Request) {
             paymentStatus: paymentStatus || "UNPAID",
             paymentMethod: paymentMethod || null,
             paymentReceiverId: paymentReceiverId || null,
+            paymentDate: paymentDate ? new Date(paymentDate) : (paymentStatus === 'PAID' ? new Date() : null),
             depositMethod: depositMethod || null,
             depositReceiverId: depositReceiverId || null,
+            depositDate: depositDate ? new Date(depositDate) : (Number(depositAmount || 0) > 0 ? new Date() : null),
             source: source || "DIRECT",
             notes,
             hasParking: !!hasParking,
@@ -164,8 +166,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json(reservations[0]);
 
-  } catch (error) {
-    console.log("[RESERVATIONS_POST]", error);
+  } catch (error: any) {
+    console.error("[RESERVATIONS_POST] Error:", error?.message || error);
+    if (error?.code) console.error("[RESERVATIONS_POST] Prisma code:", error.code, "meta:", error.meta);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
