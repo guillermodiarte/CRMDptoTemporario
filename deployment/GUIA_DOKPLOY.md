@@ -39,13 +39,25 @@ Esto creará el siguiente usuario:
 ### 4. Persistencia (Volúmenes) - ¡La Clave!
 Para evitar errores de permisos ("No such container") y que la base de datos no se borre, usaremos **Volúmenes Nombrados** (Docker gestiona los permisos por nosotros).
 
-Ve a la pestaña **Volumes** y agrega:
+Ve a la pestaña **Volumes** y agrega **dos volúmenes**:
+
+#### Volumen 1 — Base de Datos (ya configurado)
 
 | Configuración | Valor | Nota |
 | :--- | :--- | :--- |
 | **Mount Type** | `VOLUME` | **Importante**: NO usar "BIND". Usar "VOLUME". |
 | **Name (Host Path)** | `crm_data` | Solo el nombre. Sin barras `/` al inicio. |
 | **Mount Path** | `/app/database` | Debe coincidir con la ruta de tu `DATABASE_URL`. |
+
+#### Volumen 2 — Imágenes Subidas (⚠️ Necesario para persistir fotos entre redeploys)
+
+| Configuración | Valor | Nota |
+| :--- | :--- | :--- |
+| **Mount Type** | `VOLUME` | Igual que el anterior. |
+| **Name (Host Path)** | `crm_uploads` | Nombre del volumen Docker para las imágenes. |
+| **Mount Path** | `/app/public/uploads` | Ruta donde la app escribe las fotos subidas. |
+
+> **Sin este segundo volumen, todas las imágenes subidas por el panel (fotos de departamentos, logos, slides, etc.) se borran con cada redeploy.** Las imágenes que vienen en el código (default images) siempre se restauran; sólo las subidas manualmente a través del panel se perderán si no hay volumen.
 
 ---
 

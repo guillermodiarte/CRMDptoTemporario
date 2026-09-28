@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
+import { getUploadsRoot } from "@/lib/uploads-path";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +34,9 @@ export async function GET(
     // Sanitize path against directory traversal
     const safePath = path.normalize(relativePath).replace(/^(\.\.[\/\\])+/, "");
 
-    // Search in all possible locations for uploads
+    // Search in all possible locations for uploads, prioritizing the persistent volume root
     const possiblePaths = [
+      path.join(getUploadsRoot(), safePath),
       path.join(process.cwd(), "public", "uploads", safePath),
       path.join("/app", "public", "uploads", safePath),
       path.join(process.cwd(), "..", "..", "public", "uploads", safePath),

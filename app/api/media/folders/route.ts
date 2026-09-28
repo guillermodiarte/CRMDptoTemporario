@@ -3,6 +3,7 @@ import { mkdir, rm, readdir } from "fs/promises";
 import path from "path";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { getUploadsRoot } from "@/lib/uploads-path";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export async function GET() {
 
     // Also scan public/uploads directory for any folders not in list (excluding depts and system folders)
     try {
-      const uploadsDir = path.join(process.cwd(), "public", "uploads");
+      const uploadsDir = getUploadsRoot();
       const dirEntries = await readdir(uploadsDir, { withFileTypes: true });
       const existingFolderNames = dirEntries.filter(e => e.isDirectory()).map(e => e.name);
 
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create physical directory
-    const dirPath = path.join(process.cwd(), "public", "uploads", sanitizedId);
+    const dirPath = path.join(getUploadsRoot(), sanitizedId);
     await mkdir(dirPath, { recursive: true });
 
     // Save in custom folders list
@@ -153,7 +154,7 @@ export async function DELETE(req: NextRequest) {
     });
 
     // Remove physical folder if exists
-    const dirPath = path.join(process.cwd(), "public", "uploads", folderId);
+    const dirPath = path.join(getUploadsRoot(), folderId);
     await rm(dirPath, { recursive: true, force: true }).catch(() => null);
 
     return NextResponse.json({ success: true });

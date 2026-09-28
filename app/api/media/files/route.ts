@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readdir, stat } from "fs/promises";
 import path from "path";
 import { auth } from "@/auth";
+import { getUploadsRoot } from "@/lib/uploads-path";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
       .replace(/\s+/g, "_")
       .slice(0, 80);
 
-    const targetDir = path.join(process.cwd(), "public", "uploads", sanitizedFolder);
+    const targetDir = path.join(getUploadsRoot(), sanitizedFolder);
 
     try {
       const entries = await readdir(targetDir, { withFileTypes: true });

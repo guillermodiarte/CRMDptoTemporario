@@ -47,6 +47,10 @@ import {
   ClipboardCopy,
   Check,
   Users,
+  Database,
+  RefreshCw,
+  HardDrive,
+  ShieldCheck,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -147,10 +151,25 @@ export function SettingsForm({ activeParkingCount = 0, users = [] }: SettingsFor
   const [editingSupply, setEditingSupply] = useState<any | null>(null);
   const [supplyToDelete, setSupplyToDelete] = useState<string | null>(null);
 
-  // Backup State
+  // Backup State (JSON Import/Export)
   const [loadingBackup, setLoadingBackup] = useState(false);
   const [backupToRestore, setBackupToRestore] = useState<File | null>(null);
   const [backupContent, setBackupContent] = useState<any>(null);
+
+  // Auto Database Backups (7 Days) State
+  interface AutoBackupItem {
+    filename: string;
+    size: number;
+    formattedSize: string;
+    createdAt: string;
+    isSafetyBackup?: boolean;
+  }
+  const [autoBackups, setAutoBackups] = useState<AutoBackupItem[]>([]);
+  const [loadingAutoBackups, setLoadingAutoBackups] = useState(false);
+  const [creatingAutoBackup, setCreatingAutoBackup] = useState(false);
+  const [backupToRestoreAuto, setBackupToRestoreAuto] = useState<AutoBackupItem | null>(null);
+  const [backupToDeleteAuto, setBackupToDeleteAuto] = useState<AutoBackupItem | null>(null);
+  const [restoringAutoBackup, setRestoringAutoBackup] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -202,6 +221,7 @@ export function SettingsForm({ activeParkingCount = 0, users = [] }: SettingsFor
       }
     };
     fetchData();
+    fetchAutoBackups();
   }, [isSuperAdmin]);
 
   const handleSaveSettings = async () => {
@@ -671,6 +691,91 @@ export function SettingsForm({ activeParkingCount = 0, users = [] }: SettingsFor
     }
   };
 
+  // ─── Auto Backup Handlers (7 Days SQLite) ─────────────────────────
+  const fetchAutoBackups = async () => {
+    setLoadingAutoBackups(true);
+    try {
+      const res = await fetch("/api/backup/auto");
+      if (res.ok) {
+        const data = await res.json();
+        setAutoBackups(data.backups || []);
+      }
+    } catch (err) {
+      console.error("Error al cargar copias de seguridad automáticas:", err);
+    } finally {
+      setLoadingAutoBackups(false);
+    }
+  };
+
+  const handleCreateAutoBackup = async () => {
+    setCreatingAutoBackup(true);
+    try {
+      const res = await fetch("/api/backup/auto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al crear la copia de seguridad");
+      toast.success("Copia de seguridad creada correctamente");
+      await fetchAutoBackups();
+    } catch (err: any) {
+      toast.error(err.message || "Error al crear la copia");
+    } finally {
+      setCreatingAutoBackup(false);
+    }
+  };
+
+  const handleConfirmRestoreAuto = async () => {
+    if (!backupToRestoreAuto) return;
+    setRestoringAutoBackup(true);
+    try {
+      const res = await fetch("/api/backup/auto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "restore",
+          filename: backupToRestoreAuto.filename,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al restaurar la copia de seguridad");
+      toast.success("Base de datos restaurada correctamente. Reiniciando...");
+      setBackupToRestoreAuto(null);
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (err: any) {
+      toast.error(err.message || "Error al restaurar la copia");
+      setRestoringAutoBackup(false);
+    }
+  };
+
+  const handleConfirmDeleteAuto = async () => {
+    if (!backupToDeleteAuto) return;
+    try {
+      const res = await fetch("/api/backup/auto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete",
+          filename: backupToDeleteAuto.filename,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al eliminar la copia");
+      toast.success("Copia de seguridad eliminada");
+      setBackupToDeleteAuto(null);
+      await fetchAutoBackups();
+    } catch (err: any) {
+      toast.error(err.message || "Error al eliminar la copia");
+    }
+  };
+
+  const handleDownloadAutoBackup = (filename: string) => {
+    window.open(`/api/backup/auto?action=download&filename=${encodeURIComponent(filename)}`, "_blank");
+  };
+
   // ─── SMTP Test ────────────────────────────────────────────────────
   const handleTestSmtp = async () => {
     setTestingSmtp(true);
@@ -834,63 +939,63 @@ export function SettingsForm({ activeParkingCount = 0, users = [] }: SettingsFor
 
       {/* ── TAB 1: GENERAL & SISTEMA ── */}
       {activeTab === "general" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-200">
-          {/* General Options */}
-          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <CardHeader>
-              <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Settings className="w-5 h-5 text-sky-500" /> Configuración General
-              </CardTitle>
-              <CardDescription className="text-slate-500 dark:text-slate-400">
-                Opciones operativas y rangos de calendario.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid w-full items-center gap-1.5">
-                <Label htmlFor="cleaningFee" className="font-semibold text-slate-800 dark:text-slate-200">Gasto de Limpieza Global ($)</Label>
-                <Input
-                  id="cleaningFee"
-                  type="number"
-                  value={cleaningFee}
-                  onChange={(e) => setCleaningFee(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-medium"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-200 items-start">
+          {/* Columna Izquierda: Configuración, Menú y Copia Manual */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* General Options */}
+            <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <CardHeader>
+                <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-sky-500" /> Configuración General
+                </CardTitle>
+                <CardDescription className="text-slate-500 dark:text-slate-400">
+                  Opciones operativas y rangos de calendario.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="startYear" className="font-semibold text-slate-800 dark:text-slate-200">Año Inicio</Label>
+                  <Label htmlFor="cleaningFee" className="font-semibold text-slate-800 dark:text-slate-200">Gasto de Limpieza Global ($)</Label>
                   <Input
-                    id="startYear"
+                    id="cleaningFee"
                     type="number"
-                    value={startYear}
-                    onChange={(e) => setStartYear(e.target.value)}
-                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                    value={cleaningFee}
+                    onChange={(e) => setCleaningFee(e.target.value)}
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-medium"
                   />
                 </div>
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="endYear" className="font-semibold text-slate-800 dark:text-slate-200">Año Fin</Label>
-                  <Input
-                    id="endYear"
-                    type="number"
-                    value={endYear}
-                    onChange={(e) => setEndYear(e.target.value)}
-                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="startYear" className="font-semibold text-slate-800 dark:text-slate-200">Año Inicio</Label>
+                    <Input
+                      id="startYear"
+                      type="number"
+                      value={startYear}
+                      onChange={(e) => setStartYear(e.target.value)}
+                      className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="endYear" className="font-semibold text-slate-800 dark:text-slate-200">Año Fin</Label>
+                    <Input
+                      id="endYear"
+                      type="number"
+                      value={endYear}
+                      onChange={(e) => setEndYear(e.target.value)}
+                      className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end pt-2">
-                <Button onClick={handleSaveSettings} disabled={saving} className="bg-sky-600 hover:bg-sky-500 text-white font-semibold cursor-pointer">
-                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Guardar Configuración
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="flex justify-end pt-2">
+                  <Button onClick={handleSaveSettings} disabled={saving} className="bg-sky-600 hover:bg-sky-500 text-white font-semibold cursor-pointer">
+                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Guardar Configuración
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Menu Options & Backup */}
-          <div className="space-y-6">
             {/* Menu Visibility */}
             <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               <CardHeader>
@@ -950,14 +1055,14 @@ export function SettingsForm({ activeParkingCount = 0, users = [] }: SettingsFor
               </CardContent>
             </Card>
 
-            {/* Database Backup */}
+            {/* Manual Database Backup (JSON) */}
             <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               <CardHeader>
                 <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <Download className="w-5 h-5 text-amber-500" /> Copia de Seguridad
+                  <Download className="w-5 h-5 text-amber-500" /> Copia Manual (Archivo JSON)
                 </CardTitle>
                 <CardDescription className="text-slate-500 dark:text-slate-400">
-                  Exporta o importa la base de datos completa.
+                  Exporta o importa un archivo JSON para respaldo externo o migración.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -986,7 +1091,7 @@ export function SettingsForm({ activeParkingCount = 0, users = [] }: SettingsFor
                     className="w-full justify-center font-semibold cursor-pointer"
                   >
                     <Upload className="mr-2 h-4 w-4" />
-                    Restaurar Base de Datos
+                    Restaurar desde Archivo JSON
                   </Button>
                 </div>
 
@@ -1006,6 +1111,240 @@ export function SettingsForm({ activeParkingCount = 0, users = [] }: SettingsFor
                 )}
               </CardContent>
             </Card>
+          </div>
+
+          {/* Columna Derecha: Copias de Seguridad Automáticas (7 Días) */}
+          <div className="lg:col-span-7 space-y-6">
+            <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2 text-lg">
+                      <Database className="w-5 h-5 text-emerald-500" /> Copias de Seguridad Automáticas (7 Días)
+                    </CardTitle>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      <ShieldCheck className="w-3.5 h-3.5" /> Activo (00:00 hs)
+                    </span>
+                  </div>
+                  <CardDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
+                    El sistema almacena copias de seguridad de la base de datos de los últimos 7 días. Puedes restaurar el sistema a cualquier punto o descargarlo como archivo .db.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchAutoBackups}
+                    disabled={loadingAutoBackups}
+                    className="cursor-pointer border-slate-300 dark:border-slate-700 h-9"
+                    title="Actualizar lista de copias"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loadingAutoBackups ? "animate-spin" : ""}`} />
+                    Actualizar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleCreateAutoBackup}
+                    disabled={creatingAutoBackup}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer h-9 shadow-xs"
+                  >
+                    {creatingAutoBackup ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        Creando...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-3.5 h-3.5 mr-1.5" />
+                        Crear Copia Ahora
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-5">
+                {loadingAutoBackups && autoBackups.length === 0 ? (
+                  <div className="flex items-center justify-center p-8 text-slate-500 dark:text-slate-400">
+                    <Loader2 className="w-6 h-6 animate-spin text-emerald-500 mr-2" />
+                    <span className="text-sm">Buscando copias de seguridad en el sistema...</span>
+                  </div>
+                ) : autoBackups.length === 0 ? (
+                  <div className="text-center p-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/40">
+                    <Database className="w-10 h-10 text-slate-400 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      No se encontraron copias de seguridad automáticas registradas
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">
+                      Las copias se crean automáticamente a las 00:00 hs o puedes generar una copia manual ahora.
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={handleCreateAutoBackup}
+                      disabled={creatingAutoBackup}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4 mr-1.5" /> Generar Primera Copia
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {autoBackups.map((item) => {
+                      const dateObj = new Date(item.createdAt);
+                      const formattedDate = !isNaN(dateObj.getTime())
+                        ? format(dateObj, "EEEE d 'de' MMMM yyyy, HH:mm 'hs'", { locale: es }).replace(/^\w/, c => c.toUpperCase())
+                        : item.filename;
+
+                      return (
+                        <div
+                          key={item.filename}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/60 dark:hover:bg-slate-800/80 transition-all"
+                        >
+                          <div className="flex items-start sm:items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <Database className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+                                  {formattedDate}
+                                </span>
+                                {item.isSafetyBackup ? (
+                                  <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                    Respaldo Preventivo
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                    Automático
+                                  </span>
+                                )}
+                                <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-slate-200/80 text-slate-700 dark:bg-slate-700/80 dark:text-slate-300">
+                                  {item.formattedSize}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate mt-0.5 max-w-md">
+                                {item.filename}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDownloadAutoBackup(item.filename)}
+                              title="Descargar archivo .db a tu equipo"
+                              className="h-8 text-xs font-medium cursor-pointer border-slate-300 dark:border-slate-700"
+                            >
+                              <Download className="w-3.5 h-3.5 mr-1 text-slate-600 dark:text-slate-300" />
+                              Descargar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setBackupToRestoreAuto(item)}
+                              disabled={restoringAutoBackup}
+                              title="Restaurar base de datos a este punto"
+                              className="h-8 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 border-amber-300 dark:border-amber-800/80 cursor-pointer"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                              Restaurar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setBackupToDeleteAuto(item)}
+                              title="Eliminar este archivo de copia"
+                              className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Confirm Dialog: Restore from Auto Backup */}
+            <AlertDialog open={!!backupToRestoreAuto} onOpenChange={(open) => !open && setBackupToRestoreAuto(null)}>
+              <AlertDialogContent className="max-w-md">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                    <AlertCircle className="w-5 h-5" /> ¿Restaurar Base de Datos?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3 pt-2 text-left text-slate-600 dark:text-slate-300">
+                    <span>Estás a punto de restaurar el sistema al siguiente punto de copia:</span>
+                    {backupToRestoreAuto && (
+                      <div className="p-3 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-xs space-y-1 font-sans border border-slate-200 dark:border-slate-700">
+                        <div>
+                          <strong>Fecha:</strong>{" "}
+                          {format(new Date(backupToRestoreAuto.createdAt), "EEEE d 'de' MMMM yyyy, HH:mm 'hs'", { locale: es }).replace(/^\w/, c => c.toUpperCase())}
+                        </div>
+                        <div><strong>Tamaño:</strong> {backupToRestoreAuto.formattedSize}</div>
+                        <div className="font-mono text-slate-500 dark:text-slate-400 break-all">{backupToRestoreAuto.filename}</div>
+                      </div>
+                    )}
+                    <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl text-xs text-amber-800 dark:text-amber-300">
+                      ⚠️ <strong>Atención:</strong> Todos los datos actuales serán reemplazados por los de esta copia. Por precaución, el sistema creará automáticamente un respaldo preventivo antes de sobrescribir. Al terminar, la página se recargará automáticamente.
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={restoringAutoBackup}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleConfirmRestoreAuto();
+                    }}
+                    disabled={restoringAutoBackup}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+                  >
+                    {restoringAutoBackup ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Restaurando...
+                      </>
+                    ) : (
+                      "Confirmar Restauración"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Confirm Dialog: Delete Auto Backup */}
+            <AlertDialog open={!!backupToDeleteAuto} onOpenChange={(open) => !open && setBackupToDeleteAuto(null)}>
+              <AlertDialogContent className="max-w-md">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                    <Trash2 className="w-5 h-5" /> ¿Eliminar Copia de Seguridad?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="pt-2 text-left text-slate-600 dark:text-slate-300">
+                    ¿Estás seguro de que deseas eliminar este archivo de respaldo?
+                    {backupToDeleteAuto && (
+                      <span className="block mt-2 font-mono text-xs text-slate-500 break-all">
+                        {backupToDeleteAuto.filename}
+                      </span>
+                    )}
+                    Esta acción no se puede deshacer.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleConfirmDeleteAuto();
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+                  >
+                    Eliminar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       )}

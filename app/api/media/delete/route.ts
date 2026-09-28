@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { unlink } from "fs/promises";
 import path from "path";
 import { auth } from "@/auth";
+import { resolveUploadUrl } from "@/lib/uploads-path";
 
 export const dynamic = "force-dynamic";
 
@@ -33,9 +34,8 @@ export async function POST(req: NextRequest) {
     for (const rawUrl of urls) {
       if (typeof rawUrl !== "string" || !rawUrl.startsWith("/uploads/")) continue;
 
-      // Prevent path traversal
-      const safeRelative = rawUrl.replace(/^\/uploads\//, "").replace(/\.\./g, "");
-      const fullPath = path.join(process.cwd(), "public", "uploads", safeRelative);
+      const fullPath = resolveUploadUrl(rawUrl);
+      if (!fullPath) continue;
 
       try {
         await unlink(fullPath);

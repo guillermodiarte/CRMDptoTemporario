@@ -3,6 +3,7 @@ import { writeFile, mkdir, readdir } from "fs/promises";
 import path from "path";
 import { auth } from "@/auth";
 import { optimizeImageBuffer } from "@/lib/image-optimizer";
+import { getUploadsRoot } from "@/lib/uploads-path";
 
 /**
  * Returns a short prefix for filenames based on the target folder.
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
       .slice(0, 80);
 
     const subDir = sanitized || "general";
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", subDir);
+    const uploadsDir = path.join(getUploadsRoot(), subDir);
 
     // Create directory recursively if it doesn't exist
     await mkdir(uploadsDir, { recursive: true });

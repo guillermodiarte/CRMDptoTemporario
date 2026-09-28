@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import prisma from "@/lib/prisma";
+import { getUploadsRoot } from "@/lib/uploads-path";
 
 const IMAGE_EXTS = new Set([".webp", ".png", ".jpg", ".jpeg", ".avif", ".svg", ".gif"]);
 
@@ -13,7 +14,7 @@ export function normalizeDeptName(name: string): string {
 }
 
 export function getDeptUploadsBaseDir(): string {
-  const dir = path.join(process.cwd(), "public", "uploads", "departamentos");
+  const dir = path.join(getUploadsRoot(), "departamentos");
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }

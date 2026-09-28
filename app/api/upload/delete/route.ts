@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { unlink } from "fs/promises";
 import path from "path";
 import { auth } from "@/auth";
+import { resolveUploadUrl } from "@/lib/uploads-path";
 
 export async function DELETE(req: NextRequest) {
   try {
@@ -20,13 +21,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
 
-    // Resolve absolute path on disk
-    const relativePath = url.replace(/^\/uploads\//, "");
-    const absPath = path.join(process.cwd(), "public", "uploads", relativePath);
-
-    // Safety check: must remain inside public/uploads
-    const uploadsRoot = path.join(process.cwd(), "public", "uploads");
-    if (!absPath.startsWith(uploadsRoot)) {
+    // Resolve absolute path on disk (guards against traversal)
+    const absPath = resolveUploadUrl(url);
+    if (!absPath) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
 

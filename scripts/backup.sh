@@ -8,7 +8,16 @@
 # --- Configuration ---
 # The database file path (resolved from DATABASE_URL env or default)
 if [ -n "$DATABASE_URL" ]; then
-  DB_PATH=$(echo "$DATABASE_URL" | sed 's/file://')
+  RAW_PATH=$(echo "$DATABASE_URL" | sed 's/file://')
+  if [ -f "$RAW_PATH" ]; then
+    DB_PATH="$RAW_PATH"
+  elif [ -f "./prisma/$RAW_PATH" ]; then
+    DB_PATH="./prisma/$RAW_PATH"
+  elif [ -f "./prisma/$(basename "$RAW_PATH")" ]; then
+    DB_PATH="./prisma/$(basename "$RAW_PATH")"
+  else
+    DB_PATH="$RAW_PATH"
+  fi
 else
   DB_PATH="./prisma/dev.db"
 fi

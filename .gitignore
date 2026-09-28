@@ -46,6 +46,8 @@ next-env.d.ts
 *.db-journal
 *.sqlite
 *.sqlite-journal
+/crm_backups
+crm_backups/
 
 # logs
 *.log
