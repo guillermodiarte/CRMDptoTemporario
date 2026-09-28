@@ -1274,20 +1274,22 @@ export function SettingsForm({ activeParkingCount = 0, users = [] }: SettingsFor
                   <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                     <AlertCircle className="w-5 h-5" /> ¿Restaurar Base de Datos?
                   </AlertDialogTitle>
-                  <AlertDialogDescription className="space-y-3 pt-2 text-left text-slate-600 dark:text-slate-300">
-                    <span>Estás a punto de restaurar el sistema al siguiente punto de copia:</span>
-                    {backupToRestoreAuto && (
-                      <div className="p-3 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-xs space-y-1 font-sans border border-slate-200 dark:border-slate-700">
-                        <div>
-                          <strong>Fecha:</strong>{" "}
-                          {format(new Date(backupToRestoreAuto.createdAt), "EEEE d 'de' MMMM yyyy, HH:mm 'hs'", { locale: es }).replace(/^\w/, c => c.toUpperCase())}
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3 pt-2 text-left text-slate-600 dark:text-slate-300 text-sm">
+                      <p>Estás a punto de restaurar el sistema al siguiente punto de copia:</p>
+                      {backupToRestoreAuto && (
+                        <div className="p-3 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-xs space-y-1 font-sans border border-slate-200 dark:border-slate-700">
+                          <div>
+                            <strong>Fecha:</strong>{" "}
+                            {format(new Date(backupToRestoreAuto.createdAt), "EEEE d 'de' MMMM yyyy, HH:mm 'hs'", { locale: es }).replace(/^\w/, c => c.toUpperCase())}
+                          </div>
+                          <div><strong>Tamaño:</strong> {backupToRestoreAuto.formattedSize}</div>
+                          <div className="font-mono text-slate-500 dark:text-slate-400 break-all">{backupToRestoreAuto.filename}</div>
                         </div>
-                        <div><strong>Tamaño:</strong> {backupToRestoreAuto.formattedSize}</div>
-                        <div className="font-mono text-slate-500 dark:text-slate-400 break-all">{backupToRestoreAuto.filename}</div>
+                      )}
+                      <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl text-xs text-amber-800 dark:text-amber-300">
+                        ⚠️ <strong>Atención:</strong> Todos los datos actuales serán reemplazados por los de esta copia. Por precaución, el sistema creará automáticamente un respaldo preventivo antes de sobrescribir. Al terminar, la página se recargará automáticamente.
                       </div>
-                    )}
-                    <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl text-xs text-amber-800 dark:text-amber-300">
-                      ⚠️ <strong>Atención:</strong> Todos los datos actuales serán reemplazados por los de esta copia. Por precaución, el sistema creará automáticamente un respaldo preventivo antes de sobrescribir. Al terminar, la página se recargará automáticamente.
                     </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
