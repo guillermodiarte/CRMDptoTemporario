@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Department } from "@prisma/client";
+import { formatCurrency } from "@/lib/utils";
 
 const formSchema = z.object({
   type: z.enum(["COMMISSION", "TAX", "SUPPLY"]),
@@ -28,20 +29,36 @@ const formSchema = z.object({
   date: z.string(),
 });
 
+type PaymentMode = "cash" | string;
+
 interface ExpenseFormProps {
   departments: Department[];
   setOpen: (open: boolean) => void;
   initialData?: any;
   defaultDate?: Date;
   receivers?: { id: string; name: string; accountInfo?: string | null }[];
+  globalCashBalance?: number;
 }
 
-export function ExpenseForm({ departments, setOpen, initialData, defaultDate, receivers = [] }: ExpenseFormProps) {
+export function ExpenseForm({
+  departments,
+  setOpen,
+  initialData,
+  defaultDate,
+  receivers = [],
+  globalCashBalance = 0,
+}: ExpenseFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [selectedReceiverId, setSelectedReceiverId] = useState<string>(
-    initialData?.paymentReceiverId || initialData?.paymentReceiver?.id || ""
-  );
+
+  const getInitialMode = (): PaymentMode => {
+    if (initialData?.paidFromCash) return "cash";
+    if (initialData?.paymentReceiverId || initialData?.paymentReceiver?.id)
+      return initialData.paymentReceiverId || initialData.paymentReceiver?.id;
+    return "cash";
+  };
+
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>(getInitialMode);
 
   const defaultDateStr = initialData?.date
     ? new Date(initialData.date).toISOString().split("T")[0]
@@ -51,30 +68,32 @@ export function ExpenseForm({ departments, setOpen, initialData, defaultDate, re
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema) as any,
-    defaultValues: initialData ? {
-      type: initialData.type,
-      description: initialData.description,
-      amount: initialData.amount,
-      quantity: initialData.quantity || 1,
-      unitPrice: initialData.unitPrice || 0,
-      departmentId: initialData.departmentId || "global",
-      date: defaultDateStr,
-    } : {
-      type: "SUPPLY",
-      description: "",
-      amount: 0,
-      quantity: 1,
-      unitPrice: 0,
-      departmentId: "global",
-      date: defaultDateStr,
-    },
+    defaultValues: initialData
+      ? {
+          type: initialData.type,
+          description: initialData.description,
+          amount: initialData.amount,
+          quantity: initialData.quantity || 1,
+          unitPrice: initialData.unitPrice || 0,
+          departmentId: initialData.departmentId || "global",
+          date: defaultDateStr,
+        }
+      : {
+          type: "SUPPLY",
+          description: "",
+          amount: 0,
+          quantity: 1,
+          unitPrice: 0,
+          departmentId: "global",
+          date: defaultDateStr,
+        },
   });
 
   const type = form.watch("type");
   const quantity = form.watch("quantity") || 1;
   const unitPrice = form.watch("unitPrice") || 0;
+  const amount = form.watch("amount") || 0;
 
-  // Auto-calculate amount for SUPPLY
   useEffect(() => {
     if (type === "SUPPLY") {
       const calc = quantity * unitPrice;
@@ -83,7 +102,7 @@ export function ExpenseForm({ departments, setOpen, initialData, defaultDate, re
   }, [type, quantity, unitPrice, form]);
 
   useEffect(() => {
-    setSelectedReceiverId(initialData?.paymentReceiverId || initialData?.paymentReceiver?.id || "");
+    setPaymentMode(getInitialMode());
     if (initialData) {
       form.reset({
         type: initialData.type,
@@ -92,34 +111,59 @@ export function ExpenseForm({ departments, setOpen, initialData, defaultDate, re
         quantity: initialData.quantity || 1,
         unitPrice: initialData.unitPrice || 0,
         departmentId: initialData.departmentId || "global",
-        date: initialData.date ? new Date(initialData.date).toISOString().split("T")[0] : defaultDateStr,
+        date: initialData.date
+          ? new Date(initialData.date).toISOString().split("T")[0]
+          : defaultDateStr,
       });
     }
   }, [initialData]);
 
+  const projectedCashBalance = globalCashBalance - (paymentMode === "cash" ? amount : 0);
+
+  const cashColor =
+    projectedCashBalance > 0
+      ? "text-emerald-700 dark:text-emerald-400"
+      : projectedCashBalance === 0
+        ? "text-slate-600 dark:text-slate-400"
+        : "text-red-600 dark:text-red-400";
+
+  const cashBg =
+    projectedCashBalance > 0
+      ? "bg-emerald-50/80 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800"
+      : projectedCashBalance === 0
+        ? "bg-slate-50 border-slate-200 dark:bg-slate-800/40 dark:border-slate-700"
+        : "bg-red-50/80 border-red-200 dark:bg-red-950/30 dark:border-red-800";
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!paymentMode) {
+      alert("Por favor selecciona quién pagó este gasto");
+      return;
+    }
+
     setLoading(true);
     try {
+      const paidFromCash = paymentMode === "cash";
+      const paymentReceiverId = !paidFromCash ? paymentMode : null;
+
       const payload = {
         ...values,
         departmentId: values.departmentId === "global" ? null : values.departmentId,
-        paymentReceiverId: selectedReceiverId || null,
+        paymentReceiverId,
+        paidFromCash,
       };
 
-      const url = initialData?.id ? `/api/expenses/${initialData.id}` : "/api/expenses";
+      const url = initialData?.id
+        ? `/api/expenses/${initialData.id}`
+        : "/api/expenses";
       const method = initialData?.id ? "PATCH" : "POST";
 
-      const res = await fetch(url, {
-        method: method,
-        body: JSON.stringify(payload),
-      });
-
+      const res = await fetch(url, { method, body: JSON.stringify(payload) });
       if (!res.ok) throw new Error("Failed");
 
       router.refresh();
       setOpen(false);
       form.reset();
-    } catch (error) {
+    } catch {
       alert("Error guardando gasto");
     } finally {
       setLoading(false);
@@ -128,170 +172,231 @@ export function ExpenseForm({ departments, setOpen, initialData, defaultDate, re
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="type"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tipo</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="COMMISSION">Comisión (Booking/Airbnb)</SelectItem>
-                  <SelectItem value="TAX">Impuestos/Servicios</SelectItem>
-                  <SelectItem value="SUPPLY">Insumos/Mantenimiento</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Descripción</FormLabel>
-              <FormControl>
-                <Input placeholder="Factura Luz / Reparación..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {type === "SUPPLY" && (
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cantidad</FormLabel>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Tipo de Gasto */}
+          <FormField
+            control={form.control}
+            name="type"
+            render={({ field }) => (
+              <FormItem className="space-y-1">
+                <FormLabel className="text-xs font-semibold text-foreground">Tipo de Gasto</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
-                      {...field}
-                      value={field.value ?? ""}
-                    />
+                    <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  <SelectContent>
+                    <SelectItem value="COMMISSION">Comisión (Booking/Airbnb)</SelectItem>
+                    <SelectItem value="TAX">Impuestos/Servicios</SelectItem>
+                    <SelectItem value="SUPPLY">Insumos/Mantenimiento</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Departamento */}
+          <FormField
+            control={form.control}
+            name="departmentId"
+            render={({ field }) => (
+              <FormItem className="space-y-1">
+                <FormLabel className="text-xs font-semibold text-foreground">Departamento</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="global">Global (Sin Depto)</SelectItem>
+                    {departments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Descripción */}
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem className="sm:col-span-2 space-y-1">
+                <FormLabel className="text-xs font-semibold text-foreground">Descripción</FormLabel>
+                <FormControl>
+                  <Input className="h-9 text-sm" placeholder="Ej: Factura Luz, Reparación termotanque, Limpieza..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Si SUPPLY: Cantidad y Precio Unitario */}
+          {type === "SUPPLY" ? (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-xs font-semibold text-foreground">Cantidad</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          className="h-9 text-sm"
+                          onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="unitPrice"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-xs font-semibold text-foreground">Precio Unit.</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          className="h-9 text-sm"
+                          onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-semibold text-foreground">Monto Total</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        className="h-9 text-sm bg-muted font-bold"
+                        readOnly
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          ) : (
             <FormField
               control={form.control}
-              name="unitPrice"
+              name="amount"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Precio Unit.</FormLabel>
+                <FormItem className="space-y-1">
+                  <FormLabel className="text-xs font-semibold text-foreground">Monto Total</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       step="0.01"
                       min={0}
+                      className="h-9 text-sm font-bold"
                       onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
                       {...field}
-                      value={field.value ?? ""}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </div>
-        )}
-
-        <FormField
-          control={form.control}
-          name="amount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Monto Total</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
-                  {...field}
-                  readOnly={type === "SUPPLY"}
-                  className={type === "SUPPLY" ? "bg-muted" : ""}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
           )}
-        />
 
-        <FormField
-          control={form.control}
-          name="departmentId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Departamento</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+          {/* Fecha */}
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem className="space-y-1">
+                <FormLabel className="text-xs font-semibold text-foreground">Fecha</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <Input type="date" className="h-9 text-sm" {...field} />
                 </FormControl>
-                <SelectContent>
-                  <SelectItem value="global">Global (Sin Depto)</SelectItem>
-                  {departments.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="date"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Fecha</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          {/* ¿Quién pagó este gasto? */}
+          <div className="sm:col-span-2 space-y-1">
+            <label className="text-xs font-semibold text-foreground leading-none">¿Quién pagó este gasto?</label>
+            <Select value={paymentMode} onValueChange={(val) => setPaymentMode(val)}>
+              <SelectTrigger className="h-9 text-sm w-full">
+                <SelectValue placeholder="Seleccionar quién pagó" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cash">
+                  <span className="flex items-center gap-2">
+                    <span>💵</span>
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-400">Efectivo (Caja)</span>
+                    <span className="text-xs text-muted-foreground">— Se descuenta del dinero físico disponible</span>
+                  </span>
+                </SelectItem>
+                {receivers.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    <span className="flex items-center gap-2">
+                      <span>👤</span>
+                      <span className="font-medium">{r.name}</span>
+                      {r.accountInfo && (
+                        <span className="text-xs text-muted-foreground">({r.accountInfo})</span>
+                      )}
+                      <span className="text-xs text-muted-foreground">— Pagó de su bolsillo</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
-        {/* Receptor (solo si hay receptores configurados) */}
-        {receivers.length > 0 && (
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium leading-none">Pagado por (opcional)</label>
-            <select
-              value={selectedReceiverId}
-              onChange={(e) => setSelectedReceiverId(e.target.value)}
-              className="w-full text-sm px-3 py-2 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Sin asignar</option>
-              {receivers.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}{r.accountInfo ? ` (${r.accountInfo})` : ""}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground">Quién pagó este gasto — se descontará de su balance.</p>
+        {/* Status compacto de caja si se paga en efectivo */}
+        {paymentMode === "cash" && (
+          <div className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs transition-all ${cashBg}`}>
+            <div className="flex items-center gap-2">
+              <span>💰</span>
+              <span className="text-muted-foreground">Caja disponible:</span>
+              <span className={`font-semibold ${globalCashBalance >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                {formatCurrency(globalCashBalance)}
+              </span>
+            </div>
+            {amount > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Saldo resultante:</span>
+                <span className={`font-extrabold ${cashColor}`}>
+                  {formatCurrency(projectedCashBalance)}
+                  {projectedCashBalance < 0 && (
+                    <span className="font-semibold text-red-500 ml-1">(déficit)</span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Guardando..." : (initialData?.id ? "Actualizar Gasto" : "Guardar Gasto")}
+        <Button type="submit" className="w-full h-10 mt-1" disabled={loading}>
+          {loading ? "Guardando..." : initialData?.id ? "Actualizar Gasto" : "Guardar Gasto"}
         </Button>
       </form>
     </Form>

@@ -44,6 +44,7 @@ interface FinanceViewProps {
   startYear?: number;
   endYear?: number;
   receivers?: { id: string; name: string; accountInfo?: string | null }[];
+  globalCashBalance?: number;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
@@ -71,7 +72,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function FinanceView({ expenses, departments, monthlyStats, distribution, summary, role, date = new Date(), departmentStats = [], platformStats = [], startYear, endYear, reservations = [], receivers = [] }: FinanceViewProps) {
+export function FinanceView({ expenses, departments, monthlyStats, distribution, summary, role, date = new Date(), departmentStats = [], platformStats = [], startYear, endYear, reservations = [], receivers = [], globalCashBalance = 0 }: FinanceViewProps) {
+
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
@@ -219,7 +221,12 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                     <div className="font-medium truncate max-w-[120px] lg:max-w-none">{exp.description}</div>
                     <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                       <span className="text-muted-foreground text-[10px]">{exp.department?.name || "Global"}</span>
-                      {exp.paymentReceiver && (
+                      {exp.paidFromCash && (
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-medium">
+                          💵 Caja
+                        </span>
+                      )}
+                      {!exp.paidFromCash && exp.paymentReceiver && (
                         <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-medium">
                           {exp.paymentReceiver.name}
                         </span>
@@ -269,7 +276,12 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                 <div className="font-medium text-sm whitespace-normal break-words leading-tight">{exp.description}</div>
                 <div className="flex items-center gap-1.5 flex-wrap text-xs text-muted-foreground mt-0.5">
                   <span>{format(new Date(exp.date), "dd/MM")} • {exp.department?.name || "Global"}</span>
-                  {exp.paymentReceiver && (
+                  {exp.paidFromCash && (
+                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-medium">
+                      💵 Caja
+                    </span>
+                  )}
+                  {!exp.paidFromCash && exp.paymentReceiver && (
                     <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-medium">
                       {exp.paymentReceiver.name}
                     </span>
@@ -347,7 +359,13 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                   <Plus className="mr-2 h-4 w-4" /> Agregar Gasto
                 </Button>
               </DialogTrigger>
-              <DialogContent onCloseAutoFocus={(e) => e.preventDefault()}>
+              <DialogContent
+                className="sm:max-w-xl md:max-w-2xl"
+                onCloseAutoFocus={(e) => e.preventDefault()}
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()}
+              >
                 <DialogHeader>
                   <DialogTitle>{editingExpense?.id ? "Editar Gasto" : "Agregar Gasto"}</DialogTitle>
                 </DialogHeader>
@@ -357,6 +375,7 @@ export function FinanceView({ expenses, departments, monthlyStats, distribution,
                   initialData={editingExpense}
                   defaultDate={formDefaultDate}
                   receivers={receivers}
+                  globalCashBalance={globalCashBalance}
                 />
               </DialogContent>
             </Dialog>

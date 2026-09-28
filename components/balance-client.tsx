@@ -69,6 +69,7 @@ interface ExpenseRow {
   department?: { name: string } | null;
   paymentReceiver?: { id: string; name: string } | null;
   paymentReceiverId?: string | null;
+  paidFromCash?: boolean | null;
 }
 
 interface ReservationRow {
@@ -835,8 +836,15 @@ export function BalanceClient({
     const map: Record<string, { name: string; amount: number; count: number }> = {};
     let unassigned = 0;
     let unassignedCount = 0;
+    let fromCash = 0;
+    let fromCashCount = 0;
 
     for (const exp of periodExpenses) {
+      if (exp.paidFromCash) {
+        fromCash += exp.amount;
+        fromCashCount++;
+        continue;
+      }
       const recId = exp.paymentReceiverId || exp.paymentReceiver?.id;
       if (recId) {
         const recName = exp.paymentReceiver?.name || receivers.find((r) => r.id === recId)?.name || "Socio";
@@ -853,13 +861,24 @@ export function BalanceClient({
       byReceiver: map,
       unassigned,
       unassignedCount,
+      fromCash,
+      fromCashCount,
     };
   }, [periodExpenses, receivers]);
+
+  // Real cash in hand = total cash received minus expenses paid from cash (can be negative in deficit)
+  const realCashInHand = computedStats.totalCash - expensesByReceiver.fromCash;
+
+  const cashExpensesList = useMemo(() => {
+    return periodExpenses
+      .filter((e) => e.paidFromCash)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [periodExpenses]);
 
   // ─── Modal for Partner Expenses Breakdown ───
   const [partnerExpensesModal, setPartnerExpensesModal] = useState<{
     isOpen: boolean;
-    receiverId: string | "all" | "unassigned";
+    receiverId: string | "all" | "unassigned" | "fromCash";
     receiverName: string;
   }>({
     isOpen: false,
@@ -873,7 +892,10 @@ export function BalanceClient({
       return periodExpenses;
     }
     if (partnerExpensesModal.receiverId === "unassigned") {
-      return periodExpenses.filter((e) => !e.paymentReceiverId && !e.paymentReceiver?.id);
+      return periodExpenses.filter((e) => !e.paidFromCash && !e.paymentReceiverId && !e.paymentReceiver?.id);
+    }
+    if (partnerExpensesModal.receiverId === "fromCash") {
+      return periodExpenses.filter((e) => e.paidFromCash);
     }
     return periodExpenses.filter((e) => {
       const recId = e.paymentReceiverId || e.paymentReceiver?.id;
@@ -887,6 +909,9 @@ export function BalanceClient({
     }
     if (partnerExpensesModal.receiverId === "unassigned") {
       return expensesByReceiver.unassigned;
+    }
+    if (partnerExpensesModal.receiverId === "fromCash") {
+      return expensesByReceiver.fromCash;
     }
     const info = expensesByReceiver.byReceiver[partnerExpensesModal.receiverId];
     return info ? info.amount : 0;
@@ -907,12 +932,14 @@ export function BalanceClient({
     const airbnbTotal = computedStats.totalAirbnb;
     const isDeficit = netPeriodProfit < -0.001;
     const totalProfit = Math.max(0, netPeriodProfit);
-    const totalCash = Math.max(0, computedStats.totalCash);
+    // Real distributable cash = cash received - cash spent from box (can be negative)
+    const realCashBalance = realCashInHand;
+    const totalCash = Math.max(0, realCashBalance);
 
     // Calculate base share percentages and ideal target results
     const receiverShares = receivers.map((recv) => {
-      const sharePct = useConfigured
-        ? (recv.profitSharePercent || 0) / 100
+      const sharePct = useConfigured && totalConfiguredPercent > 0
+        ? (recv.profitSharePercent || 0) / totalConfiguredPercent
         : 1 / receivers.length;
       return {
         recv,
@@ -1422,7 +1449,9 @@ export function BalanceClient({
           title: "Detalle de Efectivo en Mano",
           icon: Banknote,
           color: "emerald",
-          total: computedStats.totalCash,
+          total: realCashInHand,
+          grossIncome: computedStats.totalCash,
+          cashSpent: expensesByReceiver.fromCash,
           badgeColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300",
         };
       case "TRANSFER":
@@ -1452,7 +1481,7 @@ export function BalanceClient({
       default:
         return null;
     }
-  }, [selectedChannelForDetail, computedStats]);
+  }, [selectedChannelForDetail, computedStats, realCashInHand, expensesByReceiver.fromCash]);
 
   return (
     <div className="flex-1 space-y-6 w-full">
@@ -1622,12 +1651,12 @@ export function BalanceClient({
               <div className="w-full bg-slate-200/80 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2.5 flex">
                 <div
                   className="bg-emerald-500 h-full transition-all duration-500 rounded-l-full"
-                  style={{ width: `${Math.min(100, Math.max(0, ((grandTotal - totalPeriodExpenses) / grandTotal) * 100))}%` }}
-                  title="Ganancia"
+                  style={{ width: `${Math.min(100, Math.max(0, (grandTotal / (grandTotal + totalPeriodExpenses)) * 100))}%` }}
+                  title="Ingresos"
                 />
                 <div
                   className="bg-rose-500 h-full transition-all duration-500 rounded-r-full"
-                  style={{ width: `${Math.min(100, Math.max(0, (totalPeriodExpenses / grandTotal) * 100))}%` }}
+                  style={{ width: `${Math.min(100, Math.max(0, (totalPeriodExpenses / (grandTotal + totalPeriodExpenses)) * 100))}%` }}
                   title="Gastos"
                 />
               </div>
@@ -1636,54 +1665,118 @@ export function BalanceClient({
         </div>
 
         {/* INGRESOS TOTALES */}
-        <div className="col-span-1 order-2 sm:order-1 relative overflow-hidden rounded-2xl border p-3.5 sm:p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-300 dark:hover:border-emerald-800/60 transition-all flex flex-col justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 sm:p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
+        <div
+          className="col-span-1 order-2 sm:order-1 relative overflow-hidden rounded-2xl border p-4 sm:p-5 shadow-xs transition-all bg-gradient-to-br from-emerald-50/90 via-white to-emerald-50/40 dark:from-emerald-950/40 dark:via-slate-900 dark:to-slate-900 border-emerald-200/80 dark:border-emerald-800/60"
+        >
+          {/* Subtle decorative blob */}
+          <div
+            className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-15 pointer-events-none blur-xl bg-emerald-500"
+          />
+
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 sm:p-2.5 rounded-xl shrink-0 shadow-xs bg-emerald-600 text-white">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
+              <div>
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 block">
+                  Ingresos
+                </span>
+                <span className="text-[10px] sm:text-[11px] text-muted-foreground block -mt-0.5">
+                  Cobros del período
+                </span>
+              </div>
             </div>
-            <div className="min-w-0">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block truncate">
-                Ingresos
-              </span>
-              <span className="text-[10px] sm:text-[11px] text-muted-foreground block truncate">
-                {periodReservations.filter((r) => r.paymentStatus === "PAID" || (r.depositAmount || 0) > 0).length} cobradas
-              </span>
-            </div>
+
+            <span className="text-[11px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-2xs bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
+              {periodReservations.filter((r) => r.paymentStatus === "PAID" || (r.depositAmount || 0) > 0).length} cobradas
+            </span>
           </div>
 
-          <div className="mt-2.5 sm:mt-3">
-            <div className="text-base sm:text-lg lg:text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 break-words leading-tight">
+          <div className="mt-3 sm:mt-4">
+            <div className="text-2xl sm:text-2xl lg:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 leading-none">
               {formatCurrency(grandTotal)}
             </div>
-            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate">
-              Total facturado
+
+            {/* Quick breakdown subtitle */}
+            <div className="text-[11px] sm:text-xs text-muted-foreground mt-2 flex items-center gap-1.5 flex-wrap">
+              <span className="text-emerald-700 dark:text-emerald-400 font-semibold">Total facturado</span>
+              {grandTotal > 0 && totalPeriodExpenses > 0 && (
+                <span className="text-slate-500 dark:text-slate-400">
+                  · {Math.round((grandTotal / (grandTotal + totalPeriodExpenses)) * 100)}% del total
+                </span>
+              )}
             </div>
+
+            {/* Visual ratio bar */}
+            {grandTotal > 0 && (
+              <div className="w-full bg-slate-200/80 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2.5 flex">
+                <div
+                  className="bg-emerald-500 h-full transition-all duration-500 rounded-full"
+                  style={{ width: `${Math.min(100, Math.max(0, (grandTotal / (grandTotal + totalPeriodExpenses || 1)) * 100))}%` }}
+                  title="Ingresos"
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* GASTOS DEL PERÍODO */}
-        <div className="col-span-1 order-3 sm:order-2 relative overflow-hidden rounded-2xl border p-3.5 sm:p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:border-rose-300 dark:hover:border-rose-800/60 transition-all flex flex-col justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 sm:p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 shrink-0">
-              <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
+        <div
+          className="col-span-1 order-3 sm:order-2 relative overflow-hidden rounded-2xl border p-4 sm:p-5 shadow-xs transition-all bg-gradient-to-br from-rose-50/90 via-white to-rose-50/40 dark:from-rose-950/40 dark:via-slate-900 dark:to-slate-900 border-rose-200/80 dark:border-rose-800/60"
+        >
+          {/* Subtle decorative blob */}
+          <div
+            className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-15 pointer-events-none blur-xl bg-rose-500"
+          />
+
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 sm:p-2.5 rounded-xl shrink-0 shadow-xs bg-rose-600 text-white">
+                <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
+              <div>
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 block">
+                  Gastos
+                </span>
+                <span className="text-[10px] sm:text-[11px] text-muted-foreground block -mt-0.5">
+                  Egresos registrados
+                </span>
+              </div>
             </div>
-            <div className="min-w-0">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block truncate">
-                Gastos
-              </span>
-              <span className="text-[10px] sm:text-[11px] text-muted-foreground block truncate">
-                {periodExpenses.length} registrados
-              </span>
-            </div>
+
+            <span className="text-[11px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-2xs bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800">
+              {periodExpenses.length} registrados
+            </span>
           </div>
 
-          <div className="mt-2.5 sm:mt-3">
-            <div className="text-base sm:text-lg lg:text-2xl font-black tracking-tight text-rose-600 dark:text-rose-400 break-words leading-tight">
+          <div className="mt-3 sm:mt-4">
+            <div className="text-2xl sm:text-2xl lg:text-3xl font-black tracking-tight text-rose-600 dark:text-rose-400 leading-none">
               {formatCurrency(totalPeriodExpenses)}
             </div>
-            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate">
-              {cleaningExpenseEnabled ? "Con limpieza" : "Sin computar limp."}
+
+            {/* Quick breakdown subtitle */}
+            <div className="text-[11px] sm:text-xs text-muted-foreground mt-2 flex items-center gap-1.5 flex-wrap">
+              <span className="text-rose-700 dark:text-rose-400 font-semibold">
+                {cleaningExpenseEnabled ? "Con limpieza" : "Sin computar limp."}
+              </span>
+              {totalPeriodExpenses > 0 && grandTotal > 0 && (
+                <span className="text-slate-500 dark:text-slate-400">
+                  · {Math.round((totalPeriodExpenses / grandTotal) * 100)}% de ingresos
+                </span>
+              )}
             </div>
+
+            {/* Visual ratio bar */}
+            {grandTotal > 0 && (
+              <div className="w-full bg-slate-200/80 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2.5 flex">
+                <div
+                  className="bg-rose-500 h-full transition-all duration-500 rounded-full"
+                  style={{ width: `${Math.min(100, Math.max(0, (totalPeriodExpenses / (grandTotal + totalPeriodExpenses || 1)) * 100))}%` }}
+                  title="Gastos"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1693,12 +1786,14 @@ export function BalanceClient({
         <StatCard
           icon={Banknote}
           label="Efectivo en Mano"
-          amount={computedStats.totalCash}
+          amount={realCashInHand}
           color="bg-emerald-500"
           iconStyle={{ bg: "bg-emerald-50 dark:bg-emerald-950/40", fg: "text-emerald-600 dark:text-emerald-400" }}
           onClick={() => setSelectedChannelForDetail("CASH")}
           sub={
-            computedStats.isManualAdjustmentActive
+            expensesByReceiver.fromCash > 0
+              ? `${formatCurrency(computedStats.totalCash, 'ARS', 0)} cobrados - ${formatCurrency(expensesByReceiver.fromCash, 'ARS', 0)} gastos · Clic para ver`
+              : computedStats.isManualAdjustmentActive
               ? "Restante por ajuste manual · Clic para ver"
               : grandTotal > 0
               ? `${Math.round((computedStats.totalCash / grandTotal) * 100)}% del total · Clic para ver`
@@ -2115,22 +2210,63 @@ export function BalanceClient({
           </div>
 
           {/* Cash Box Banner */}
-          <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm text-emerald-950 dark:text-emerald-100">
-            <div className="flex items-center gap-2">
-              <Banknote className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
-              <span>
-                <strong>Efectivo en mano (caja física): {formatCurrency(computedStats.totalCash)}.</strong>{" "}
-                {computedStats.totalCash > 0
-                  ? "Dinero disponible en billetes para liquidar retiros y compensaciones."
-                  : "No hay efectivo disponible en caja física."}
-              </span>
-            </div>
-            {computedStats.totalAirbnb > 0 && (
-              <span className="shrink-0 font-medium text-slate-700 dark:text-slate-300">
-                Airbnb: <strong className="text-blue-700 dark:text-blue-400">{formatCurrency(computedStats.totalAirbnb)}</strong> (en cuenta exterior de Guillermo)
-              </span>
-            )}
-          </div>
+          {(() => {
+            const cashIncome = computedStats.totalCash;
+            const cashSpent = expensesByReceiver.fromCash;
+            const realCash = cashIncome - cashSpent;
+            const hasCashExpenses = cashSpent > 0;
+
+            return (
+              <div className={`p-3.5 sm:p-4 rounded-xl border flex flex-col gap-2 text-xs sm:text-sm ${
+                realCash < 0
+                  ? "bg-red-50/70 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-950 dark:text-red-100"
+                  : "bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100"
+              }`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  {/* Cash income (always shown) */}
+                  <div className="flex items-center gap-2">
+                    <Banknote className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                    <span>
+                      <strong>Efectivo cobrado: {formatCurrency(cashIncome)}</strong>
+                      {!hasCashExpenses && cashIncome > 0 && " — disponible en caja."}
+                      {!hasCashExpenses && cashIncome === 0 && " — sin cobros en efectivo este período."}
+                    </span>
+                  </div>
+                  {computedStats.totalAirbnb > 0 && (
+                    <span className="shrink-0 font-medium text-slate-700 dark:text-slate-300">
+                      Airbnb: <strong className="text-blue-700 dark:text-blue-400">{formatCurrency(computedStats.totalAirbnb)}</strong> (cuenta exterior Guillermo)
+                    </span>
+                  )}
+                </div>
+
+                {/* Real cash balance (only when there are cash expenses) */}
+                {hasCashExpenses && (
+                  <div className="border-t border-current/15 pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span>Gastos pagados desde caja: <strong className="text-red-600 dark:text-red-400">-{formatCurrency(cashSpent)}</strong></span>
+                    </div>
+                    <button
+                      onClick={() => setPartnerExpensesModal({
+                        isOpen: true,
+                        receiverId: "fromCash",
+                        receiverName: "Gastos pagados desde caja",
+                      })}
+                      className={`flex items-center gap-1.5 font-bold text-sm sm:text-base hover:underline underline-offset-2 transition-colors ${
+                        realCash < 0
+                          ? "text-red-700 dark:text-red-400 hover:text-red-800"
+                          : "text-emerald-700 dark:text-emerald-300 hover:text-emerald-800"
+                      }`}
+                      title="Ver detalle de gastos desde caja"
+                    >
+                      Saldo actual en caja: {formatCurrency(realCash)}
+                      {realCash < 0 && <span className="text-xs font-normal ml-1">(déficit)</span>}
+                      <span className="text-xs opacity-60 ml-1">→ ver detalle</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -2234,6 +2370,33 @@ export function BalanceClient({
               </span>
               <span className="text-[10px] text-muted-foreground block mt-1">
                 {expensesByReceiver.unassignedCount} gastos generales • Clic para ver
+              </span>
+            </div>
+          )}
+
+          {expensesByReceiver.fromCash > 0 && (
+            <div
+              onClick={() =>
+                setPartnerExpensesModal({
+                  isOpen: true,
+                  receiverId: "fromCash",
+                  receiverName: "Gastos pagados desde la caja",
+                })
+              }
+              className="p-3.5 rounded-xl border bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/80 dark:hover:bg-emerald-950/60 cursor-pointer transition-all hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs group/card"
+              title="Ver gastos pagados desde la caja física"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold uppercase tracking-wider block truncate">
+                  💵 Pagado desde Caja
+                </span>
+                <Receipt className="h-3.5 w-3.5 text-muted-foreground opacity-40 group-hover/card:opacity-100 group-hover/card:text-emerald-600 transition-all shrink-0" />
+              </div>
+              <span className="text-lg font-bold text-red-700 dark:text-red-400 block mt-0.5 group-hover/card:underline underline-offset-2">
+                {formatSignedCurrency(-expensesByReceiver.fromCash)}
+              </span>
+              <span className="text-[10px] text-muted-foreground block mt-1">
+                {expensesByReceiver.fromCashCount} {expensesByReceiver.fromCashCount === 1 ? "gasto desde caja" : "gastos desde caja"} • Clic para ver
               </span>
             </div>
           )}
@@ -3320,7 +3483,15 @@ export function BalanceClient({
                       {channelMeta.title}
                     </DialogTitle>
                     <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                      {periodLabel} · Total canal: {formatCurrency(channelMeta.total)}
+                      {periodLabel} · {selectedChannelForDetail === "CASH" ? "Saldo en mano:" : "Total canal:"}{" "}
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        {formatCurrency(channelMeta.total)}
+                      </span>
+                      {selectedChannelForDetail === "CASH" && expensesByReceiver.fromCash > 0 && (
+                        <span className="ml-1 text-[11px] text-muted-foreground">
+                          ({formatCurrency(computedStats.totalCash)} cobrados - {formatCurrency(expensesByReceiver.fromCash)} gastos)
+                        </span>
+                      )}
                     </DialogDescription>
                   </div>
                 </div>
@@ -3425,6 +3596,166 @@ export function BalanceClient({
                         </div>
                       );
                     })()}
+                  </div>
+                ) : selectedChannelForDetail === "CASH" ? (
+                  /* Dedicated Cash In Hand View with Income + Cash Expenses Breakdown */
+                  <div className="space-y-4">
+                    {/* Summary box */}
+                    <div className="p-4 rounded-xl border bg-slate-50/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 space-y-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
+                          <Banknote className="h-3.5 w-3.5 text-emerald-600" />
+                          Cobros de reservas en efectivo ({channelEvents.length}):
+                        </span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                          +{formatCurrency(computedStats.totalCash)}
+                        </span>
+                      </div>
+                      {expensesByReceiver.fromCash > 0 && (
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
+                            <Receipt className="h-3.5 w-3.5 text-red-500" />
+                            Gastos pagados desde caja ({cashExpensesList.length}):
+                          </span>
+                          <span className="font-bold text-red-600 dark:text-red-400 text-sm">
+                            -{formatCurrency(expensesByReceiver.fromCash)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="border-t border-slate-200 dark:border-slate-800 pt-2.5 flex items-center justify-between">
+                        <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                          Efectivo real en mano disponible:
+                        </span>
+                        <span
+                          className={cn(
+                            "font-black text-lg",
+                            realCashInHand < 0
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-emerald-700 dark:text-emerald-400"
+                          )}
+                        >
+                          {formatCurrency(realCashInHand)}
+                          {realCashInHand < 0 && (
+                            <span className="text-xs font-normal ml-1 text-red-500">(déficit)</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Section 1: Cash Collections */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        <span className="flex items-center gap-1.5">
+                          <Banknote className="h-3.5 w-3.5 text-emerald-600" />
+                          Cobros de reservas ({channelEvents.length})
+                        </span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                          +{formatCurrency(computedStats.totalCash)}
+                        </span>
+                      </div>
+
+                      {channelEvents.length === 0 ? (
+                        <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-center text-xs text-muted-foreground">
+                          No hay reservas cobradas en efectivo en este período.
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                          {channelEvents.map((evt) => (
+                            <div
+                              key={evt.id}
+                              className="p-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-slate-900 dark:text-white">
+                                    {evt.guestName}
+                                  </span>
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                    {evt.concept}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                                  <span className="flex items-center gap-1">
+                                    <Building className="h-3 w-3" />
+                                    {evt.departmentName}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {format(new Date(evt.checkIn), "dd/MM/yyyy")}
+                                  </span>
+                                  {evt.collectionDate && (
+                                    <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                                      Cobrado:{" "}
+                                      {format(new Date(evt.collectionDate), "dd/MM/yyyy HH:mm", { locale: es })} hs
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-left sm:text-right shrink-0">
+                                <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
+                                  +{formatCurrency(evt.amount)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Section 2: Cash Expenses */}
+                    {cashExpensesList.length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          <span className="flex items-center gap-1.5 text-red-700 dark:text-red-400">
+                            <Receipt className="h-3.5 w-3.5 text-red-500" />
+                            Gastos pagados desde caja ({cashExpensesList.length})
+                          </span>
+                          <span className="text-red-600 dark:text-red-400 font-bold">
+                            -{formatCurrency(expensesByReceiver.fromCash)}
+                          </span>
+                        </div>
+
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                          {cashExpensesList.map((exp) => (
+                            <div
+                              key={exp.id}
+                              className="p-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-slate-900 dark:text-white">
+                                    {exp.description}
+                                  </span>
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                    💵 Caja
+                                  </span>
+                                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                    {exp.type === "COMMISSION" ? "Comisión" : exp.type === "TAX" ? "Impuesto/Servicio" : "Insumo/Mantenimiento"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                                  {exp.department?.name && (
+                                    <span className="flex items-center gap-1">
+                                      <Building className="h-3 w-3" />
+                                      {exp.department.name}
+                                    </span>
+                                  )}
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {format(new Date(exp.date), "dd/MM/yyyy")}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-left sm:text-right shrink-0">
+                                <span className="text-base font-extrabold text-red-600 dark:text-red-400">
+                                  -{formatCurrency(exp.amount)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   // Normal mode or Airbnb (not affected by manual transfer adjustment)

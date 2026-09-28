@@ -36,6 +36,7 @@ export default async function FinancePage({
   const dollarRate = await getDollarRate();
 
   // 2. Fetch de datos
+  // Fetch all expenses (for current month display + global cash balance)
   const expenses = await prisma.expense.findMany({
     where: {
       date: { gte: startDate, lte: endDate },
@@ -44,6 +45,50 @@ export default async function FinancePage({
     include: { department: true, paymentReceiver: true },
     orderBy: { date: "desc" },
   });
+
+  // Calculate global (all-time) cash balance = total cash received - total cash expenses
+  const allTimeReservations = await prisma.reservation.findMany({
+    where: {
+      sessionId,
+      OR: [
+        { paymentStatus: { in: ["PAID", "PARTIAL"] }, status: { notIn: ["CANCELLED"] } },
+        { status: "CANCELLED", depositAmount: { gt: 0 } },
+        { paymentStatus: "CANCELLED", depositAmount: { gt: 0 } },
+      ],
+    },
+    select: {
+      paymentStatus: true,
+      paymentMethod: true,
+      depositMethod: true,
+      totalAmount: true,
+      depositAmount: true,
+      currency: true,
+      exchangeRate: true,
+    },
+  });
+
+  let globalCashIncome = 0;
+  for (const res of allTimeReservations) {
+    const isUSD = res.currency === "USD";
+    const rate = res.exchangeRate && res.exchangeRate > 1 ? res.exchangeRate : dollarRate;
+    const toARS = (v: number) => isUSD ? v * rate : v;
+    const isPaid = res.paymentStatus === "PAID";
+    const isPartial = res.paymentStatus === "PARTIAL";
+    const depositAmt = (res.depositAmount || 0);
+    const hadDeposit = depositAmt > 0 && (isPartial || depositAmt < res.totalAmount || !!res.depositMethod);
+    if (hadDeposit && res.depositMethod === "CASH") globalCashIncome += toARS(depositAmt);
+    if (isPaid) {
+      const remaining = Math.max(0, res.totalAmount - (hadDeposit ? depositAmt : 0));
+      if (remaining > 0 && res.paymentMethod === "CASH") globalCashIncome += toARS(remaining);
+    }
+  }
+
+  const allTimeCashExpenses = await prisma.expense.aggregate({
+    where: { sessionId, isDeleted: false, paidFromCash: true },
+    _sum: { amount: true },
+  });
+  const globalCashBalance = globalCashIncome - (allTimeCashExpenses._sum.amount || 0);
+
 
   const paymentReceivers = await prisma.paymentReceiver.findMany({
     where: { sessionId, isActive: true },
@@ -231,6 +276,7 @@ export default async function FinancePage({
       startYear={configStartYear}
       endYear={configEndYear}
       receivers={paymentReceivers}
+      globalCashBalance={globalCashBalance}
     />
   );
 }

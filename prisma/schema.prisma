@@ -232,6 +232,8 @@ model Expense {
   paymentReceiverId String?          // Who paid this expense (deducted from their balance)
   paymentReceiver   PaymentReceiver? @relation("ExpensePaidBy", fields: [paymentReceiverId], references: [id], onDelete: SetNull)
 
+  paidFromCash Boolean @default(false) // true = se pagó con efectivo de la caja física
+
   isDeleted Boolean  @default(false) // Soft delete
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
