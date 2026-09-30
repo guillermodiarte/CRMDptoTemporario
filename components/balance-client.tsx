@@ -342,6 +342,7 @@ export function BalanceClient({
 
   // ─── Channel Detail Modal State (Efectivo, Transferencias, Airbnb, Señas) ───
   const [selectedChannelForDetail, setSelectedChannelForDetail] = useState<"CASH" | "TRANSFER" | "AIRBNB" | "DEPOSIT" | null>(null);
+  const [showAllCashReservations, setShowAllCashReservations] = useState(false);
 
   // ─── Edit Payment Modal State ───
   const [editingRes, setEditingRes] = useState<ReservationRow | null>(null);
@@ -3208,7 +3209,7 @@ export function BalanceClient({
         open={!!selectedReceiverForDetail}
         onOpenChange={(open) => !open && setSelectedReceiverForDetail(null)}
       >
-        <DialogContent className="max-w-2xl w-full max-h-[85vh] p-0 flex flex-col overflow-hidden">
+        <DialogContent className="sm:max-w-2xl w-full max-h-[85vh] p-0 flex flex-col overflow-hidden">
           {selectedReceiverForDetail && selectedReceiverStats && (
             <>
               <DialogHeader className="p-5 pb-4 border-b shrink-0 bg-slate-50/80 dark:bg-slate-900/80">
@@ -3477,11 +3478,17 @@ export function BalanceClient({
       </Dialog>
 
       {/* Channel Detail Modal (Efectivo, Transferencias, Airbnb, Señas) */}
+      {/* Channel Detail Modal (Efectivo, Transferencias, Airbnb, Señas) */}
       <Dialog
         open={!!selectedChannelForDetail}
-        onOpenChange={(open) => !open && setSelectedChannelForDetail(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedChannelForDetail(null);
+            setShowAllCashReservations(false);
+          }
+        }}
       >
-        <DialogContent className="max-w-2xl w-full max-h-[85vh] p-0 flex flex-col overflow-hidden">
+        <DialogContent className="sm:max-w-2xl w-full max-h-[88vh] p-0 flex flex-col overflow-hidden">
           {selectedChannelForDetail && channelMeta && (
             <>
               <DialogHeader className="p-5 pb-4 border-b shrink-0 bg-slate-50/80 dark:bg-slate-900/80">
@@ -3509,8 +3516,253 @@ export function BalanceClient({
               </DialogHeader>
 
               <div className="p-5 overflow-y-auto space-y-4 flex-1">
-                {/* Notice if manual adjustment is active and channel is not Airbnb */}
-                {computedStats.isManualAdjustmentActive && computedStats.activeAdjustment && selectedChannelForDetail !== "AIRBNB" ? (
+                {selectedChannelForDetail === "CASH" ? (
+                  /* Dedicated Cash In Hand View with 2 Separate Boxes: Ingresos vs Gastos */
+                  <div className="space-y-4">
+                    {/* Top Summary Card (3 métricas claras) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3.5 rounded-xl border bg-slate-50/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800">
+                      <div className="flex flex-col justify-center p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50">
+                        <span className="text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                          <Banknote className="h-3 w-3" /> Cobros en Efectivo
+                        </span>
+                        <span className="text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-400 mt-0.5">
+                          +{formatCurrency(computedStats.totalCash)}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col justify-center p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/50">
+                        <span className="text-[10px] uppercase font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1">
+                          <Receipt className="h-3 w-3" /> Gastos desde Caja
+                        </span>
+                        <span className="text-sm sm:text-base font-extrabold text-rose-700 dark:text-rose-400 mt-0.5">
+                          -{formatCurrency(expensesByReceiver.fromCash)}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col justify-center p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                        <span className="text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                          <Wallet className="h-3 w-3" /> Saldo Neto en Mano
+                        </span>
+                        <span
+                          className={cn(
+                            "text-sm sm:text-base font-black mt-0.5",
+                            realCashInHand < 0
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-emerald-800 dark:text-emerald-300"
+                          )}
+                        >
+                          {formatCurrency(realCashInHand)}
+                          {realCashInHand < 0 && (
+                            <span className="text-[10px] font-normal ml-1 text-red-500">(déficit)</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* ─── RECUADRO 1: INGRESOS EN EFECTIVO (RESERVAS) ─── */}
+                    <div className="rounded-xl border border-emerald-200 dark:border-emerald-800/80 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+                      {/* Header Recuadro 1 */}
+                      <div className="bg-emerald-50/70 dark:bg-emerald-950/30 px-4 py-3 border-b border-emerald-100 dark:border-emerald-900/60 flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-emerald-600 text-white shadow-2xs">
+                            <Banknote className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-sm text-foreground">
+                              Ingresos por Cobros en Efectivo
+                            </h4>
+                            <span className="text-[11px] text-muted-foreground">
+                              {computedStats.isManualAdjustmentActive && !showAllCashReservations
+                                ? `${channelEvents.filter((e) => e.isAfterCutoff).length} cobros posteriores al ajuste`
+                                : `${channelEvents.length} cobros registrados`}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="font-black text-sm text-emerald-600 dark:text-emerald-400 block">
+                            +{formatCurrency(computedStats.totalCash)}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">Total cobrado</span>
+                        </div>
+                      </div>
+
+                      {/* Contenido Recuadro 1 */}
+                      <div className="p-3.5 space-y-3">
+                        {computedStats.isManualAdjustmentActive && computedStats.activeAdjustment && (
+                          <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-800/80 bg-amber-50/80 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2.5">
+                            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                            <div className="space-y-1.5 flex-1">
+                              <p className="font-semibold">
+                                Se editó &quot;Cobros por Transferencia Bancaria (Cuentas)&quot;
+                              </p>
+                              <p className="text-[11px] leading-relaxed opacity-90">
+                                El ajuste manual se guardó el{" "}
+                                <span className="font-semibold">
+                                  {format(new Date(computedStats.activeAdjustment.editedAt), "dd/MM/yyyy HH:mm", { locale: es })} hs
+                                </span>
+                                . Las transferencias se fijaron manualmente, por lo que el restante de cobros anteriores ({formatCurrency(Math.max(0, computedStats.totalCash - channelEvents.filter((e) => e.isAfterCutoff).reduce((s, e) => s + e.amount, 0)))}) quedó consolidado como base en caja física. A continuación se listan las reservas cobradas con posterioridad (+{formatCurrency(channelEvents.filter((e) => e.isAfterCutoff).reduce((s, e) => s + e.amount, 0))}).
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setShowAllCashReservations((prev) => !prev)}
+                                className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:opacity-80 transition-opacity cursor-pointer block pt-0.5"
+                              >
+                                {showAllCashReservations
+                                  ? "← Ver solo cobros posteriores al ajuste"
+                                  : `Ver todas las reservas cobradas en efectivo del mes (${channelEvents.length}) →`}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {(() => {
+                          const displayEvents =
+                            computedStats.isManualAdjustmentActive && !showAllCashReservations
+                              ? channelEvents.filter((e) => e.isAfterCutoff)
+                              : channelEvents;
+
+                          if (displayEvents.length === 0) {
+                            return (
+                              <div className="p-6 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-center space-y-1.5 text-xs text-muted-foreground">
+                                <p className="font-semibold text-slate-700 dark:text-slate-300">
+                                  Sin cobros posteriores a la edición manual
+                                </p>
+                                <p className="text-[11px] max-w-sm mx-auto">
+                                  Todo el efectivo anterior está consolidado en la base de caja física ({formatCurrency(computedStats.totalCash)}).
+                                </p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                              {displayEvents.map((evt) => (
+                                <div
+                                  key={evt.id}
+                                  className="p-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-sm"
+                                >
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-bold text-slate-900 dark:text-white">
+                                        {evt.guestName}
+                                      </span>
+                                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                        {evt.concept}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                                      <span className="flex items-center gap-1">
+                                        <Building className="h-3 w-3" />
+                                        {evt.departmentName}
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        {format(new Date(evt.checkIn), "dd/MM/yyyy")}
+                                      </span>
+                                      {evt.collectionDate && (
+                                        <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                                          Cobrado:{" "}
+                                          {format(new Date(evt.collectionDate), "dd/MM/yyyy HH:mm", { locale: es })} hs
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="text-left sm:text-right shrink-0">
+                                    <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
+                                      +{formatCurrency(evt.amount)}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* ─── RECUADRO 2: GASTOS EN EFECTIVO (SALIDAS DE CAJA) ─── */}
+                    <div className="rounded-xl border border-rose-200 dark:border-rose-800/80 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+                      {/* Header Recuadro 2 */}
+                      <div className="bg-rose-50/70 dark:bg-rose-950/30 px-4 py-3 border-b border-rose-100 dark:border-rose-900/60 flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-rose-600 text-white shadow-2xs">
+                            <Receipt className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-sm text-foreground">
+                              Gastos Pagados desde Caja Física
+                            </h4>
+                            <span className="text-[11px] text-muted-foreground">
+                              {cashExpensesList.length} {cashExpensesList.length === 1 ? "gasto registrado" : "gastos registrados"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="font-black text-sm text-rose-600 dark:text-rose-400 block">
+                            -{formatCurrency(expensesByReceiver.fromCash)}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">Total egresos caja</span>
+                        </div>
+                      </div>
+
+                      {/* Contenido Recuadro 2 */}
+                      <div className="p-3.5">
+                        {cashExpensesList.length === 0 ? (
+                          <div className="p-6 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-center space-y-1.5 text-xs text-muted-foreground">
+                            <p className="font-semibold text-slate-700 dark:text-slate-300">
+                              No hay gastos pagados desde caja física en este período
+                            </p>
+                            <p className="text-[11px] max-w-md mx-auto">
+                              Cuando registres un gasto con el medio de pago &quot;Efectivo (Caja)&quot;, se descontará automáticamente de la caja física y figurará en este recuadro.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                            {cashExpensesList.map((exp) => (
+                              <div
+                                key={exp.id}
+                                className="p-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-sm"
+                              >
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-bold text-slate-900 dark:text-white">
+                                      {exp.description}
+                                    </span>
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                      💵 Efectivo Caja
+                                    </span>
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                      {exp.type === "COMMISSION" ? "Comisión" : exp.type === "TAX" ? "Impuesto/Servicio" : "Insumo/Mantenimiento"}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                                    {exp.department?.name && (
+                                      <span className="flex items-center gap-1">
+                                        <Building className="h-3 w-3" />
+                                        {exp.department.name}
+                                      </span>
+                                    )}
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      {format(new Date(exp.date), "dd/MM/yyyy")}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="text-left sm:text-right shrink-0">
+                                  <span className="text-base font-extrabold text-rose-600 dark:text-rose-400">
+                                    -{formatCurrency(exp.amount)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : computedStats.isManualAdjustmentActive && computedStats.activeAdjustment && selectedChannelForDetail !== "AIRBNB" ? (
                   <div className="space-y-4">
                     <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-800/80 bg-amber-50/80 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2.5">
                       <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
@@ -3607,166 +3859,6 @@ export function BalanceClient({
                         </div>
                       );
                     })()}
-                  </div>
-                ) : selectedChannelForDetail === "CASH" ? (
-                  /* Dedicated Cash In Hand View with Income + Cash Expenses Breakdown */
-                  <div className="space-y-4">
-                    {/* Summary box */}
-                    <div className="p-4 rounded-xl border bg-slate-50/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 space-y-2.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
-                          <Banknote className="h-3.5 w-3.5 text-emerald-600" />
-                          Cobros de reservas en efectivo ({channelEvents.length}):
-                        </span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                          +{formatCurrency(computedStats.totalCash)}
-                        </span>
-                      </div>
-                      {expensesByReceiver.fromCash > 0 && (
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
-                            <Receipt className="h-3.5 w-3.5 text-red-500" />
-                            Gastos pagados desde caja ({cashExpensesList.length}):
-                          </span>
-                          <span className="font-bold text-red-600 dark:text-red-400 text-sm">
-                            -{formatCurrency(expensesByReceiver.fromCash)}
-                          </span>
-                        </div>
-                      )}
-                      <div className="border-t border-slate-200 dark:border-slate-800 pt-2.5 flex items-center justify-between">
-                        <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
-                          Efectivo real en mano disponible:
-                        </span>
-                        <span
-                          className={cn(
-                            "font-black text-lg",
-                            realCashInHand < 0
-                              ? "text-red-600 dark:text-red-400"
-                              : "text-emerald-700 dark:text-emerald-400"
-                          )}
-                        >
-                          {formatCurrency(realCashInHand)}
-                          {realCashInHand < 0 && (
-                            <span className="text-xs font-normal ml-1 text-red-500">(déficit)</span>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Section 1: Cash Collections */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        <span className="flex items-center gap-1.5">
-                          <Banknote className="h-3.5 w-3.5 text-emerald-600" />
-                          Cobros de reservas ({channelEvents.length})
-                        </span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                          +{formatCurrency(computedStats.totalCash)}
-                        </span>
-                      </div>
-
-                      {channelEvents.length === 0 ? (
-                        <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-center text-xs text-muted-foreground">
-                          No hay reservas cobradas en efectivo en este período.
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden bg-white dark:bg-slate-900">
-                          {channelEvents.map((evt) => (
-                            <div
-                              key={evt.id}
-                              className="p-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
-                            >
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-bold text-slate-900 dark:text-white">
-                                    {evt.guestName}
-                                  </span>
-                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                    {evt.concept}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                                  <span className="flex items-center gap-1">
-                                    <Building className="h-3 w-3" />
-                                    {evt.departmentName}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    {format(new Date(evt.checkIn), "dd/MM/yyyy")}
-                                  </span>
-                                  {evt.collectionDate && (
-                                    <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                                      Cobrado:{" "}
-                                      {format(new Date(evt.collectionDate), "dd/MM/yyyy HH:mm", { locale: es })} hs
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-left sm:text-right shrink-0">
-                                <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
-                                  +{formatCurrency(evt.amount)}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Section 2: Cash Expenses */}
-                    {cashExpensesList.length > 0 && (
-                      <div className="space-y-2 pt-1">
-                        <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          <span className="flex items-center gap-1.5 text-red-700 dark:text-red-400">
-                            <Receipt className="h-3.5 w-3.5 text-red-500" />
-                            Gastos pagados desde caja ({cashExpensesList.length})
-                          </span>
-                          <span className="text-red-600 dark:text-red-400 font-bold">
-                            -{formatCurrency(expensesByReceiver.fromCash)}
-                          </span>
-                        </div>
-
-                        <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden bg-white dark:bg-slate-900">
-                          {cashExpensesList.map((exp) => (
-                            <div
-                              key={exp.id}
-                              className="p-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
-                            >
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-bold text-slate-900 dark:text-white">
-                                    {exp.description}
-                                  </span>
-                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                    💵 Caja
-                                  </span>
-                                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                                    {exp.type === "COMMISSION" ? "Comisión" : exp.type === "TAX" ? "Impuesto/Servicio" : "Insumo/Mantenimiento"}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                                  {exp.department?.name && (
-                                    <span className="flex items-center gap-1">
-                                      <Building className="h-3 w-3" />
-                                      {exp.department.name}
-                                    </span>
-                                  )}
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    {format(new Date(exp.date), "dd/MM/yyyy")}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="text-left sm:text-right shrink-0">
-                                <span className="text-base font-extrabold text-red-600 dark:text-red-400">
-                                  -{formatCurrency(exp.amount)}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   // Normal mode or Airbnb (not affected by manual transfer adjustment)

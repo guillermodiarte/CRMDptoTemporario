@@ -126,16 +126,16 @@ export function PartnerExpensesModal({
         </div>
 
         {/* Desktop View Table */}
-        <div className="hidden md:block overflow-x-auto max-h-[320px]">
+        <div className="hidden sm:block overflow-y-auto max-h-[400px]">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10 bg-card">
               <TableRow className="bg-muted/40 hover:bg-muted/40 text-xs">
-                <TableHead className="w-[85px] py-2">Fecha</TableHead>
-                <TableHead className="py-2">Detalle / Concepto</TableHead>
-                <TableHead className="w-[120px] py-2">Depto.</TableHead>
-                {showDetails && <TableHead className="w-[60px] text-right py-2">Cant.</TableHead>}
-                {showDetails && <TableHead className="w-[90px] text-right py-2">P. Unit</TableHead>}
-                <TableHead className="w-[110px] text-right py-2">Total</TableHead>
+                <TableHead className="w-24 py-2 whitespace-nowrap">Fecha</TableHead>
+                <TableHead className="py-2 min-w-[180px]">Detalle / Concepto</TableHead>
+                <TableHead className="w-28 py-2">Depto.</TableHead>
+                {showDetails && <TableHead className="w-14 text-right py-2">Cant.</TableHead>}
+                {showDetails && <TableHead className="w-28 text-right py-2 whitespace-nowrap">P. Unit</TableHead>}
+                <TableHead className="w-32 text-right py-2 whitespace-nowrap">Total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -188,7 +188,7 @@ export function PartnerExpensesModal({
         </div>
 
         {/* Mobile View List */}
-        <div className="md:hidden divide-y divide-border max-h-[320px] overflow-y-auto">
+        <div className="sm:hidden divide-y divide-border max-h-[400px] overflow-y-auto">
           {list.map((exp) => (
             <div key={exp.id} className="p-3 flex justify-between items-start gap-2 text-xs">
               <div className="min-w-0 flex-1 space-y-1">
@@ -226,7 +226,7 @@ export function PartnerExpensesModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="!max-w-5xl w-[95vw] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Header */}
         <DialogHeader className="p-5 pb-4 border-b bg-slate-50/70 dark:bg-slate-900/70 shrink-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

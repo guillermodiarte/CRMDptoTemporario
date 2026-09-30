@@ -47,9 +47,14 @@ export default async function FinancePage({
     orderBy: { date: "desc" },
   });
 
-  // Calculate global (all-time) cash balance = total cash received - total cash expenses
-  const allTimeReservations = await prisma.reservation.findMany({
+  // Calculate cash balance for the selected period (aligned with Balance system & manual adjustments)
+  const manualTransferRecord = await prisma.systemSettings.findUnique({
+    where: { sessionId_key: { sessionId: sessionId || "", key: `BALANCE_MANUAL_TRANSFERS_${selectedYear}_${selectedMonth}` } }
+  });
+
+  const periodReservationsForCash = await prisma.reservation.findMany({
     where: {
+      checkIn: { gte: startDate, lte: endDate },
       sessionId,
       OR: [
         { paymentStatus: { in: ["PAID", "PARTIAL"] }, status: { notIn: ["CANCELLED"] } },
@@ -57,38 +62,120 @@ export default async function FinancePage({
         { paymentStatus: "CANCELLED", depositAmount: { gt: 0 } },
       ],
     },
-    select: {
-      paymentStatus: true,
-      paymentMethod: true,
-      depositMethod: true,
-      totalAmount: true,
-      depositAmount: true,
-      currency: true,
-      exchangeRate: true,
-    },
+    include: { paymentReceiver: true, depositReceiver: true }
   });
 
-  let globalCashIncome = 0;
-  for (const res of allTimeReservations) {
-    const isUSD = res.currency === "USD";
-    const rate = res.exchangeRate && res.exchangeRate > 1 ? res.exchangeRate : dollarRate;
-    const toARS = (v: number) => isUSD ? v * rate : v;
-    const isPaid = res.paymentStatus === "PAID";
-    const isPartial = res.paymentStatus === "PARTIAL";
-    const depositAmt = (res.depositAmount || 0);
-    const hadDeposit = depositAmt > 0 && (isPartial || depositAmt < res.totalAmount || !!res.depositMethod);
-    if (hadDeposit && res.depositMethod === "CASH") globalCashIncome += toARS(depositAmt);
-    if (isPaid) {
-      const remaining = Math.max(0, res.totalAmount - (hadDeposit ? depositAmt : 0));
-      if (remaining > 0 && res.paymentMethod === "CASH") globalCashIncome += toARS(remaining);
+  const periodCashExpenses = await prisma.expense.aggregate({
+    where: {
+      date: { gte: startDate, lte: endDate },
+      sessionId,
+      isDeleted: false,
+      paidFromCash: true,
+    },
+    _sum: { amount: true },
+  });
+
+  let periodCashIncome = 0;
+  if (manualTransferRecord?.value) {
+    try {
+      const parsed = JSON.parse(manualTransferRecord.value);
+      const manualTransfersBase = Object.values(parsed.receivers || {}).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
+      const cutoff = parsed.editedAt ? new Date(parsed.editedAt) : null;
+      const snapshot = parsed.snapshot;
+
+      let totalCollected = 0;
+      let totalAirbnb = 0;
+      let futureTransfers = 0;
+
+      for (const res of periodReservationsForCash) {
+        const isUSD = res.currency === "USD";
+        const rate = res.exchangeRate && res.exchangeRate > 1 ? res.exchangeRate : dollarRate;
+        const toARS = (v: number) => (isUSD ? v * rate : v);
+        const totalARS = toARS(res.totalAmount);
+        const depositARS = toARS(res.depositAmount || 0);
+
+        if (res.source === "AIRBNB") {
+          totalCollected += totalARS;
+          totalAirbnb += totalARS;
+          continue;
+        }
+
+        const isCancelled = res.status === "CANCELLED" || res.paymentStatus === "CANCELLED";
+        if (isCancelled && depositARS > 0) {
+          totalCollected += depositARS;
+          const dMethod = res.depositMethod || "TRANSFER";
+          if (dMethod !== "CASH" && cutoff) {
+            const isHistorical = snapshot?.depositReservationIds
+              ? snapshot.depositReservationIds.includes(res.id)
+              : (res.createdAt ? new Date(res.createdAt) < cutoff : false);
+            if (!isHistorical) futureTransfers += depositARS;
+          }
+          continue;
+        }
+
+        const isPaid = res.paymentStatus === "PAID";
+        const isPartial = res.paymentStatus === "PARTIAL";
+        const hadDeposit = depositARS > 0 && (isPartial || isPaid);
+        const depositAmt = hadDeposit ? depositARS : 0;
+
+        if (depositAmt > 0) {
+          const dMethod = res.depositMethod || "TRANSFER";
+          if (dMethod !== "CASH" && cutoff) {
+            const isHistorical = snapshot?.depositReservationIds
+              ? snapshot.depositReservationIds.includes(res.id)
+              : (res.createdAt ? new Date(res.createdAt) < cutoff : false);
+            if (!isHistorical) futureTransfers += depositAmt;
+          }
+        }
+
+        if (isPaid) {
+          const remainingAmt = Math.max(0, totalARS - depositAmt);
+          if (remainingAmt > 0) {
+            const payMethod = res.paymentMethod || "CASH";
+            if (payMethod === "TRANSFER" && cutoff) {
+              const isHistorical = snapshot?.paidReservationIds
+                ? snapshot.paidReservationIds.includes(res.id)
+                : (res.updatedAt ? new Date(res.updatedAt) < cutoff : false);
+              if (!isHistorical) futureTransfers += remainingAmt;
+            }
+          }
+          totalCollected += totalARS;
+        } else if (isPartial) {
+          totalCollected += depositAmt;
+        }
+      }
+
+      const totalTransferAdjusted = manualTransfersBase + futureTransfers;
+      periodCashIncome = Math.max(0, totalCollected - totalTransferAdjusted - totalAirbnb);
+    } catch {
+      periodCashIncome = 0;
+    }
+  } else {
+    for (const res of periodReservationsForCash) {
+      if (res.source === "AIRBNB") continue;
+      const isUSD = res.currency === "USD";
+      const rate = res.exchangeRate && res.exchangeRate > 1 ? res.exchangeRate : dollarRate;
+      const toARS = (v: number) => (isUSD ? v * rate : v);
+      const isPaid = res.paymentStatus === "PAID";
+      const isPartial = res.paymentStatus === "PARTIAL";
+      const depositAmt = (res.depositAmount || 0);
+      const hadDeposit = depositAmt > 0 && (isPartial || depositAmt < res.totalAmount || !!res.depositMethod);
+
+      if (hadDeposit) {
+        const dMethod = res.depositMethod || "TRANSFER";
+        if (dMethod === "CASH") periodCashIncome += toARS(depositAmt);
+      }
+      if (isPaid) {
+        const remaining = Math.max(0, res.totalAmount - (hadDeposit ? depositAmt : 0));
+        if (remaining > 0) {
+          const payMethod = res.paymentMethod || "CASH";
+          if (payMethod === "CASH") periodCashIncome += toARS(remaining);
+        }
+      }
     }
   }
 
-  const allTimeCashExpenses = await prisma.expense.aggregate({
-    where: { sessionId, isDeleted: false, paidFromCash: true },
-    _sum: { amount: true },
-  });
-  const globalCashBalance = globalCashIncome - (allTimeCashExpenses._sum.amount || 0);
+  const globalCashBalance = periodCashIncome - (periodCashExpenses._sum.amount || 0);
 
 
   const paymentReceivers = await prisma.paymentReceiver.findMany({
