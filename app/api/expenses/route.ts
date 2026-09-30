@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireSessionId } from "@/lib/auth-helper";
+import { revalidatePath } from "next/cache";
 
 export async function GET(req: Request) {
   try {
@@ -10,7 +11,7 @@ export async function GET(req: Request) {
 
     const sessionId = await requireSessionId();
     const expenses = await prisma.expense.findMany({
-      where: { sessionId },
+      where: { sessionId, isDeleted: false },
 
       orderBy: { date: 'desc' },
       include: { department: { select: { name: true } } }
@@ -55,6 +56,10 @@ export async function POST(req: Request) {
         sessionId
       }
     });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/finance");
+    revalidatePath("/dashboard/balance");
 
     return NextResponse.json(expense);
   } catch (error) {

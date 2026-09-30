@@ -1723,7 +1723,17 @@ export function BalanceClient({
 
         {/* GASTOS DEL PERÍODO */}
         <div
-          className="col-span-1 order-3 sm:order-2 relative overflow-hidden rounded-2xl border p-4 sm:p-5 shadow-xs transition-all bg-gradient-to-br from-rose-50/90 via-white to-rose-50/40 dark:from-rose-950/40 dark:via-slate-900 dark:to-slate-900 border-rose-200/80 dark:border-rose-800/60"
+          onClick={() =>
+            setPartnerExpensesModal({
+              isOpen: true,
+              receiverId: "all",
+              receiverName: "Todos los Socios (Gastos del Período)",
+            })
+          }
+          role="button"
+          tabIndex={0}
+          title="Haz clic para ver el desglose completo de gastos"
+          className="col-span-1 order-3 sm:order-2 relative overflow-hidden rounded-2xl border p-4 sm:p-5 shadow-xs transition-all bg-gradient-to-br from-rose-50/90 via-white to-rose-50/40 dark:from-rose-950/40 dark:via-slate-900 dark:to-slate-900 border-rose-200/80 dark:border-rose-800/60 cursor-pointer hover:shadow-md hover:border-rose-300 dark:hover:border-rose-700 group active:scale-[0.99]"
         >
           {/* Subtle decorative blob */}
           <div
@@ -1745,8 +1755,9 @@ export function BalanceClient({
               </div>
             </div>
 
-            <span className="text-[11px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-2xs bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800">
-              {periodExpenses.length} registrados
+            <span className="text-[11px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-2xs bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 flex items-center gap-1">
+              <span>{periodExpenses.length} registrados</span>
+              <ChevronRight className="h-3 w-3 text-rose-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
             </span>
           </div>
 

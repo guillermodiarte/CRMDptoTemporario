@@ -40,7 +40,8 @@ export default async function FinancePage({
   const expenses = await prisma.expense.findMany({
     where: {
       date: { gte: startDate, lte: endDate },
-      sessionId
+      sessionId,
+      isDeleted: false,
     },
     include: { department: true, paymentReceiver: true },
     orderBy: { date: "desc" },
@@ -136,7 +137,7 @@ export default async function FinancePage({
   const yearEnd = new Date(selectedYear, 11, 31);
 
   const allYearExpenses = await prisma.expense.findMany({
-    where: { date: { gte: yearStart, lte: yearEnd }, sessionId }
+    where: { date: { gte: yearStart, lte: yearEnd }, sessionId, isDeleted: false }
   });
   const allYearReservations = await prisma.reservation.findMany({
     where: { checkIn: { gte: yearStart, lte: yearEnd }, sessionId }

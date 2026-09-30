@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireSessionId } from "@/lib/auth-helper";
+import { revalidatePath } from "next/cache";
 
 export async function PATCH(
   req: Request,
@@ -47,6 +48,10 @@ export async function PATCH(
       },
     });
 
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/finance");
+    revalidatePath("/dashboard/balance");
+
     return NextResponse.json(expense);
   } catch (error) {
     console.log("[EXPENSE_PATCH]", error);
@@ -75,6 +80,10 @@ export async function DELETE(
     const expense = await prisma.expense.delete({
       where: { id },
     });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/finance");
+    revalidatePath("/dashboard/balance");
 
     return NextResponse.json(expense);
   } catch (error) {
