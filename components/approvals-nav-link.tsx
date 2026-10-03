@@ -21,7 +21,7 @@ export function ApprovalsNavLink({ mobile = false, onClick }: ApprovalsNavLinkPr
       <Link
         href="/dashboard/approvals"
         onClick={onClick}
-        className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all ${
+        className={`flex items-center gap-3 rounded-xl px-3 py-2 text-base font-medium transition-all ${
           hasPending
             ? 'bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/15 border border-amber-500/50 dark:border-amber-400/40 text-amber-950 dark:text-amber-200 font-bold shadow-xs'
             : isActive
@@ -55,7 +55,7 @@ export function ApprovalsNavLink({ mobile = false, onClick }: ApprovalsNavLinkPr
   return (
     <Link
       href="/dashboard/approvals"
-      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
+      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium transition-all w-full ${
         hasPending
           ? 'bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/15 border border-amber-500/50 dark:border-amber-400/40 text-amber-950 dark:text-amber-200 font-bold shadow-xs hover:from-amber-500/30 hover:via-orange-500/25 hover:to-amber-500/20'
           : isActive

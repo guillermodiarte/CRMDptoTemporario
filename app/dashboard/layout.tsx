@@ -35,6 +35,7 @@ import { AdminThemeProvider } from "@/components/admin-theme-provider";
 import { AdminThemeToggle } from "@/components/admin-theme-toggle";
 import { ApprovalsProvider } from "@/components/approvals-provider";
 import { ApprovalsNavLink } from "@/components/approvals-nav-link";
+import { SidebarNav } from "@/components/sidebar-nav";
 import Image from "next/image";
 
 import type { Metadata } from "next";
@@ -170,114 +171,12 @@ export default async function DashboardLayout({
                 </Link>
               </div>
               <div className="flex-1 flex flex-col justify-between overflow-y-auto">
-                <nav className="grid items-start px-2 text-base font-medium lg:px-4">
-                  <Link
-                    href="/dashboard"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                  >
-                    <Home className="h-5 w-5 text-sky-500" />
-                    Panel General
-                  </Link>
-                  <Link
-                    href="/dashboard/calendar"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                  >
-                    <CalendarDays className="h-5 w-5 text-purple-500" />
-                    Calendario
-                  </Link>
-                  <ApprovalsNavLink />
-                  <Link
-                    href="/dashboard/reservations"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                  >
-                    <CreditCard className="h-5 w-5 text-emerald-500" />
-                    Reservas
-                  </Link>
-                  <Link
-                    href="/dashboard/departments"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                  >
-                    <Building className="h-5 w-5 text-blue-500" />
-                    Departamentos
-                  </Link>
-                  {showParking && (
-                    <Link
-                      href="/dashboard/parking"
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                    >
-                      <Car className="h-5 w-5 text-indigo-500" />
-                      Cocheras
-                    </Link>
-                  )}
-                  <Link
-                    href="/dashboard/finance"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                  >
-                    <LineChart className="h-5 w-5 text-green-500" />
-                    Finanzas
-                  </Link>
-                  {role === "ADMIN" && (
-                    <Link
-                      href="/dashboard/users"
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                    >
-                      <Users className="h-5 w-5 text-pink-500" />
-                      Usuarios
-                    </Link>
-                  )}
-                  {role === "ADMIN" && (
-                    <Link
-                      href="/dashboard/settings"
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                    >
-                      <Settings className="h-5 w-5 text-gray-500" />
-                      Configuración
-                    </Link>
-                  )}
-                  {role === "ADMIN" && (
-                    <Link
-                      href="/dashboard/blacklist"
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                    >
-                      <ShieldAlert className="h-5 w-5 text-red-500" />
-                      Lista Negra
-                    </Link>
-                  )}
-                  {user?.isSuperAdmin && (
-                    <Link
-                      href="/dashboard/admin/sessions"
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                    >
-                      <UserCog className="h-5 w-5 text-cyan-500" />
-                      Gestión de Sesiones
-                    </Link>
-                  )}
-                  {showBalance && (
-                    <Link
-                      href="/dashboard/balance"
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                    >
-                      <BarChart3 className="h-5 w-5 text-violet-500" />
-                      Balance
-                    </Link>
-                  )}
-                  <Link
-                    href="/dashboard/departments/gallery"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                  >
-                    <Images className="h-5 w-5 text-violet-500" />
-                    Galería
-                  </Link>
-                  <div className="my-2 border-t" />
-                  <Link
-                    href="/?preview=true"
-                    target="_blank"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                  >
-                    <Building className="h-5 w-5 text-teal-500" />
-                    Ver Sitio Público
-                  </Link>
-                </nav>
+                <SidebarNav
+                  role={role}
+                  isSuperAdmin={user?.isSuperAdmin}
+                  showParking={showParking}
+                  showBalance={showBalance}
+                />
 
                 {/* Version Indicator */}
                 <div className="p-3 border-t text-center text-xs text-muted-foreground font-semibold">
