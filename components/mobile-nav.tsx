@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Menu,
   Home,
@@ -13,17 +11,64 @@ import {
   CreditCard,
   Building,
   LineChart,
+  Users,
   UserCog,
   Settings,
   ShieldAlert,
-  Search,
   Car,
   Images,
-  ClipboardCheck,
+  BarChart3,
+  Check,
 } from "lucide-react";
-import { Logo } from "@/components/logo";
-import { UserMenu } from "@/components/user-menu";
 import { ApprovalsNavLink } from "@/components/approvals-nav-link";
+import { MENU_ORDER_KEY } from "@/components/sidebar-nav";
+
+interface NavItem {
+  id: string;
+  label: string;
+  href?: string;
+  icon: React.ReactNode;
+  isSpecial?: string;
+  condition: boolean;
+}
+
+function buildMobileItems(
+  role: string | undefined,
+  isSuperAdmin: boolean | undefined,
+  showParking: boolean,
+  showBalance: boolean
+): NavItem[] {
+  return [
+    { id: "panel", label: "Panel General", href: "/dashboard", icon: <Home className="h-5 w-5 text-sky-500" />, condition: true },
+    { id: "calendar", label: "Calendario", href: "/dashboard/calendar", icon: <CalendarDays className="h-5 w-5 text-purple-500" />, condition: true },
+    { id: "approvals", label: "Aprobaciones", isSpecial: "approvals", icon: <Check className="h-5 w-5 text-orange-400" />, condition: true },
+    { id: "reservations", label: "Reservas", href: "/dashboard/reservations", icon: <CreditCard className="h-5 w-5 text-emerald-500" />, condition: true },
+    { id: "departments", label: "Departamentos", href: "/dashboard/departments", icon: <Building className="h-5 w-5 text-blue-500" />, condition: true },
+    { id: "parking", label: "Cocheras", href: "/dashboard/parking", icon: <Car className="h-5 w-5 text-orange-500" />, condition: showParking },
+    { id: "finance", label: "Finanzas", href: "/dashboard/finance", icon: <LineChart className="h-5 w-5 text-green-500" />, condition: true },
+    { id: "users", label: "Usuarios", href: "/dashboard/users", icon: <Users className="h-5 w-5 text-pink-500" />, condition: role === "ADMIN" },
+    { id: "settings", label: "Configuración", href: "/dashboard/settings", icon: <Settings className="h-5 w-5 text-slate-500" />, condition: role === "ADMIN" },
+    { id: "blacklist", label: "Lista Negra", href: "/dashboard/blacklist", icon: <ShieldAlert className="h-5 w-5 text-red-500" />, condition: role === "ADMIN" },
+    { id: "sessions", label: "Gestión de Sesiones", href: "/dashboard/admin/sessions", icon: <UserCog className="h-5 w-5 text-cyan-500" />, condition: !!isSuperAdmin },
+    { id: "balance", label: "Balance", href: "/dashboard/balance", icon: <BarChart3 className="h-5 w-5 text-violet-500" />, condition: !!showBalance },
+    { id: "gallery", label: "Galería", href: "/dashboard/departments/gallery", icon: <Images className="h-5 w-5 text-violet-500" />, condition: true },
+  ];
+}
+
+function applyOrder(visible: NavItem[], order: string[]): NavItem[] {
+  const ordered: NavItem[] = [];
+  for (const id of order) {
+    const found = visible.find((i) => i.id === id);
+    if (found) ordered.push(found);
+  }
+  for (const item of visible) {
+    if (!order.includes(item.id)) ordered.push(item);
+  }
+  return ordered;
+}
+
+const LINK_CLASS =
+  "flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted";
 
 interface MobileNavProps {
   role: string | undefined;
@@ -48,11 +93,24 @@ export function MobileNav({
 }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [items, setItems] = useState<NavItem[]>([]);
 
-  // Prevent hydration mismatch for Radix UI primitives
+  // Load menu order from localStorage (shared with desktop sidebar)
   useEffect(() => {
+    const all = buildMobileItems(role, isSuperAdmin, showParking, showBalance);
+    const visible = all.filter((i) => i.condition);
+    try {
+      const saved = localStorage.getItem(MENU_ORDER_KEY);
+      if (saved) {
+        setItems(applyOrder(visible, JSON.parse(saved)));
+      } else {
+        setItems(visible);
+      }
+    } catch {
+      setItems(visible);
+    }
     setIsMounted(true);
-  }, []);
+  }, [role, isSuperAdmin, showParking, showBalance]);
 
   if (!isMounted) {
     return (
@@ -105,119 +163,42 @@ export function MobileNav({
               className="w-auto max-w-[210px] object-contain hidden dark:block"
             />
           </Link>
+
+          {items.map((item) => {
+            if (item.isSpecial === "approvals") {
+              return (
+                <ApprovalsNavLink
+                  key="approvals"
+                  mobile
+                  onClick={() => setOpen(false)}
+                />
+              );
+            }
+            return (
+              <Link
+                key={item.id}
+                href={item.href!}
+                className={LINK_CLASS}
+                onClick={() => setOpen(false)}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            );
+          })}
+
+          {/* Divider + Ver Sitio Público */}
+          <div className="my-2 border-t" />
           <Link
-            href="/dashboard"
-            className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+            href="/?preview=true"
+            target="_blank"
+            className={LINK_CLASS}
             onClick={() => setOpen(false)}
           >
-            <Home className="h-5 w-5 text-sky-500" />
-            Panel General
-          </Link>
-          <Link
-            href="/dashboard/calendar"
-            className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-            onClick={() => setOpen(false)}
-          >
-            <CalendarDays className="h-5 w-5 text-purple-500" />
-            Calendario
-          </Link>
-          <ApprovalsNavLink mobile onClick={() => setOpen(false)} />
-          <Link
-            href="/dashboard/reservations"
-            className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-            onClick={() => setOpen(false)}
-          >
-            <CreditCard className="h-5 w-5 text-emerald-500" />
-            Reservas
-          </Link>
-          <Link
-            href="/dashboard/departments"
-            className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-            onClick={() => setOpen(false)}
-          >
-            <Building className="h-5 w-5 text-blue-500" />
-            Departamentos
-          </Link>
-          {showParking && (
-            <Link
-              href="/dashboard/parking"
-              className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-              onClick={() => setOpen(false)}
-            >
-              <Car className="h-5 w-5 text-orange-500" />
-              Cocheras
-            </Link>
-          )}
-          <Link
-            href="/dashboard/finance"
-            className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-            onClick={() => setOpen(false)}
-          >
-            <LineChart className="h-5 w-5 text-green-500" />
-            Finanzas
-          </Link>
-          {role === 'ADMIN' && (
-            <Link
-              href="/dashboard/users"
-              className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-              onClick={() => setOpen(false)}
-            >
-              <UserCog className="h-5 w-5 text-pink-500" />
-              Usuarios
-            </Link>
-          )}
-          {role === 'ADMIN' && (
-            <Link
-              href="/dashboard/settings"
-              className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-              onClick={() => setOpen(false)}
-            >
-              <Settings className="h-5 w-5 text-slate-500" />
-              Configuración
-            </Link>
-          )}
-          <Link
-            href="/dashboard/blacklist"
-            className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-            onClick={() => setOpen(false)}
-          >
-            <ShieldAlert className="h-5 w-5 text-red-500" />
-            Lista Negra
-          </Link>
-          {isSuperAdmin && (
-            <Link
-              href="/dashboard/admin/sessions"
-              className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-              onClick={() => setOpen(false)}
-            >
-              <ShieldAlert className="h-5 w-5 text-indigo-500" />
-              Gestión de Sesiones
-            </Link>
-          )}
-          {showBalance && (
-            <Link
-              href="/dashboard/balance"
-              className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-              onClick={() => setOpen(false)}
-            >
-              <LineChart className="h-5 w-5 text-violet-500" />
-              Balance
-            </Link>
-          )}
-          <Link
-            href="/dashboard/departments/gallery"
-            className="flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-            onClick={() => setOpen(false)}
-          >
-            <Images className="h-5 w-5 text-violet-500" />
-            Galería
+            <Building className="h-5 w-5 text-teal-500" />
+            Ver Sitio Público
           </Link>
         </nav>
-        {/* We can reproduce the search bar here if desired, or leave it in the header. 
-            The original design had it in the content but the header search was outside the sheet.
-            However, the layout.tsx had the searchbar OUTSIDE the sheet in the main header div.
-            Looking at layout.tsx lines 205-217, the search is unrelated to the sheet content.
-        */}
       </SheetContent>
     </Sheet>
   );
