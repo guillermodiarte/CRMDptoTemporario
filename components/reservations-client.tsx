@@ -881,8 +881,11 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
             const isBlacklisted = !!res.guestPhone && blacklistedPhones.some(bp => normalizePhone(bp) === normalizePhone(res.guestPhone));
             const debt = res.totalAmount - (res.depositAmount || 0);
             const groupDebt = (res.groupTotalAmount ?? res.totalAmount) - (res.groupDepositAmount ?? res.depositAmount ?? 0);
-            const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid;
             const isCancelled = (res.paymentStatus as any) === 'CANCELLED' || (res.status as any) === 'CANCELLED';
+            const canEdit = res.department.isActive && !res.department.isArchived;
+            const canMarkPaid = !isPaid && !isNoShow && !isCancelled;
+            const canMarkNoShow = isAdmin && !isNoShow && today > new Date(res.checkIn) && !isPaid && !isCancelled;
+            const canCancel = !isCancelled && new Date(res.checkIn) >= today && !isNoShow;
 
             let cardClass = "text-sm border border-slate-200 dark:border-slate-700 relative overflow-hidden ";
             if (isNoShow) {
@@ -1025,8 +1028,8 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                       <span className="font-medium text-gray-700 dark:text-gray-200 text-base">{format(new Date(res.checkIn), "dd/MM")} - {format(new Date(res.checkOut), "dd/MM")}</span>
                     </div>
 
-                    {/* New Info Row: Nights, People, Beds (Mobile) */}
-                    <div className="col-span-2 flex flex-wrap justify-start gap-4 text-sm mt-1">
+                    {/* Info Row: Nights, People, Beds, Parking (Mobile) */}
+                    <div className="col-span-2 flex flex-wrap justify-start items-center gap-x-4 gap-y-1.5 text-sm mt-1">
                       <div className="flex items-center gap-1">
                         {(() => {
                           const nights = Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)));
@@ -1049,6 +1052,12 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                             <BedDouble className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </>
+                      )}
+                      {res.hasParking && (
+                        <div className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded text-xs border border-blue-200 dark:border-blue-900/50">
+                          <Car className="h-3.5 w-3.5" />
+                          <span>Cochera</span>
+                        </div>
                       )}
                     </div>
 
@@ -1084,89 +1093,105 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                     </div>
                   </div>
 
-                  {/* Actions Row (Wrapped) */}
-                  <div className="flex flex-col gap-3 pt-1">
-                    {/* Top Row: Indicators + Edit/Delete */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {res.hasParking && (
-                          <span title="Cochera" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium whitespace-nowrap"><Car className="h-5 w-5" /> Requiere Cochera</span>
-                        )}
-                        {res.notes && (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button title="Ver nota" className="text-blue-600 dark:text-blue-400 flex items-center gap-2 text-sm bg-blue-50 dark:bg-blue-950/40 px-4 h-10 rounded border border-blue-100 dark:border-blue-900/40 font-medium"><NotepadText className="h-5 w-5" /> Nota</button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-3 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xl border border-slate-200 dark:border-slate-700 rounded-md whitespace-pre-wrap">
-                              {res.notes}
-                            </PopoverContent>
-                          </Popover>
-                        )}
-                        {res.guestPhone && res.guestPhone.trim() && (
-                          <button
-                            type="button"
-                            onClick={() => handleCopyPhone(res.guestPhone!, res.guestName)}
-                            title="Copiar número de celular del huésped"
-                            className={`flex items-center gap-2 text-sm px-4 h-10 rounded border font-medium transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
-                              copiedPhone === res.guestPhone
-                                ? "bg-emerald-600 text-white border-emerald-700"
-                                : "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
-                            }`}
-                          >
-                            {copiedPhone === res.guestPhone ? (
-                              <>
-                                <Check className="h-5 w-5 shrink-0" />
-                                <span>¡Copiado!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Phone className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                                <span>Copiar Tel</span>
-                              </>
-                            )}
-                          </button>
-                        )}
+                  {/* Nota (Banner informativo directo para móvil) */}
+                  {res.notes && (
+                    <div className="flex items-start gap-2 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/50 rounded-lg p-2.5 text-xs text-amber-900 dark:text-amber-200">
+                      <NotepadText className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="flex-1 whitespace-pre-wrap leading-relaxed break-words">
+                        <span className="font-semibold text-amber-800 dark:text-amber-300">Nota: </span>
+                        {res.notes}
                       </div>
-                      {!isVisualizer && (
-                        <div className="flex items-center gap-2">
-                          {res.department.isActive && !res.department.isArchived && (
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(res)} className="h-10 px-3 text-gray-600 bg-white border-gray-300">
-                              <Pencil className="h-4 w-4 mr-2" /> Editar
-                            </Button>
-                          )}
-                          <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(res.id)} className="h-10 px-3">
-                            <Trash className="h-4 w-4 mr-2" /> Eliminar
-                          </Button>
-                        </div>
-                      )}
                     </div>
+                  )}
 
-                    {/* Bottom Row: Status Actions */}
-                    {!isVisualizer && (
-                      <div className="flex flex-wrap gap-2 w-full justify-end">
-                        {!isPaid && !isNoShow && (res.paymentStatus as any) !== 'CANCELLED' && (
-                          <Button variant="outline" size="sm" onClick={() => handleMarkPaidClick(res.id, res.totalAmount)} className="h-10 px-3 text-green-600 bg-green-50/50 border-green-200">
-                            <DollarSign className="h-4 w-4 mr-2" /> Pagado
+                  {/* Actions Row - Fixed & Predictable Grid Layout */}
+                  {!isVisualizer && (
+                    <div className="flex flex-col gap-2 pt-1 border-t border-slate-200/80 dark:border-slate-800/80">
+                      {/* 1. Botón Principal: Cobro (solo si está pendiente de pago) */}
+                      {canMarkPaid && (
+                        <Button
+                          type="button"
+                          onClick={() => handleMarkPaidClick(res.id, res.totalAmount)}
+                          className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm flex items-center justify-center gap-2 rounded-lg shadow-xs active:scale-[0.98] transition-all cursor-pointer"
+                        >
+                          <DollarSign className="h-4 w-4" /> Marcar como Pagado
+                        </Button>
+                      )}
+
+                      {/* 2. Fila Fija de Gestión: Editar (Izq) & Eliminar (Der) */}
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        {canEdit ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleEdit(res)}
+                            className="h-10 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 font-medium text-sm flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.98] transition-all cursor-pointer shadow-2xs"
+                          >
+                            <Pencil className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Editar
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            disabled
+                            className="h-10 opacity-40 text-slate-400 border-slate-200 dark:border-slate-800 font-medium text-sm flex items-center justify-center gap-2"
+                          >
+                            <Pencil className="h-4 w-4" /> Editar
                           </Button>
                         )}
-                        {canMarkNoShow && (res.paymentStatus as any) !== 'CANCELLED' && (
-                          <Button variant="outline" size="sm" onClick={() => handleNoShowClick(res.id)} className="h-10 px-3 text-orange-500 bg-orange-50/50 border-orange-200">
-                            <UserX className="h-4 w-4 mr-2" /> No Presentado
-                          </Button>
-                        )}
-                        {!isBlacklisted && (
-                          <Button variant="outline" size="sm" onClick={() => setReportBlacklistData(res)} className="h-10 px-3 text-red-500 bg-red-50/50 border-red-200">
-                            <ShieldAlert className="h-4 w-4 mr-2" /> Reportar a Lista Negra
-                          </Button>
-                        )}
-                        {!isCancelled && new Date(res.checkIn) >= today && !isNoShow && (
-                          <Button variant="outline" size="sm" onClick={() => handleCancelReservationClick(res.id)} className="h-10 px-3 text-red-600 bg-red-50/50 border-red-200">
-                            <XCircle className="h-4 w-4 mr-2" /> Cancelar
-                          </Button>
-                        )}
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleDeleteClick(res.id)}
+                          className="h-10 text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-900/40 font-medium text-sm flex items-center justify-center gap-2 hover:bg-red-100/60 dark:hover:bg-red-900/40 active:scale-[0.98] transition-all cursor-pointer shadow-2xs"
+                        >
+                          <Trash className="h-4 w-4 text-red-600 dark:text-red-400" /> Eliminar
+                        </Button>
                       </div>
-                    )}
-                  </div>
+
+                      {/* 3. Fila Secundaria de Estado: Lista Negra + Cancelar / No Presentado */}
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        {!isBlacklisted ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setReportBlacklistData(res)}
+                            className={`h-9 text-rose-700 dark:text-rose-300 bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40 font-medium text-xs flex items-center justify-center gap-1.5 hover:bg-rose-100/60 dark:hover:bg-rose-900/30 active:scale-[0.98] transition-all cursor-pointer truncate ${!canCancel && !canMarkNoShow ? "col-span-2" : ""}`}
+                          >
+                            <ShieldAlert className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                            <span className="truncate">Lista Negra</span>
+                          </Button>
+                        ) : (
+                          <div className={`h-9 flex items-center justify-center gap-1.5 px-2 rounded-md bg-rose-100/60 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 text-xs font-semibold border border-rose-200 dark:border-rose-900/40 ${!canCancel && !canMarkNoShow ? "col-span-2" : ""}`}>
+                            <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">En Lista Negra</span>
+                          </div>
+                        )}
+
+                        {canCancel ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleCancelReservationClick(res.id)}
+                            className="h-9 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 font-medium text-xs flex items-center justify-center gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] transition-all cursor-pointer truncate"
+                          >
+                            <XCircle className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                            <span className="truncate">Cancelar</span>
+                          </Button>
+                        ) : canMarkNoShow ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleNoShowClick(res.id)}
+                            className="h-9 text-orange-700 dark:text-orange-300 bg-orange-50/50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900/40 font-medium text-xs flex items-center justify-center gap-1.5 hover:bg-orange-100/60 dark:hover:bg-orange-900/30 active:scale-[0.98] transition-all cursor-pointer truncate"
+                          >
+                            <UserX className="h-3.5 w-3.5 text-orange-600 shrink-0" />
+                            <span className="truncate">No Presentado</span>
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
