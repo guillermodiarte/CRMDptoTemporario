@@ -2,7 +2,8 @@
 
 import { useState, cloneElement, isValidElement, useEffect, useRef } from "react";
 import { Department, Reservation } from "@prisma/client";
-import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble, X, Home, ShieldAlert, DollarSign, Ban, UserX, XCircle, ChevronDown, Banknote, CreditCard, Check } from "lucide-react";
+import { Plus, Pencil, Trash, NotepadText, Link as LinkIcon, Search, Car, Moon, Users, BedDouble, X, Home, ShieldAlert, DollarSign, Ban, UserX, XCircle, ChevronDown, Banknote, CreditCard, Check, Phone, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,6 +136,35 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
   const [cancelConfirmationId, setCancelConfirmationId] = useState<string | null>(null);
   const [viewNotesRes, setViewNotesRes] = useState<ReservationWithDept | null>(null);
   const [search, setSearch] = useState("");
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+
+  const handleCopyPhone = async (phone: string, guestName?: string) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(phone);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = phone;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        textArea.remove();
+      }
+      setCopiedPhone(phone);
+      toast.success("Teléfono copiado al portapapeles", {
+        description: `${phone}${guestName ? ` • ${guestName}` : ""}`,
+      });
+      setTimeout(() => {
+        setCopiedPhone((prev) => (prev === phone ? null : prev));
+      }, 2000);
+    } catch (err) {
+      toast.error("No se pudo copiar el teléfono");
+    }
+  };
 
   const handleDeleteClick = (id: string) => {
     setDeleteConfirmationId(id);
@@ -568,7 +598,23 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                         {/* Info Derecha */}
                         <div className="flex flex-col text-left">
                           <div className={isNoShow || isCancelled ? "line-through text-muted-foreground" : ""}>{res.guestName}</div>
-                          <div className={`text-xs text-muted-foreground ${isCancelled ? "line-through" : ""}`}>{res.guestPhone}</div>
+                          {res.guestPhone ? (
+                            <div className="flex items-center gap-1.5 group/phone">
+                              <span className={`text-xs text-muted-foreground ${isCancelled ? "line-through" : ""}`}>{res.guestPhone}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyPhone(res.guestPhone!, res.guestName)}
+                                className="opacity-60 hover:opacity-100 p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-opacity cursor-pointer"
+                                title="Copiar número de teléfono"
+                              >
+                                {copiedPhone === res.guestPhone ? (
+                                  <Check className="h-3 w-3 text-emerald-600" />
+                                ) : (
+                                  <Copy className="h-3 w-3 text-slate-500" />
+                                )}
+                              </button>
+                            </div>
+                          ) : null}
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className={`text-xs text-muted-foreground font-semibold inline-block min-w-[70px] ${isCancelled ? "line-through" : ""}`}>
                               {res.source === 'DIRECT' ? 'DIRECTO' : res.source}
@@ -903,13 +949,42 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                           {!['AIRBNB', 'BOOKING', 'DIRECT'].includes(res.source || '') && <span className="text-xs text-muted-foreground font-bold">{res.source?.substring(0, 3)}</span>}
                         </div>
 
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className={`font-bold text-xl whitespace-normal break-words leading-tight ${isNoShow ? "line-through text-muted-foreground" : "text-slate-900 dark:text-white"}`}>
                             {res.guestName}
                           </div>
                           <div className="text-base font-medium text-blue-600 dark:text-blue-400 mt-1 whitespace-normal break-words">
                             {res.department.name}
                           </div>
+                          {res.guestPhone && res.guestPhone.trim() && (
+                            <div className="mt-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyPhone(res.guestPhone!, res.guestName);
+                                }}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border shadow-2xs transition-all active:scale-95 cursor-pointer max-w-full ${
+                                  copiedPhone === res.guestPhone
+                                    ? "bg-emerald-600 text-white border-emerald-700 shadow-emerald-600/20"
+                                    : "bg-white/95 dark:bg-slate-800/95 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/80"
+                                }`}
+                                title="Toca para copiar número de celular"
+                              >
+                                <Phone className={`h-3.5 w-3.5 shrink-0 ${copiedPhone === res.guestPhone ? "text-white" : "text-emerald-600 dark:text-emerald-400"}`} />
+                                <span className="font-mono text-xs truncate">{res.guestPhone}</span>
+                                {copiedPhone === res.guestPhone ? (
+                                  <span className="inline-flex items-center gap-0.5 text-[11px] font-bold ml-0.5">
+                                    <Check className="h-3.5 w-3.5" /> ¡Copiado!
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-0.5 text-[11px] text-slate-500 dark:text-slate-400 ml-0.5">
+                                    <Copy className="h-3.5 w-3.5" /> Copiar
+                                  </span>
+                                )}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1013,7 +1088,7 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                   <div className="flex flex-col gap-3 pt-1">
                     {/* Top Row: Indicators + Edit/Delete */}
                     <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {res.hasParking && (
                           <span title="Cochera" className="text-blue-600 flex items-center gap-2 text-sm bg-blue-50 px-4 h-10 rounded border border-blue-100 font-medium whitespace-nowrap"><Car className="h-5 w-5" /> Requiere Cochera</span>
                         )}
@@ -1026,6 +1101,30 @@ export const ReservationsClient: React.FC<ReservationsClientProps> = ({
                               {res.notes}
                             </PopoverContent>
                           </Popover>
+                        )}
+                        {res.guestPhone && res.guestPhone.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyPhone(res.guestPhone!, res.guestName)}
+                            title="Copiar número de celular del huésped"
+                            className={`flex items-center gap-2 text-sm px-4 h-10 rounded border font-medium transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
+                              copiedPhone === res.guestPhone
+                                ? "bg-emerald-600 text-white border-emerald-700"
+                                : "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                            }`}
+                          >
+                            {copiedPhone === res.guestPhone ? (
+                              <>
+                                <Check className="h-5 w-5 shrink-0" />
+                                <span>¡Copiado!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Phone className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                <span>Copiar Tel</span>
+                              </>
+                            )}
+                          </button>
                         )}
                       </div>
                       {!isVisualizer && (
