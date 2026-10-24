@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { GuestAutocomplete } from "@/components/guest-autocomplete";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -957,7 +958,16 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                 <FormItem>
                   <FormLabel>Huésped</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nombre completo" {...field} />
+                    <GuestAutocomplete
+                      value={field.value}
+                      onChange={field.onChange}
+                      onSelectGuest={(guest) => {
+                        field.onChange(guest.guestName);
+                        if (guest.guestPhone) form.setValue("guestPhone", guest.guestPhone);
+                        if (guest.guestDni) form.setValue("guestDni", guest.guestDni);
+                      }}
+                      placeholder="Nombre completo"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
