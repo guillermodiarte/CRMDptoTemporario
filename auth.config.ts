@@ -1,8 +1,18 @@
 import type { NextAuthConfig } from 'next-auth';
 
+const STATIC_SECRET = 'crm-super-secret-key-diarte-2026-auth-persistent-session-permanent';
+
 export const authConfig = {
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'crm-super-secret-key-diarte-2026',
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || STATIC_SECRET,
   trustHost: true,
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 días: las sesiones se mantienen abiertas indefinidamente
+    updateAge: 24 * 60 * 60,   // Se refresca el token automáticamente si el usuario navega
+  },
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // 30 días
+  },
   pages: {
     signIn: '/admin',
   },

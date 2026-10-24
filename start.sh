@@ -60,39 +60,48 @@ if [ -f .env.production ]; then
 fi
 
 # Ensure Secret Consistency
-# Ensure Secret Consistency
+# IMPORTANTE: Usar un secreto fijo garantiza que las sesiones sobrevivan a los redeploys.
+# Si no hay AUTH_SECRET en el entorno de Dokploy, usar el secreto fijo (no generar uno aleatorio).
+FALLBACK_SECRET="crm-super-secret-key-diarte-2026-auth-persistent-session-permanent"
+
 if [ -z "$AUTH_SECRET" ] && [ -z "$NEXTAUTH_SECRET" ]; then
-  log "WARNING: neither AUTH_SECRET nor NEXTAUTH_SECRET is set."
+  log "WARNING: AUTH_SECRET no está configurado en el entorno."
   
-  # Check if .env exists, if so append, else create
-  if [ ! -f .env ]; then
-      log "Creating .env file to persist secret..."
-      touch .env
-  fi
-
-  # Generate functionality
-  NEW_SECRET=$(openssl rand -base64 32)
-  
-  # Check if AUTH_SECRET is already in .env (maybe empty string?)
-  if grep -q "AUTH_SECRET" .env; then
-      log "AUTH_SECRET key found in .env but env var was empty/missing. Not overwriting file blindly."
-      # Fallback to temp export if file has it but maybe commented out?
-      export AUTH_SECRET=$NEW_SECRET
+  # Intentar recuperar el secreto del .env persistido
+  if [ -f .env ] && grep -q "AUTH_SECRET" .env; then
+      log "Recuperando AUTH_SECRET desde .env..."
+      SAVED=$(grep "AUTH_SECRET" .env | head -1 | sed 's/AUTH_SECRET=//; s/"//g')
+      if [ -n "$SAVED" ]; then
+          export AUTH_SECRET="$SAVED"
+          log "AUTH_SECRET recuperado correctamente desde .env."
+      else
+          log "AUTH_SECRET en .env estaba vacío. Usando secreto fijo de fallback."
+          export AUTH_SECRET="$FALLBACK_SECRET"
+      fi
   else
-      log "Appending generated AUTH_SECRET to .env for persistence."
-      echo "" >> .env
-      echo "AUTH_SECRET=\"$NEW_SECRET\"" >> .env
-      export AUTH_SECRET=$NEW_SECRET
+      # Usar el secreto fijo (NO aleatorio) para que las sesiones no se invaliden
+      log "Usando secreto fijo de fallback para garantizar persistencia de sesiones."
+      export AUTH_SECRET="$FALLBACK_SECRET"
+      # Persistir en .env para futuros arranques
+      if [ ! -f .env ]; then
+          touch .env
+      fi
+      if ! grep -q "AUTH_SECRET" .env; then
+          echo "" >> .env
+          echo "AUTH_SECRET=\"$FALLBACK_SECRET\"" >> .env
+          log "Secreto fijo persistido en .env."
+      fi
   fi
 
-  log "Sessions will now persist across restarts (saved to .env)."
-  
-  # Keep legacy compatibility just in case
-  export NEXTAUTH_SECRET=$AUTH_SECRET
+  export NEXTAUTH_SECRET="$AUTH_SECRET"
+  log "Sesiones configuradas para persistir entre redeploys."
 else
   log "Secret is set. Sessions will persist."
   if [ -n "$AUTH_SECRET" ] && [ -z "$NEXTAUTH_SECRET" ]; then
-     export NEXTAUTH_SECRET=$AUTH_SECRET
+     export NEXTAUTH_SECRET="$AUTH_SECRET"
+  fi
+  if [ -n "$NEXTAUTH_SECRET" ] && [ -z "$AUTH_SECRET" ]; then
+     export AUTH_SECRET="$NEXTAUTH_SECRET"
   fi
 fi
 

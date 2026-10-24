@@ -17,12 +17,18 @@ Asegúrate de tener estas variables:
 # Ruta interna donde la app guardará los datos
 DATABASE_URL="file:/app/database/prod.db"
 
-# Clave de seguridad (importante para que no se cierren las sesiones)
-AUTH_SECRET="tu_clave_secreta_larga_aqui"
+# ⚠️ MUY IMPORTANTE: Clave de seguridad FIJA para las sesiones.
+# Si este valor cambia entre deploys, TODOS los usuarios quedan deslogueados automáticamente.
+# Una vez que lo configures, NO lo cambies nunca. Si no lo defines, la app usa un valor
+# interno fijo que también garantiza la persistencia, pero se recomienda definirlo aquí.
+AUTH_SECRET="tu_clave_secreta_larga_y_fija_aqui_minimo_32_caracteres"
 
 # Necesario para logins tras proxy (Dokploy)
 AUTH_TRUST_HOST=true
 ```
+
+> **¿Por qué las sesiones se cierran en cada deploy?**
+> NextAuth firma sus cookies/tokens JWT con el `AUTH_SECRET`. Si ese secreto cambia (por ejemplo porque se genera aleatoriamente al arrancar), todos los tokens existentes se consideran inválidos y los usuarios quedan deslogueados. **Solución: siempre usar el mismo `AUTH_SECRET` fijo.**
 
 ### 3. Inicialización de Base de Datos (Seed)
 Para dejar la base de datos lista para usar (limpia y con el usuario admin por defecto), ejecuta este comando en la consola del servidor (tras el despliegue):
