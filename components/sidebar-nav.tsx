@@ -21,10 +21,11 @@ import {
   GripVertical,
 } from "lucide-react";
 import { ApprovalsNavLink } from "@/components/approvals-nav-link";
+import { toast } from "sonner";
 
 export const MENU_ORDER_KEY = "admin_menu_order_v1";
 
-interface NavItem {
+export interface NavItem {
   id: string;
   label: string;
   href?: string;
@@ -38,6 +39,7 @@ interface SidebarNavProps {
   isSuperAdmin?: boolean;
   showParking: boolean;
   showBalance: boolean;
+  initialMenuOrder?: string[] | null;
 }
 
 function buildItems(
@@ -140,9 +142,22 @@ function useDragSort(
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function SidebarNav({ role, isSuperAdmin, showParking, showBalance }: SidebarNavProps) {
+export function SidebarNav({
+  role,
+  isSuperAdmin,
+  showParking,
+  showBalance,
+  initialMenuOrder,
+}: SidebarNavProps) {
   const [editing, setEditing] = useState(false);
-  const [items, setItems] = useState<NavItem[]>([]);
+  const [items, setItems] = useState<NavItem[]>(() => {
+    const all = buildItems(role, isSuperAdmin, showParking, showBalance);
+    const visible = all.filter((i) => i.condition);
+    if (initialMenuOrder && Array.isArray(initialMenuOrder)) {
+      return applyOrder(visible, initialMenuOrder);
+    }
+    return visible;
+  });
   const [mounted, setMounted] = useState(false);
   const { onPointerDown, onPointerMove, onPointerUp, setItemRef, dragIdx } =
     useDragSort(items, setItems);
@@ -150,29 +165,104 @@ export function SidebarNav({ role, isSuperAdmin, showParking, showBalance }: Sid
   useEffect(() => {
     const all = buildItems(role, isSuperAdmin, showParking, showBalance);
     const visible = all.filter((i) => i.condition);
+
+    let activeOrder = initialMenuOrder;
     try {
       const saved = localStorage.getItem(MENU_ORDER_KEY);
       if (saved) {
-        setItems(applyOrder(visible, JSON.parse(saved)));
-      } else {
-        setItems(visible);
+        const parsedSaved = JSON.parse(saved);
+        if (Array.isArray(parsedSaved) && parsedSaved.length > 0) {
+          activeOrder = parsedSaved;
+          // If server didn't have it yet, sync desktop's existing localStorage to server!
+          if (!initialMenuOrder) {
+            fetch("/api/menu-order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ order: parsedSaved }),
+            }).catch(() => {});
+          }
+        }
       }
-    } catch {
+    } catch {}
+
+    if (activeOrder && Array.isArray(activeOrder)) {
+      setItems(applyOrder(visible, activeOrder));
+    } else {
       setItems(visible);
     }
     setMounted(true);
-  }, []);
+  }, [role, isSuperAdmin, showParking, showBalance, initialMenuOrder]);
 
-  const handleSave = useCallback(() => {
-    localStorage.setItem(MENU_ORDER_KEY, JSON.stringify(items.map((i) => i.id)));
+  // Listen to menu changes from other components (e.g. MobileNav)
+  useEffect(() => {
+    const handleOrderChange = (e: Event) => {
+      const customEvent = e as CustomEvent<string[] | null>;
+      const all = buildItems(role, isSuperAdmin, showParking, showBalance);
+      const visible = all.filter((i) => i.condition);
+
+      if (customEvent.detail && Array.isArray(customEvent.detail)) {
+        setItems(applyOrder(visible, customEvent.detail));
+      } else {
+        try {
+          const saved = localStorage.getItem(MENU_ORDER_KEY);
+          setItems(saved ? applyOrder(visible, JSON.parse(saved)) : visible);
+        } catch {
+          setItems(visible);
+        }
+      }
+    };
+
+    window.addEventListener("admin-menu-order-changed", handleOrderChange);
+    window.addEventListener("storage", handleOrderChange);
+    return () => {
+      window.removeEventListener("admin-menu-order-changed", handleOrderChange);
+      window.removeEventListener("storage", handleOrderChange);
+    };
+  }, [role, isSuperAdmin, showParking, showBalance]);
+
+  const handleSave = useCallback(async () => {
+    const orderIds = items.map((i) => i.id);
+    localStorage.setItem(MENU_ORDER_KEY, JSON.stringify(orderIds));
     setEditing(false);
+
+    window.dispatchEvent(
+      new CustomEvent("admin-menu-order-changed", { detail: orderIds })
+    );
+
+    try {
+      const res = await fetch("/api/menu-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: orderIds }),
+      });
+      if (res.ok) {
+        toast.success("Orden del menú guardado y sincronizado");
+      } else {
+        toast.info("Guardado localmente");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.info("Guardado localmente");
+    }
   }, [items]);
 
-  const handleReset = useCallback(() => {
+  const handleReset = useCallback(async () => {
     localStorage.removeItem(MENU_ORDER_KEY);
     const all = buildItems(role, isSuperAdmin, showParking, showBalance);
-    setItems(all.filter((i) => i.condition));
+    const visible = all.filter((i) => i.condition);
+    setItems(visible);
     setEditing(false);
+
+    window.dispatchEvent(
+      new CustomEvent("admin-menu-order-changed", { detail: null })
+    );
+
+    try {
+      await fetch("/api/menu-order", { method: "DELETE" });
+      toast.success("Menú restablecido al orden predeterminado");
+    } catch (err) {
+      console.error(err);
+    }
   }, [role, isSuperAdmin, showParking, showBalance]);
 
   const handleCancel = useCallback(() => {
@@ -180,12 +270,18 @@ export function SidebarNav({ role, isSuperAdmin, showParking, showBalance }: Sid
     const visible = all.filter((i) => i.condition);
     try {
       const saved = localStorage.getItem(MENU_ORDER_KEY);
-      setItems(saved ? applyOrder(visible, JSON.parse(saved)) : visible);
+      if (saved) {
+        setItems(applyOrder(visible, JSON.parse(saved)));
+      } else if (initialMenuOrder) {
+        setItems(applyOrder(visible, initialMenuOrder));
+      } else {
+        setItems(visible);
+      }
     } catch {
       setItems(visible);
     }
     setEditing(false);
-  }, [role, isSuperAdmin, showParking, showBalance]);
+  }, [role, isSuperAdmin, showParking, showBalance, initialMenuOrder]);
 
   const renderItems = mounted
     ? items

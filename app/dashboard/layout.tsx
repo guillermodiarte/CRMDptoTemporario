@@ -107,8 +107,10 @@ export default async function DashboardLayout({
   let showParking = true; // Default
   let showBalance = false; // Default: only visible when enabled
 
+  let initialMenuOrder: string[] | null = null;
+
   if (sessionId) {
-    const [showParkingSetting, showBalanceSetting, balanceEnabledUsersSetting] = await Promise.all([
+    const [showParkingSetting, showBalanceSetting, balanceEnabledUsersSetting, menuOrderSetting] = await Promise.all([
       prisma.systemSettings.findUnique({
         where: { sessionId_key: { sessionId, key: "SHOW_PARKING_MENU" } }
       }),
@@ -118,7 +120,19 @@ export default async function DashboardLayout({
       prisma.systemSettings.findUnique({
         where: { sessionId_key: { sessionId, key: "BALANCE_ENABLED_USERS" } }
       }),
+      prisma.systemSettings.findUnique({
+        where: { sessionId_key: { sessionId, key: "ADMIN_MENU_ORDER" } }
+      }),
     ]);
+
+    if (menuOrderSetting?.value) {
+      try {
+        const parsed = JSON.parse(menuOrderSetting.value);
+        if (Array.isArray(parsed)) initialMenuOrder = parsed;
+      } catch {
+        initialMenuOrder = null;
+      }
+    }
 
     if (showParkingSetting) {
       showParking = showParkingSetting.value !== "false";
@@ -176,6 +190,7 @@ export default async function DashboardLayout({
                   isSuperAdmin={user?.isSuperAdmin}
                   showParking={showParking}
                   showBalance={showBalance}
+                  initialMenuOrder={initialMenuOrder}
                 />
 
                 {/* Version Indicator */}
@@ -196,6 +211,7 @@ export default async function DashboardLayout({
                 adminLogo={adminLogo}
                 adminLogoDark={adminLogoDark}
                 adminLogoSize={adminLogoSize}
+                initialMenuOrder={initialMenuOrder}
               />
               <div className="w-full flex-1 min-w-0">
                 <form action="/dashboard/search">
