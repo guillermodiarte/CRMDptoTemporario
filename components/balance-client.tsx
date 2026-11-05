@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { formatCurrency, formatSignedCurrency, cn } from "@/lib/utils";
+import { formatCurrency, formatSignedCurrency, cn, parseFlexibleNumber } from "@/lib/utils";
 import {
   Banknote,
   CreditCard,
@@ -3155,7 +3155,7 @@ export function BalanceClient({
                         placeholder="0"
                         value={currentVal === 0 ? "" : currentVal}
                         onChange={(e) => {
-                          const val = Math.max(0, Number(e.target.value) || 0);
+                          const val = Math.max(0, parseFlexibleNumber(e.target.value));
                           setManualModalAmounts((prev) => ({
                             ...prev,
                             [recv.id]: val,

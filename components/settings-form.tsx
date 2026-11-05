@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { parseFlexibleNumber } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
   Loader2,
@@ -237,7 +238,7 @@ export function SettingsForm({ activeParkingCount = 0, users = [] }: SettingsFor
           startYear: parseInt(startYear),
           endYear: parseInt(endYear),
           showParking,
-          cleaningFee: parseFloat(cleaningFee) || 0,
+          cleaningFee: parseFlexibleNumber(cleaningFee),
         }),
       });
 
@@ -542,7 +543,7 @@ export function SettingsForm({ activeParkingCount = 0, users = [] }: SettingsFor
   const handleSaveSupply = async () => {
     if (!newSupplyName || !newSupplyCost) return;
     try {
-      const cost = parseFloat(newSupplyCost);
+      const cost = parseFlexibleNumber(newSupplyCost);
       if (isNaN(cost)) return;
 
       if (editingSupply) {

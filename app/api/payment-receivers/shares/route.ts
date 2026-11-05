@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { parseFlexibleNumber } from "@/lib/utils";
 
 // PUT: Bulk update profit share percentages for payment receivers
 export async function PUT(req: Request) {
@@ -33,7 +34,7 @@ export async function PUT(req: Request) {
     }
 
     // Validate that sum equals 100% (with small tolerance for rounding like 33.3 + 33.3 + 33.4 = 100)
-    const total = shares.reduce((acc, curr) => acc + (Number(curr.profitSharePercent) || 0), 0);
+    const total = shares.reduce((acc, curr) => acc + (parseFlexibleNumber(curr.profitSharePercent) || 0), 0);
     if (Math.abs(total - 100) > 0.5 && total !== 0) {
       return new NextResponse(`Total percentage must equal 100% (currently ${total.toFixed(1)}%)`, {
         status: 400,
@@ -46,7 +47,7 @@ export async function PUT(req: Request) {
         prisma.paymentReceiver.update({
           where: { id: share.id },
           data: {
-            profitSharePercent: Math.min(100, Math.max(0, Number(share.profitSharePercent) || 0)),
+            profitSharePercent: Math.min(100, Math.max(0, parseFlexibleNumber(share.profitSharePercent) || 0)),
           },
         })
       )

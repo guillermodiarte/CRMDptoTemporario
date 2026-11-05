@@ -15,6 +15,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parseFlexibleNumber } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -250,13 +251,15 @@ export function FinanceActions({ expenses, departments, receivers = [], date = n
       else if (!isValid(parse(entry.date, "yyyy-MM-dd", new Date()))) rowErrors.push("Fecha inválida");
 
       // Amount
-      if (!entry.amount) rowErrors.push("Falta Monto");
+      if (!entry.amount && entry.amount !== 0) rowErrors.push("Falta Monto");
       else {
-        entry.amount = parseFloat(entry.amount);
+        entry.amount = parseFlexibleNumber(entry.amount);
         if (isNaN(entry.amount)) rowErrors.push("Monto inválido");
       }
       entry.quantity = entry.quantity ? parseInt(entry.quantity) : 1;
-      entry.unitPrice = entry.unitPrice ? parseFloat(entry.unitPrice) : undefined;
+      entry.unitPrice = entry.unitPrice !== undefined && entry.unitPrice !== null && entry.unitPrice !== ""
+        ? parseFlexibleNumber(entry.unitPrice)
+        : undefined;
 
       // Department
       if (entry.departmentName && entry.departmentName.toLowerCase() !== "global") {

@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Department } from "@prisma/client";
+import { parseFlexibleNumber, zFlexibleNumber } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Trash2, UploadCloud, Building, Settings, Wifi, DollarSign } from "lucide-react";
 import { AVAILABLE_AMENITIES } from "./shared-ui";
@@ -40,10 +41,10 @@ const formSchema = z.object({
   address: z.string().optional(),
   googleMapsLink: z.string().url("Debe ser una URL válida").optional().or(z.literal("")),
 
-  bedCount: z.coerce.number().min(0),
-  maxPeople: z.coerce.number().min(0),
-  basePrice: z.coerce.number().min(0),
-  cleaningFee: z.coerce.number().min(0),
+  bedCount: zFlexibleNumber(0),
+  maxPeople: zFlexibleNumber(0),
+  basePrice: zFlexibleNumber(0),
+  cleaningFee: zFlexibleNumber(0),
 
   wifiName: z.string().optional(),
   wifiPass: z.string().optional(),
@@ -439,7 +440,7 @@ export function DepartmentForm({ setOpen, initialData, forcedType }: DepartmentF
                     <Input type="number" min={0} step="0.01" {...field}
                       onChange={(e) => {
                         field.onChange(e);
-                        setPricesObj(prev => ({ ...prev, ["2"]: Number(e.target.value) }));
+                        setPricesObj(prev => ({ ...prev, ["2"]: parseFlexibleNumber(e.target.value) }));
                       }}
                     />
                   </FormControl>
@@ -468,7 +469,7 @@ export function DepartmentForm({ setOpen, initialData, forcedType }: DepartmentF
                           type="number" min={0} step="0.01"
                           value={pricesObj[count] || ''}
                           onChange={(e) => {
-                            const val = Number(e.target.value);
+                            const val = parseFlexibleNumber(e.target.value);
                             setPricesObj(prev => ({ ...prev, [count]: val }));
                             if (count === 2) form.setValue("basePrice", val);
                           }}

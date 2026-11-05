@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireSessionId } from "@/lib/auth-helper";
+import { parseFlexibleNumber } from "@/lib/utils";
 
 export async function PATCH(
   req: Request,
@@ -38,8 +39,8 @@ export async function PATCH(
         ...(address !== undefined && { address }),
         ...(bedCount !== undefined && { bedCount: Number(bedCount) }),
         ...(maxPeople !== undefined && { maxPeople: Number(maxPeople) }),
-        ...(basePrice !== undefined && { basePrice: Number(basePrice) }),
-        ...(cleaningFee !== undefined && { cleaningFee: Number(cleaningFee) }),
+        ...(basePrice !== undefined && { basePrice: parseFlexibleNumber(basePrice) }),
+        ...(cleaningFee !== undefined && { cleaningFee: parseFlexibleNumber(cleaningFee) }),
         ...(wifiName !== undefined && { wifiName }),
         ...(wifiPass !== undefined && { wifiPass }),
         ...(alias !== undefined && { alias }),

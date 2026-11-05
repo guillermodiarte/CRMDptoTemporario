@@ -36,7 +36,7 @@ import { Department, Reservation } from "@prisma/client";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon, RotateCcw, Moon, Banknote, CreditCard, Check, Clock } from "lucide-react";
-import { formatNumber, cn } from "@/lib/utils";
+import { formatNumber, cn, parseFlexibleNumber, zFlexibleNumber, zFlexibleNumberOptional } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { type DateRange } from "react-day-picker";
@@ -46,15 +46,15 @@ const formSchema = z.object({
   guestName: z.string().min(2, "Nombre requerido"),
   guestPhone: z.string().optional(),
   guestDni: z.string().optional(),
-  guestPeopleCount: z.coerce.number().min(0),
-  bedsRequired: z.coerce.number().min(0).default(0),
+  guestPeopleCount: zFlexibleNumber(0),
+  bedsRequired: zFlexibleNumber(0),
   checkIn: z.string(),
   checkOut: z.string(),
-  totalAmount: z.coerce.number().min(0, "Monto requerido"),
-  depositAmount: z.coerce.number().default(0),
-  heatingFee: z.coerce.number().default(0), // Removed? No, waiting.
-  cleaningFee: z.coerce.number().default(0),
-  amenitiesFee: z.coerce.number().default(0),
+  totalAmount: zFlexibleNumber(0, "Monto requerido"),
+  depositAmount: zFlexibleNumber(0),
+  heatingFee: zFlexibleNumber(0), // Removed? No, waiting.
+  cleaningFee: zFlexibleNumber(0),
+  amenitiesFee: zFlexibleNumber(0),
   currency: z.enum(["ARS", "USD"]).default("ARS"),
   paymentStatus: z.enum(["PAID", "PARTIAL", "UNPAID", "CANCELLED"]).default("UNPAID"),
   status: z.string().optional(),
@@ -1395,7 +1395,7 @@ export function ReservationForm({ departments, setOpen, defaultDepartmentId, def
                   {form.watch("paymentStatus") !== "CANCELLED" && (
                     <div className="flex justify-between items-center text-xs font-medium text-red-600 dark:text-red-400">
                       <span>Resta Cobrar:</span>
-                      <span className="font-bold text-sm">${formatNumber((form.watch("totalAmount") || 0) - (form.watch("depositAmount") || 0))}</span>
+                      <span className="font-bold text-sm">${formatNumber((parseFlexibleNumber(form.watch("totalAmount")) || 0) - (parseFlexibleNumber(form.watch("depositAmount")) || 0))}</span>
                     </div>
                   )}
                 </div>

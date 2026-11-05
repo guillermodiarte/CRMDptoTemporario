@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requireSessionId } from "@/lib/auth-helper";
+import { parseFlexibleNumber } from "@/lib/utils";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -31,13 +32,13 @@ export async function POST(req: Request) {
   if (session?.user?.role !== "ADMIN") return new NextResponse("Unauthorized", { status: 401 });
 
   try {
+    const sessionId = await requireSessionId();
     const { name, cost } = await req.json();
 
     const supply = await prisma.supply.create({
       data: {
         name,
-        cost: parseFloat(cost),
-        cost: parseFloat(cost),
+        cost: parseFlexibleNumber(cost),
         isActive: true,
         sessionId
       }
@@ -66,7 +67,7 @@ export async function PUT(req: Request) {
       where: { id },
       data: {
         name,
-        cost: parseFloat(cost),
+        cost: parseFlexibleNumber(cost),
         isActive
       }
     });

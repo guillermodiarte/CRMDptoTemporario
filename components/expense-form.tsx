@@ -17,14 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Department } from "@prisma/client";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, parseFlexibleNumber, zFlexibleNumber, zFlexibleNumberOptional } from "@/lib/utils";
 
 const formSchema = z.object({
   type: z.enum(["COMMISSION", "TAX", "SUPPLY"]),
   description: z.string().min(2),
-  amount: z.coerce.number().min(0.01),
-  quantity: z.coerce.number().optional(),
-  unitPrice: z.coerce.number().optional(),
+  amount: zFlexibleNumber(0.01, "Monto requerido"),
+  quantity: zFlexibleNumberOptional(1),
+  unitPrice: zFlexibleNumberOptional(0),
   departmentId: z.string().optional(),
   date: z.string(),
 });
@@ -96,7 +96,9 @@ export function ExpenseForm({
 
   useEffect(() => {
     if (type === "SUPPLY") {
-      const calc = quantity * unitPrice;
+      const q = parseFlexibleNumber(quantity) || 1;
+      const u = parseFlexibleNumber(unitPrice) || 0;
+      const calc = q * u;
       form.setValue("amount", parseFloat(calc.toFixed(2)));
     }
   }, [type, quantity, unitPrice, form]);
@@ -118,7 +120,7 @@ export function ExpenseForm({
     }
   }, [initialData]);
 
-  const projectedCashBalance = globalCashBalance - (paymentMode === "cash" ? amount : 0);
+  const projectedCashBalance = globalCashBalance - (paymentMode === "cash" ? parseFlexibleNumber(amount) : 0);
 
   const cashColor =
     projectedCashBalance > 0

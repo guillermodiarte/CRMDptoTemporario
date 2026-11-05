@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireSessionId } from "@/lib/auth-helper";
+import { parseFlexibleNumber } from "@/lib/utils";
 
 export async function GET(req: Request) {
   try {
@@ -58,8 +59,8 @@ export async function POST(req: Request) {
             address,
             bedCount: Number(bedCount || 0), // Allow 0
             maxPeople: Number(maxPeople || 0), // Allow 0
-            basePrice: Number(basePrice || 0),
-            cleaningFee: Number(cleaningFee || 0),
+            basePrice: parseFlexibleNumber(basePrice || 0),
+            cleaningFee: parseFlexibleNumber(cleaningFee || 0),
             wifiName,
             wifiPass,
             alias,
@@ -81,8 +82,8 @@ export async function POST(req: Request) {
           address,
           bedCount: Number(bedCount || 0),
           maxPeople: Number(maxPeople || 0),
-          basePrice: Number(basePrice || 0),
-          cleaningFee: Number(cleaningFee || 0),
+          basePrice: parseFlexibleNumber(basePrice || 0),
+          cleaningFee: parseFlexibleNumber(cleaningFee || 0),
           wifiName,
           wifiPass,
           alias,

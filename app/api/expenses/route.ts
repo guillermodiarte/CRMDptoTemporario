@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireSessionId } from "@/lib/auth-helper";
 import { revalidatePath } from "next/cache";
+import { parseFlexibleNumber } from "@/lib/utils";
 
 export async function GET(req: Request) {
   try {
@@ -45,9 +46,9 @@ export async function POST(req: Request) {
       data: {
         type,
         description,
-        amount: Number(amount),
-        quantity: quantity ? Number(quantity) : 1,
-        unitPrice: unitPrice ? Number(unitPrice) : null,
+        amount: parseFlexibleNumber(amount),
+        quantity: quantity ? parseFlexibleNumber(quantity) : 1,
+        unitPrice: unitPrice ? parseFlexibleNumber(unitPrice) : null,
         departmentId: departmentId || null,
         paymentReceiverId: paidFromCash ? null : (paymentReceiverId || null),
         paidFromCash: !!paidFromCash,

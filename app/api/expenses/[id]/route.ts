@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireSessionId } from "@/lib/auth-helper";
 import { revalidatePath } from "next/cache";
+import { parseFlexibleNumber } from "@/lib/utils";
 
 export async function PATCH(
   req: Request,
@@ -37,9 +38,9 @@ export async function PATCH(
       data: {
         type,
         description,
-        amount: Number(amount),
-        quantity: quantity ? Number(quantity) : null,
-        unitPrice: unitPrice ? Number(unitPrice) : null,
+        amount: parseFlexibleNumber(amount),
+        quantity: quantity !== undefined && quantity !== null && quantity !== "" ? parseFlexibleNumber(quantity) : null,
+        unitPrice: unitPrice !== undefined && unitPrice !== null && unitPrice !== "" ? parseFlexibleNumber(unitPrice) : null,
         departmentId: departmentId || null,
         paymentReceiverId: paidFromCash ? null : (paymentReceiverId !== undefined ? (paymentReceiverId || null) : undefined),
         paidFromCash: paidFromCash !== undefined ? !!paidFromCash : undefined,

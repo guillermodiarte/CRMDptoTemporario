@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { requireSessionId } from '@/lib/auth-helper';
 import { revalidatePath } from 'next/cache';
 import { calculateReservationSplits } from '@/lib/reservation-logic';
+import { parseFlexibleNumber } from '@/lib/utils';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ groupId: string }> }) {
   try {
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
 
     const bodyText = await req.text();
     const body = bodyText ? JSON.parse(bodyText) : {};
-    const depositAmount = body.depositAmount ? Number(body.depositAmount) : 0;
+    const depositAmount = body.depositAmount !== undefined && body.depositAmount !== null ? parseFlexibleNumber(body.depositAmount) : 0;
     const forceApprove = body.forceApprove === true;
     const depositMethod = (body.depositMethod === 'CASH' || body.depositMethod === 'TRANSFER') ? body.depositMethod : null;
     const depositReceiverId = typeof body.depositReceiverId === 'string' && body.depositReceiverId.trim() ? body.depositReceiverId.trim() : null;

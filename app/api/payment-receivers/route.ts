@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { parseFlexibleNumber } from "@/lib/utils";
 
 // GET: list payment receivers for the current session
 export async function GET() {
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
         accountInfo: accountInfo?.trim() || null,
         isDefault: !!isDefault,
         order: order !== undefined ? Number(order) : 0,
-        profitSharePercent: profitSharePercent !== undefined ? Math.min(100, Math.max(0, Number(profitSharePercent))) : 0,
+        profitSharePercent: profitSharePercent !== undefined ? Math.min(100, Math.max(0, parseFlexibleNumber(profitSharePercent))) : 0,
         sessionId,
       },
     });

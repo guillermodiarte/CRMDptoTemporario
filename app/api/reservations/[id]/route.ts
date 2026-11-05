@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { calculateReservationSplits } from "@/lib/reservation-logic";
 import { revalidatePath } from "next/cache";
+import { parseFlexibleNumber } from "@/lib/utils";
 
 export async function PATCH(
   req: Request,
@@ -38,19 +39,19 @@ export async function PATCH(
       const newEnd = body.checkOut ? new Date(`${body.checkOut}T12:00:00`) : existingEnd;
 
       const mergedTotal = body.totalAmount !== undefined
-        ? Number(body.totalAmount)
+        ? parseFlexibleNumber(body.totalAmount)
         : parts.reduce((acc, p) => acc + p.totalAmount, 0);
 
       const mergedCleaning = body.cleaningFee !== undefined
-        ? Number(body.cleaningFee)
+        ? parseFlexibleNumber(body.cleaningFee)
         : parts.reduce((acc, p) => acc + p.cleaningFee, 0);
 
       const mergedDeposit = body.depositAmount !== undefined
-        ? Number(body.depositAmount)
+        ? parseFlexibleNumber(body.depositAmount)
         : parts.reduce((acc, p) => acc + p.depositAmount, 0);
 
       const mergedAmenities = body.amenitiesFee !== undefined
-        ? Number(body.amenitiesFee)
+        ? parseFlexibleNumber(body.amenitiesFee)
         : parts.reduce((acc, p) => acc + (p.amenitiesFee || 0), 0);
 
 
@@ -237,10 +238,10 @@ export async function PATCH(
           bedsRequired: bedsRequired ? Number(bedsRequired) : undefined,
           checkIn: start,
           checkOut: end,
-          totalAmount: totalAmount !== undefined ? Number(totalAmount) : undefined,
-          depositAmount: depositAmount !== undefined ? Number(depositAmount) : undefined,
-          cleaningFee: cleaningFee !== undefined ? Number(cleaningFee) : undefined,
-          amenitiesFee: amenitiesFee !== undefined ? Number(amenitiesFee) : undefined,
+          totalAmount: totalAmount !== undefined ? parseFlexibleNumber(totalAmount) : undefined,
+          depositAmount: depositAmount !== undefined ? parseFlexibleNumber(depositAmount) : undefined,
+          cleaningFee: cleaningFee !== undefined ? parseFlexibleNumber(cleaningFee) : undefined,
+          amenitiesFee: amenitiesFee !== undefined ? parseFlexibleNumber(amenitiesFee) : undefined,
           currency,
           paymentStatus: effectivePaymentStatus,
           paymentMethod: paymentMethod !== undefined ? paymentMethod : undefined,

@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { parseFlexibleNumber } from "@/lib/utils";
 
 // PATCH: update a payment receiver (ADMIN only)
 export async function PATCH(
@@ -42,7 +43,7 @@ export async function PATCH(
         ...(isDefault !== undefined && { isDefault: !!isDefault }),
         ...(order !== undefined && { order: Number(order) }),
         ...(isActive !== undefined && { isActive: !!isActive }),
-        ...(profitSharePercent !== undefined && { profitSharePercent: Math.min(100, Math.max(0, Number(profitSharePercent))) }),
+        ...(profitSharePercent !== undefined && { profitSharePercent: Math.min(100, Math.max(0, parseFlexibleNumber(profitSharePercent))) }),
       },
     });
 

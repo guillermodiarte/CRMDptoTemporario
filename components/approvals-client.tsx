@@ -5,7 +5,8 @@ import { es } from 'date-fns/locale';
 import { CheckCircle2, XCircle, User, Phone, Calendar, Users, IdCard, Globe, Car, Building2, Clock, AlertTriangle, ClipboardCheck, CreditCard, Banknote, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AirbnbBookingReminderModal, ReminderItem } from '@/components/airbnb-booking-reminder-modal';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, parseFlexibleNumber } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -485,11 +486,13 @@ export function ApprovalsClient({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-slate-500 dark:text-slate-400 font-bold">$</span>
-                      <input 
+                      <Input 
                         type="number" 
-                        className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 w-32 focus:outline-none focus:ring-2 focus:ring-sky-500 font-semibold"
+                        min={0}
+                        step="100"
+                        className="w-32 font-semibold"
                         value={currentDeposit}
-                        onChange={(e) => setDeposits(prev => ({ ...prev, [group.groupId]: Number(e.target.value) }))}
+                        onChange={(e) => setDeposits(prev => ({ ...prev, [group.groupId]: parseFlexibleNumber(e.target.value) }))}
                       />
                     </div>
                   </div>

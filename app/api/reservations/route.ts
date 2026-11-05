@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { calculateReservationSplits } from "@/lib/reservation-logic";
 import { revalidatePath } from "next/cache";
 import { requireSessionId } from "@/lib/auth-helper";
+import { parseFlexibleNumber } from "@/lib/utils";
 
 // Using native crypto for UUID
 const generateUUID = () => crypto.randomUUID();
@@ -109,10 +110,10 @@ export async function POST(req: Request) {
     // SPLITTING LOGIC
     const splits = calculateReservationSplits(
       start, end,
-      Number(totalAmount),
-      Number(cleaningFee || 0),
-      Number(depositAmount || 0),
-      amenitiesFee !== undefined ? Number(amenitiesFee) : calculatedAmenitiesFee
+      parseFlexibleNumber(totalAmount),
+      parseFlexibleNumber(cleaningFee || 0),
+      parseFlexibleNumber(depositAmount || 0),
+      amenitiesFee !== undefined ? parseFlexibleNumber(amenitiesFee) : calculatedAmenitiesFee
     );
 
     const generatedGroupId = groupId || (splits.length > 1 ? generateUUID() : null);
@@ -142,7 +143,7 @@ export async function POST(req: Request) {
             paymentDate: paymentDate ? new Date(paymentDate) : (paymentStatus === 'PAID' ? new Date() : null),
             depositMethod: depositMethod || null,
             depositReceiverId: depositReceiverId || null,
-            depositDate: depositDate ? new Date(depositDate) : (Number(depositAmount || 0) > 0 ? new Date() : null),
+            depositDate: depositDate ? new Date(depositDate) : (parseFlexibleNumber(depositAmount || 0) > 0 ? new Date() : null),
             source: source || "DIRECT",
             notes,
             hasParking: !!hasParking,

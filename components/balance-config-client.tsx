@@ -5,7 +5,8 @@ import { Plus, Pencil, Trash2, Check, X, Star, ArrowLeft, Percent, Sparkles, Ale
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, parseFlexibleNumber } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -600,15 +601,15 @@ export function BalanceConfigClient({
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">% Ganancia que le corresponde</label>
                     <div className="relative">
-                      <input
+                      <Input
                         type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold pr-8"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold pr-8 h-9"
                         placeholder="50"
                         value={newForm.profitSharePercent || ""}
-                        onChange={(e) => setNewForm((v) => ({ ...v, profitSharePercent: Number(e.target.value) || 0 }))}
+                        onChange={(e) => setNewForm((v) => ({ ...v, profitSharePercent: parseFlexibleNumber(e.target.value) }))}
                       />
                       <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-bold">%</span>
                     </div>
@@ -689,14 +690,14 @@ export function BalanceConfigClient({
                         <div>
                           <label className="text-xs text-muted-foreground block mb-1">% Ganancia Asignado</label>
                           <div className="relative">
-                            <input
+                            <Input
                               type="number"
-                              min="0"
-                              max="100"
-                              step="0.5"
-                              className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold pr-8"
+                              min={0}
+                              max={100}
+                              step={0.5}
+                              className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold pr-8 h-9"
                               value={editForm.profitSharePercent || ""}
-                              onChange={(e) => setEditForm((v) => ({ ...v, profitSharePercent: Number(e.target.value) || 0 }))}
+                              onChange={(e) => setEditForm((v) => ({ ...v, profitSharePercent: parseFlexibleNumber(e.target.value) }))}
                             />
                             <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-bold">%</span>
                           </div>
@@ -976,14 +977,14 @@ export function BalanceConfigClient({
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         <div className="relative">
-                          <input
+                          <Input
                             type="number"
-                            min="0"
-                            max="100"
-                            step="0.5"
+                            min={0}
+                            max={100}
+                            step={0.5}
                             value={s.percent}
-                            onChange={(e) => handleShareChange(s.id, Number(e.target.value) || 0)}
-                            className="w-20 text-right font-extrabold text-sm px-2 py-1 pr-6 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            onChange={(e) => handleShareChange(s.id, parseFlexibleNumber(e.target.value))}
+                            className="w-20 text-right font-extrabold text-sm px-2 py-1 pr-6 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 h-8"
                           />
                           <span className="absolute right-2 top-1 text-xs text-muted-foreground font-bold">
                             %
